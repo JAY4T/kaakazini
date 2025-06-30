@@ -1,0 +1,87 @@
+// HireLogin.js
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
+
+const BASE_URL = 'http://127.0.0.1:8001';
+
+const HireLogin = () => {
+  const [form, setForm] = useState({
+    email: '',
+    password: ''
+  });
+
+  const [message, setMessage] = useState({ text: '', type: '' });
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setForm(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!form.email || !form.password) {
+      setMessage({ text: 'Email and password are required.', type: 'danger' });
+      return;
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/api/client-login/`, {
+        email: form.email,
+        password: form.password,
+      });
+
+      sessionStorage.setItem('access_token', res.data.token);
+      sessionStorage.setItem('client', JSON.stringify(res.data.user));
+      setMessage({ text: 'Login successful! Redirecting...', type: 'success' });
+
+      setTimeout(() => navigate('/hire'), 1500);
+    } catch (error) {
+      setMessage({
+        text: 'Login failed. ' + (error.response?.data?.detail || 'Invalid credentials.'),
+        type: 'danger',
+      });
+    }
+  };
+
+  return (
+    <div className="container my-5">
+      <div className="row justify-content-center">
+        <div className="col-md-6">
+          <div className="card p-4 shadow">
+            <h3 className="text-center">Client Login</h3>
+            {message.text && <div className={`alert alert-${message.type}`}>{message.text}</div>}
+            <form onSubmit={handleSubmit}>
+              <input
+                id="email"
+                type="email"
+                placeholder="Email"
+                className="form-control mb-3"
+                value={form.email}
+                onChange={handleChange}
+                required
+              />
+              <input
+                id="password"
+                type="password"
+                placeholder="Password"
+                className="form-control mb-3"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+              <button className="btn btn-primary w-100" type="submit">Login</button>
+            </form>
+            <p className="mt-3 text-center">
+              Don't have an account? <Link to="/HireSignup">Sign Up</Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default HireLogin;
