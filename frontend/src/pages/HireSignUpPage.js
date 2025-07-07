@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
-const BASE_URL = 'http://127.0.0.1:8001'; // Your Django API base URL
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
 const HireSignup = () => {
   const [form, setForm] = useState({
@@ -34,7 +34,7 @@ const HireSignup = () => {
     }
 
     try {
-      const response = await axios.post(`${BASE_URL}/api/client-signup/`, {
+      const response = await axios.post(`${API_BASE_URL}/client-signup/`, {
   full_name: form.full_name,
   email: form.email,
   phone_number: form.phone_number,

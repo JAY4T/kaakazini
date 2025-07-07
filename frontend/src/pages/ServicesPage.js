@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
+
 const ServicesPage = () => {
   const [approvedServices, setApprovedServices] = useState([]);
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
@@ -9,13 +11,13 @@ const ServicesPage = () => {
   const getImageUrl = (filename) => {
     return filename.startsWith('http')
       ? filename
-      : `http://127.0.0.1:8001${filename}`;
+      : `${API_BASE_URL}${filename}`;
   };
 
   useEffect(() => {
     const fetchApprovedServices = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:8001/api/public-craftsman/');
+        const response = await axios.get(`${API_BASE_URL}/public-craftsman/`);
         const filteredServices = response.data.filter(service => service.service_image && service.service_image.trim() !== '');
         setApprovedServices(filteredServices);
       } catch (error) {
@@ -33,7 +35,7 @@ const ServicesPage = () => {
   const handleContactSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://127.0.0.1:8001/api/contact/', contactForm);
+      await axios.post(`${API_BASE_URL}/contact/`, contactForm);
       alert('Message sent successfully!');
       setContactForm({ name: '', email: '', message: '' });
     } catch (err) {
@@ -66,7 +68,7 @@ const ServicesPage = () => {
         <div className="container">
           <h2 className="text-center mb-3 fw-bold text-primary">What We offer</h2>
           <p className="text-center fs-6 text-secondary mb-4">
-           We offer a diverse range of high-quality, personalized services—from carpentry, masonry, and electrical work to plumbing, interior finishes, and custom designs.
+            We offer a diverse range of high-quality, personalized services—from carpentry, masonry, and electrical work to plumbing, interior finishes, and custom designs.
           </p>
 
           {approvedServices.length === 0 ? (

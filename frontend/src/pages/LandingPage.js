@@ -7,7 +7,7 @@ import 'bootstrap/dist/js/bootstrap.bundle.min';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // includes Popper
 
 
-const BASE_URL = 'http://127.0.0.1:8001';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
 function LandingPage() {
   const [approvedServices, setApprovedServices] = useState([]);
@@ -15,7 +15,7 @@ function LandingPage() {
   useEffect(() => {
     async function fetchApprovedServices() {
       try {
-        const response = await axios.get(`${BASE_URL}/api/public-craftsman/`);
+        const response = await axios.get(`${API_BASE_URL}/public-craftsman/`);
         const approved = response.data.filter(
           item => item.status === 'approved' && item.primary_service
         );
@@ -31,8 +31,8 @@ function LandingPage() {
   const getImageUrl = path => {
     if (!path) return 'https://via.placeholder.com/300';
     if (path.startsWith('http')) return path;
-    if (path.startsWith('/')) return `${BASE_URL}${path}`;
-    return `${BASE_URL}/media/${path}`;
+    if (path.startsWith('/')) return `${API_BASE_URL}${path}`;
+    return `${API_BASE_URL}/media/${path}`;
   };
 
   return (

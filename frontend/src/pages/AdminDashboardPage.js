@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8001';
+// ✅ API base URL set through environment variable (update in your .env.production)
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api'; // fallback to localhost
 
+// ✅ Axios instance with Authorization interceptor
 const authAxios = axios.create({ baseURL: API_BASE_URL });
 
 authAxios.interceptors.request.use(config => {
@@ -18,13 +20,16 @@ function AdminDashboard() {
   const [error, setError] = useState('');
   const [craftsmanFilter, setCraftsmanFilter] = useState('');
 
-  useEffect(() => { fetchData(); }, []);
+  // ✅ Fetch craftsmen data
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await authAxios.get('/api/admin/craftsman/');
-      setCraftsmen(res.data);
+      const response = await authAxios.get('admin/craftsman/');
+      setCraftsmen(response.data);
     } catch (err) {
       console.error('Fetch error:', err);
       setError('Failed to load data. Please try again later.');
@@ -39,21 +44,18 @@ function AdminDashboard() {
   };
 
   const checkCraftsmanApprovalCriteria = (c) => {
-  const errs = [];
-  if (!c.full_name?.trim()) errs.push('Full name is missing.');
-  if (!c.profile) errs.push('Profile image is missing.');
-  if (!c.profession?.trim()) errs.push('Profession is missing.');
-  if (!c.description?.trim()) errs.push('Description is missing.');
-  if (!c.primary_service?.trim()) errs.push('Primary service is missing.');
+    const errs = [];
+    if (!c.full_name?.trim()) errs.push('Full name is missing.');
+    if (!c.profile) errs.push('Profile image is missing.');
+    if (!c.profession?.trim()) errs.push('Profession is missing.');
+    if (!c.description?.trim()) errs.push('Description is missing.');
+    if (!c.primary_service?.trim()) errs.push('Primary service is missing.');
 
-  const hasServiceImage =
-    (c.services?.[0]?.image || c.service_image); // checks both possible sources
+    const hasServiceImage = c.services?.[0]?.image || c.service_image;
+    if (!hasServiceImage) errs.push('Service image is missing.');
 
-  if (!hasServiceImage) errs.push('Service image is missing.');
-
-  return errs;
-};
-
+    return errs;
+  };
 
   const handleAction = async (type, id, model, craftsman = null) => {
     if (model === 'craftsman' && type === 'approve') {
@@ -63,10 +65,10 @@ function AdminDashboard() {
         return;
       }
     }
+
     try {
-      await authAxios.post(`/api/admin/${model}/${id}/${type}/`);
-      // await authAxios.post(`/api/admin/notify/${model}/${id}/${type === 'approve' ? 'approved' : 'rejected'}/`);
-      fetchData();
+      await authAxios.post(`admin/${model}/${id}/${type}/`);
+      fetchData(); // Refresh data
     } catch (err) {
       console.error(`${type} failed:`, err);
       alert(`Action failed: ${type}`);
@@ -130,16 +132,18 @@ function AdminDashboard() {
             {filteredCraftsmen.length > 0 ? filteredCraftsmen.map(c => {
               const errors = checkCraftsmanApprovalCriteria(c);
               const mainService = c.services?.[0] || {
-  name: c.primary_service,
-  image: c.service_image,
-};
+                name: c.primary_service,
+                image: c.service_image,
+              };
               return (
                 <React.Fragment key={c.id}>
                   <tr className="align-middle">
                     <td>
                       {c.profile ? (
                         <img src={getImageUrl(c.profile)} alt={c.full_name} className="img-thumbnail" style={{ width: '80px' }} />
-                      ) : <span className="badge bg-warning text-dark">Missing image</span>}
+                      ) : (
+                        <span className="badge bg-warning text-dark">Missing image</span>
+                      )}
                     </td>
                     <td>{c.full_name}</td>
                     <td>{c.profession || <span className="badge bg-info text-dark">No profession</span>}</td>
@@ -148,26 +152,33 @@ function AdminDashboard() {
                     <td>
                       {mainService?.image ? (
                         <img src={getImageUrl(mainService.image)} alt={mainService.name} className="img-thumbnail" style={{ width: '100px', height: '70px', objectFit: 'cover' }} />
-                      ) : <span className="text-muted">No image</span>}
+                      ) : (
+                        <span className="text-muted">No image</span>
+                      )}
                     </td>
                     <td>
                       {errors.length ? (
-                        <ul className="mb-0 small">{errors.map((err, i) => <li key={i}>{err}</li>)}</ul>
-                      ) : <span className="text-success">Approved</span>}
+                        <ul className="mb-0 small">
+                          {errors.map((err, i) => <li key={i}>{err}</li>)}
+                        </ul>
+                      ) : (
+                        <span className="text-success">Approved</span>
+                      )}
                     </td>
                     <td>
-                     <button
-  className="btn btn-success btn-sm me-2"
-  disabled={errors.length > 0}
-  onClick={() => handleAction('approve', c.id, 'craftsman', c)}
->
-  ✅
-</button>
-
+                      <button
+                        className="btn btn-success btn-sm me-2"
+                        disabled={errors.length > 0}
+                        onClick={() => handleAction('approve', c.id, 'craftsman', c)}
+                      >
+                        ✅
+                      </button>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => handleAction('reject', c.id, 'craftsman')}
-                      >❌</button>
+                      >
+                        ❌
+                      </button>
                     </td>
                   </tr>
 
@@ -195,7 +206,9 @@ function AdminDashboard() {
                                         style={{ width: '100px', height: '70px', objectFit: 'cover' }}
                                         className="img-thumbnail"
                                       />
-                                    ) : <span className="text-muted">No image</span>}
+                                    ) : (
+                                      <span className="text-muted">No image</span>
+                                    )}
                                   </td>
                                 </tr>
                               ))}

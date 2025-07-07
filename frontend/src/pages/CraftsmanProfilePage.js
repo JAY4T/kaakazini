@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
+// ✅ Use environment variable for production base URL
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
+
 function CraftsmanProfile() {
   const { id } = useParams();
   const [craftsman, setCraftsman] = useState(null);
@@ -28,7 +31,7 @@ function CraftsmanProfile() {
         setLoading(false);
       } else {
         try {
-          const response = await axios.get(`http://127.0.0.1:8001/api/public-craftsman/${id}/`);
+          const response = await axios.get(`${API_BASE_URL}/public-craftsman/${id}/`);
           if (response.status === 200 && response.data) {
             setCraftsman(response.data);
             sessionStorage.setItem(`craftsman-${id}`, JSON.stringify(response.data));
@@ -38,7 +41,11 @@ function CraftsmanProfile() {
           }
         } catch (error) {
           console.error('Error fetching craftsman data:', error);
-          setErrorMsg(error.response?.status === 404 ? 'Craftsman not found on the server.' : 'Failed to fetch craftsman data.');
+          setErrorMsg(
+            error.response?.status === 404
+              ? 'Craftsman not found on the server.'
+              : 'Failed to fetch craftsman data.'
+          );
           setNotFound(true);
         } finally {
           setLoading(false);
@@ -63,9 +70,10 @@ function CraftsmanProfile() {
   }
 
   const profileImage = craftsman.profile || 'https://via.placeholder.com/150';
-  const serviceImages = craftsman.service_images && craftsman.service_images.length > 0
-    ? craftsman.service_images
-    : craftsman.service_image
+  const serviceImages =
+    craftsman.service_images && craftsman.service_images.length > 0
+      ? craftsman.service_images
+      : craftsman.service_image
       ? [craftsman.service_image]
       : [];
 

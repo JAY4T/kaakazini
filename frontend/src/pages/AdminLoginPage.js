@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+// ✅ Base URL from .env file
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
+
 function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,8 +17,8 @@ function AdminLoginPage() {
 
     try {
       const response = await axios.post(
-        'http://127.0.0.1:8001/api/token/',
-        { email, password }, // Send email instead of username
+        `${API_BASE_URL}/api/token/`,
+        { email, password },
         { headers: { 'Content-Type': 'application/json' } }
       );
 
@@ -26,22 +29,26 @@ function AdminLoginPage() {
         return;
       }
 
+      // ✅ Store token securely
       sessionStorage.setItem('access_token', token);
       sessionStorage.setItem('is_admin', 'true');
 
+      // ✅ Redirect to admin dashboard
       navigate('/admin-dashboard');
     } catch (err) {
+      console.error('Login error:', err);
+
       if (err.response) {
-        console.error('Error response data:', err.response.data);
-        if (err.response.status === 401) {
-          setError('Invalid email or password');
-        } else if (err.response.status === 400) {
-          setError('Bad Request: Please check your input');
+        const status = err.response.status;
+        if (status === 401) {
+          setError('Invalid email or password.');
+        } else if (status === 400) {
+          setError('Bad request. Please check your input.');
         } else {
           setError('Login failed. Please try again later.');
         }
       } else {
-        setError('Network or server error');
+        setError('Network or server error. Please check your connection.');
       }
     }
   };
@@ -52,9 +59,10 @@ function AdminLoginPage() {
         <h4 className="text-center mb-3">Admin Login</h4>
         <form onSubmit={handleLogin}>
           <div className="mb-3">
-            <label className="form-label">Username</label>
+            <label htmlFor="email" className="form-label">Email</label>
             <input
               type="email"
+              id="email"
               className="form-control"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -63,16 +71,17 @@ function AdminLoginPage() {
             />
           </div>
           <div className="mb-3">
-            <label className="form-label">Password</label>
+            <label htmlFor="password" className="form-label">Password</label>
             <input
               type="password"
+              id="password"
               className="form-control"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
-          {error && <p className="text-danger">{error}</p>}
+          {error && <p className="text-danger small">{error}</p>}
           <button type="submit" className="btn btn-primary w-100">Login</button>
         </form>
       </div>

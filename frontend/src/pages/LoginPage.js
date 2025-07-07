@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
+
 function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -21,7 +23,7 @@ function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8001/api/token/', {
+      const response = await fetch(`${API_BASE_URL}/token/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -37,7 +39,7 @@ function LoginPage() {
       sessionStorage.setItem('refresh_token', data.refresh);
 
       // Fetch user profile
-      const profileResponse = await fetch('http://127.0.0.1:8001/api/profile/', {
+      const profileResponse = await fetch(`${API_BASE_URL}/profile/`, {
         headers: {
           Authorization: `Bearer ${data.access}`,
         },
@@ -48,7 +50,6 @@ function LoginPage() {
       }
 
       const profileData = await profileResponse.json();
-
 
       navigate('/dashboard');
     } catch (err) {
@@ -66,7 +67,7 @@ function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('http://127.0.0.1:8001/api/google-login/', {
+      const res = await fetch(`${API_BASE_URL}/google-login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: googleToken }),
@@ -79,7 +80,7 @@ function LoginPage() {
       sessionStorage.setItem('refresh_token', data.refresh);
 
       // Fetch user profile after Google login
-      const profileResponse = await fetch('http://127.0.0.1:8001/api/profile/', {
+      const profileResponse = await fetch(`${API_BASE_URL}/profile/`, {
         headers: {
           Authorization: `Bearer ${data.access}`,
         },
@@ -89,13 +90,11 @@ function LoginPage() {
         throw new Error('Failed to fetch profile.');
       }
 
-     const profileData = await profileResponse.json();
+      const profileData = await profileResponse.json();
 
-    sessionStorage.setItem('user_profile', JSON.stringify(profileData));
-
+      sessionStorage.setItem('user_profile', JSON.stringify(profileData));
 
       navigate('/dashboard');
-
     } catch (err) {
       console.error('Google login error:', err);
       alert(err.message || 'Something went wrong with Google login.');
@@ -108,8 +107,7 @@ function LoginPage() {
     try {
       if (typeof window !== 'undefined' && window.google && googleButtonRef.current) {
         window.google.accounts.id.initialize({
-          client_id:
-            '551247510793-ria1stm1obcn36nkkl2is4tknoqaj2sv.apps.googleusercontent.com',
+          client_id: '551247510793-ria1stm1obcn36nkkl2is4tknoqaj2sv.apps.googleusercontent.com',
           callback: handleCredentialResponse,
         });
 

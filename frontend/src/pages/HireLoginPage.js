@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
-const BASE_URL = 'http://127.0.0.1:8001';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
 const HireLogin = () => {
   const [form, setForm] = useState({
@@ -28,7 +28,7 @@ const HireLogin = () => {
     }
 
     try {
-      const res = await axios.post(`${BASE_URL}/api/client-login/`, {
+      const res = await axios.post(`${API_BASE_URL}/client-login/`, {
         email: form.email,
         password: form.password,
       });

@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-// Axios instance
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
+
 const authAxios = axios.create({
-  baseURL: 'http://127.0.0.1:8001',
+  baseURL: API_BASE_URL,
 });
 
-authAxios.interceptors.request.use(config => {
+authAxios.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -22,26 +23,26 @@ function CraftsmenList() {
   const [error, setError] = useState(null);
 
   const fetchCraftsmen = async () => {
-  setLoading(true);
-  setError(null);
+    setLoading(true);
+    setError(null);
 
-  try {
-    const response = await axios.get('http://127.0.0.1:8001/api/public-craftsman/', {
-      params: {
-        is_approved: true,
-        search: searchTerm,
-      },
-    });
+    try {
+      const response = await axios.get(`${API_BASE_URL}/public-craftsman/`, {
+        params: {
+          is_approved: true,
+          search: searchTerm,
+        },
+      });
 
-    const data = response.data;
-    setCraftsmen(Array.isArray(data) ? data : data.results || []);
-  } catch (err) {
-    console.error('Fetch Error:', err);
-    setError('Failed to load craftsmen. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+      const data = response.data;
+      setCraftsmen(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      console.error('Fetch Error:', err);
+      setError('Failed to load craftsmen. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchCraftsmen();
@@ -86,17 +87,27 @@ function CraftsmenList() {
                   <div className="card shadow-sm mb-4">
                     <div className="card-body text-center">
                       <img
-                        src={craftsman.profile?.trim() ? craftsman.profile : 'https://via.placeholder.com/150'}
+                        src={
+                          craftsman.profile?.trim()
+                            ? craftsman.profile
+                            : 'https://via.placeholder.com/150'
+                        }
                         alt={craftsman.full_name}
                         className="mb-3 rounded-circle"
                         style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://via.placeholder.com/150';
+                        }}
                       />
                       <h5 className="card-title">{craftsman.full_name}</h5>
                       <p className="card-text">{craftsman.profession}</p>
                       {craftsman.location && (
                         <p className="card-text">
                           <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(craftsman.location)}`}
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                              craftsman.location
+                            )}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-primary"
@@ -107,8 +118,6 @@ function CraftsmenList() {
                         </p>
                       )}
                       <Link to={`/craftsman/${craftsman.id}`} className="btn btn-primary">
-
-
                         View portfolio
                       </Link>
                     </div>

@@ -3,7 +3,7 @@ import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
-const BASE_URL = 'http://127.0.0.1:8001';
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
 const HireCraftsmanPage = () => {
   const [activeTab, setActiveTab] = useState('makeRequest');
@@ -50,7 +50,7 @@ const HireCraftsmanPage = () => {
 
   const fetchJobs = async (clientId, token) => {
     try {
-      const { data } = await axios.get(`${BASE_URL}/api/job-requests/`, {
+      const { data } = await axios.get(`${BASE_URL}job-requests/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const clientJobs = data.filter((j) => j.client === clientId);
@@ -85,7 +85,7 @@ const HireCraftsmanPage = () => {
 
     try {
       const token = sessionStorage.getItem('access_token');
-      await axios.post(`${BASE_URL}/api/job-requests/`, formData, {
+      await axios.post(`${BASE_URL}/job-requests/`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
@@ -114,7 +114,7 @@ const HireCraftsmanPage = () => {
   const updateJob = async (jobId, update) => {
     try {
       const token = sessionStorage.getItem('access_token');
-      await axios.patch(`${BASE_URL}/api/job-requests/${jobId}/`, update, {
+      await axios.patch(`${BASE_URL}job-requests/${jobId}/`, update, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchJobs(client.id, token);
