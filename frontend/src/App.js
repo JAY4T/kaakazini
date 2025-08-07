@@ -19,6 +19,7 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import HireSignup from './pages/HireSignUpPage';
 import HireCraftsmanPage from './pages/HireCraftsmanPage';
 
+
 import HireLogin from './pages/HireLoginPage';
 import ServicesPage from './pages/ServicesPage';
 
@@ -84,6 +85,7 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
         <Route path="/HireSignup" element={<HireSignup />} />
         <Route path="/HireLogin" element={<HireLogin />} />
+
 
 
         <Route path="/admin-login" element={<AdminLoginPage />} />

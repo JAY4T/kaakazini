@@ -144,7 +144,7 @@ function LoginPage() {
             <div className="card shadow-lg border-0">
               <div className="card-body p-5">
                 <h2 className="text-center mb-4 fw-bold" style={{ color: '#0d6efd' }}>
-                  Craftsman Login
+                  Group Login
                 </h2>
 
                 <form onSubmit={handleLogin}>

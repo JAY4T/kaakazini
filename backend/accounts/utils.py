@@ -17,7 +17,7 @@ def send_sms(phone, message):
         "data": [
             {
                 "message_bag": {
-                    "numbers": phone,  # ✅ send as string not list
+                    "numbers": phone,  # send as string not list
                     "message": message,
                     "sender": settings.UJUMBE_SENDER_ID
                 }

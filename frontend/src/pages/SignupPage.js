@@ -2,7 +2,7 @@ import axios from 'axios';
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
 function Signup() {
   const navigate = useNavigate();
@@ -132,7 +132,7 @@ function Signup() {
               <div className="card shadow-lg border-0">
                 <div className="card-body p-5">
                   <h2 className="text-center mb-4 fw-bold" style={{ color: '#0d6efd' }}>
-                     Group Team Craftsman Signup
+                     Group Craftsman Signup
                   </h2>
 
                   {apiError && <div className="alert alert-danger">{apiError}</div>}
