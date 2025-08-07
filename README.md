@@ -8,9 +8,9 @@ Backend (Django)
 Clone the backend repo:
 
 
-git clone https://github.com/yourusername/kaakazini-backend.git
+git clone https://github.com/JAY4T/kaakazini/backend.git
 
-cd kaakazini-backend
+cd kaakazini/backend
 Set up virtual environment:
 
 
@@ -39,9 +39,9 @@ python manage.py runserver
 Clone the frontend repo:
 
 
-git clone https://github.com/yourusername/kaakazini-frontend.git
+git clone https://github.com/JAY4T/kaakazini/frontend.git
 
-cd kaakazini-frontend
+cd kaakazini/frontend
 
 Install dependencies:
 
