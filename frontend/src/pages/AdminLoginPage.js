@@ -17,7 +17,7 @@ function AdminLoginPage() {
 
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/api/token/`,
+        `${API_BASE_URL}/token/`,
         { email, password },
         { headers: { 'Content-Type': 'application/json' } }
       );
