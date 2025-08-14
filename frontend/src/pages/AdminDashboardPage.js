@@ -38,6 +38,10 @@ function AdminDashboard() {
   const [approvedFilter, setApprovedFilter] = useState('');
   const [activeSection, setActiveSection] = useState('pending');
 
+  // Job requests state
+  const [jobs, setJobs] = useState([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+
   useEffect(() => {
     fetchCraftsmen();
   }, []);
@@ -196,18 +200,73 @@ function AdminDashboard() {
     );
   };
 
-  const renderPendingCraftsmen = () =>
-    renderCraftsmenTable(pendingCraftsmen, pendingFilter, setPendingFilter, true);
+  // ------------------- JOB REQUESTS FUNCTIONS -------------------
+  const fetchAllJobs = async () => {
+    setJobsLoading(true);
+    try {
+      const { data } = await authAxios.get(`/job-requests/`);
+      setJobs(data);
+    } catch (err) {
+      console.error('Error fetching all jobs:', err);
+    } finally {
+      setJobsLoading(false);
+    }
+  };
 
-  const renderApprovedCraftsmen = () =>
-    renderCraftsmenTable(approvedCraftsmen, approvedFilter, setApprovedFilter, false);
+  const updateJob = async (jobId, update) => {
+    try {
+      await authAxios.patch(`/job-requests/${jobId}/`, update);
+      fetchAllJobs();
+    } catch (err) {
+      console.error('Error updating job:', err);
+    }
+  };
 
   const renderJobRequests = () => (
     <div className="p-3 bg-white rounded shadow-sm">
-      <h4>Job Requests Status</h4>
-      <p className="text-muted">This section will show client job request statuses.</p>
+      <h4>All Service Requests</h4>
+      {jobsLoading ? (
+        <div className="text-center mt-4">Loading requests...</div>
+      ) : (
+        <table className="table table-striped table-hover mt-3">
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Service</th>
+              <th>Schedule</th>
+              <th>Status</th>
+              <th>Review</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {jobs.map(job => (
+              <tr key={job.id}>
+                <td>{job.name}</td>
+                <td>{job.service}</td>
+                <td>{new Date(job.schedule).toLocaleString()}</td>
+                <td>
+                  <span className={`badge ${job.status === 'Completed' ? 'bg-success' : job.status === 'Cancelled' ? 'bg-danger' : 'bg-warning text-dark'}`}>{job.status}</span>
+                </td>
+                <td>{job.review || <span className="text-muted">No review</span>}</td>
+                <td>
+                  <button className="btn btn-sm btn-success me-2" onClick={() => updateJob(job.id, { status: 'Approved' })}>Approve</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => updateJob(job.id, { status: 'Rejected' })}>Reject</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
+
+  // Load jobs when jobs section is active
+  useEffect(() => {
+    if (activeSection === 'jobs') {
+      fetchAllJobs();
+    }
+  }, [activeSection]);
 
   return (
     <div className="d-flex min-vh-100">
@@ -236,7 +295,7 @@ function AdminDashboard() {
               className={`btn w-100 text-start ${activeSection === 'jobs' ? 'btn-primary' : 'btn-outline-light'}`}
               onClick={() => setActiveSection('jobs')}
             >
-              Job Requests status
+              Job Requests Status
             </button>
           </li>
         </ul>
@@ -248,8 +307,8 @@ function AdminDashboard() {
         {error && <div className="text-danger">{error}</div>}
         {!loading && !error && (
           <>
-            {activeSection === 'pending' && renderPendingCraftsmen()}
-            {activeSection === 'approved' && renderApprovedCraftsmen()}
+            {activeSection === 'pending' && renderCraftsmenTable(pendingCraftsmen, pendingFilter, setPendingFilter, true)}
+            {activeSection === 'approved' && renderCraftsmenTable(approvedCraftsmen, approvedFilter, setApprovedFilter, false)}
             {activeSection === 'jobs' && renderJobRequests()}
           </>
         )}
