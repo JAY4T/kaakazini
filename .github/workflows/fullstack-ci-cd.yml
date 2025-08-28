@@ -12,7 +12,6 @@ jobs:
   ##########################
   frontend:
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: frontend
@@ -52,7 +51,6 @@ jobs:
             npm run build
           else
             echo "⚠️ No build script found, skipping build"
-          fi
 
       - name: Deploy frontend
         env:
@@ -75,19 +73,21 @@ jobs:
             FRONTEND_PATH=$STAGING_FRONTEND_PATH
           fi
 
-          # Add server to known hosts
+          # Add host to known_hosts safely
+          ssh-keygen -R $REMOTE_HOST || true
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
 
           # Test SSH connection
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "echo SSH connection works!"
 
-          # Deploy frontend using rsync with explicit key
+          # Deploy frontend using rsync
           if [ -d build ]; then
-            rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" --exclude='.git' --exclude='node_modules' --delete build/ $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH
+            rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+              --exclude='.git' --exclude='node_modules' --delete build/ \
+              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH
             echo "✅ Frontend deployed successfully!"
           else
             echo "⚠️ No build folder found, skipping frontend deploy"
-          fi
 
   ##########################
   # 2. Backend Deploy
@@ -123,13 +123,17 @@ jobs:
             SERVICE_NAME="kaakazini-backend-staging"
           fi
 
+          ssh-keygen -R $REMOTE_HOST || true
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
 
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << 'EOF'
+            set -e  # exit on any error
             echo "Deploying backend to $BACKEND_PATH on $REMOTE_HOST..."
+
             rsync -avz --exclude='.git' --delete ./ $BACKEND_PATH
             cd $BACKEND_PATH
 
+            # Create virtualenv if not exists
             if [ ! -d "venv" ]; then
               python3 -m venv venv
             fi
