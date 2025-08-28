@@ -47,10 +47,12 @@ jobs:
             echo "Building for staging"
           fi
           cat .env
+
           if npm run | grep -q "build"; then
             npm run build
           else
             echo "⚠️ No build script found, skipping build"
+          fi
 
       - name: Deploy frontend
         env:
@@ -88,6 +90,7 @@ jobs:
             echo "✅ Frontend deployed successfully!"
           else
             echo "⚠️ No build folder found, skipping frontend deploy"
+          fi
 
   ##########################
   # 2. Backend Deploy
@@ -126,7 +129,7 @@ jobs:
           ssh-keygen -R $REMOTE_HOST || true
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
 
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << 'EOF'
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
             set -e  # exit on any error
             echo "Deploying backend to $BACKEND_PATH on $REMOTE_HOST..."
 
