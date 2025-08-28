@@ -37,3 +37,15 @@ venv/
 .env.production
 node_modules/
 venv/
+__pycache__/
+# .gitignore
+venv/
+backend/venv/
+backend/.env
+# Environment files
+backend/.env
+.env
+
+# Virtual environments
+venv/
+backend/venv/
