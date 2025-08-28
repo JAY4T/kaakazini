@@ -21,26 +21,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Test SSH connection
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_USER: ${{ secrets.REMOTE_USER }}
-          PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
-          STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            REMOTE_HOST=$PROD_HOST
-          else
-            REMOTE_HOST=$STAGING_HOST
-          fi
-
-          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "echo SSH connection works!" || exit 1
-
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -95,7 +75,11 @@ jobs:
             FRONTEND_PATH=$STAGING_FRONTEND_PATH
           fi
 
+          # Add server to known hosts
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
+
+          # Test SSH connection
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "echo SSH connection works!"
 
           # Deploy frontend using rsync with explicit key
           if [ -d build ]; then
@@ -115,27 +99,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      # Optional: Test SSH for backend as well
-      - name: Test SSH connection
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_USER: ${{ secrets.REMOTE_USER }}
-          PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
-          STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            REMOTE_HOST=$PROD_HOST
-          else
-            REMOTE_HOST=$STAGING_HOST
-          fi
-
-          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "echo SSH connection works!" || exit 1
 
       - name: Deploy backend
         env:
@@ -178,6 +141,6 @@ jobs:
             python manage.py migrate
             python manage.py collectstatic --noinput
 
-            sudo systemctl restart $SERVICE_NAME
+            systemctl restart $SERVICE_NAME
             echo "✅ Backend deployed successfully!"
           EOF
