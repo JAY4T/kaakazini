@@ -27,19 +27,31 @@ from .models import CustomUser
 from .serializers import ClientSignupSerializer, ClientLoginSerializer
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from accounts.utils import send_sms
-
+from .utils import send_sms 
 import logging
 
 logger = logging.getLogger(__name__)
 
+
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
+    
+    
+    def perform_create(self, serializer):
+        user = serializer.save()
 
+        # Format phone number to international (e.g., 07xxxxxxxx -> 2547xxxxxxxx)
+        phone = user.phone_number
+        if phone.startswith("07"):
+            phone = "254" + phone[1:]
 
+        message = f"Welcome to Kaakazini, {user.full_name}! You have successfully registered."
 
-
+        try:
+            send_sms(phone, message)
+        except Exception as e:
+            logger.error(f"Failed to send SMS to {phone}: {e}")
 
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID") or '551247510793-ria1stm1obcn36nkkl2is4tknoqaj2sv.apps.googleusercontent.com'
@@ -62,9 +74,7 @@ class GoogleLoginView(APIView):
             })
         except Exception as e:
             return Response({"detail": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
+        
 
 
 class EmailBackend(ModelBackend):
@@ -157,7 +167,6 @@ class ClientSignupView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = ClientSignupSerializer
     permission_classes = [AllowAny]  # ✅ Add this
-
 
 
 
