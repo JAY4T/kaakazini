@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Cache Node modules
         uses: actions/cache@v3
@@ -31,12 +31,12 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm install
 
       - name: Set environment and build React app
         run: |
           echo "Branch: ${{ github.ref }}"
-          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_PROD_API_URL }}" > .env
             echo "Building for production"
           else
@@ -59,7 +59,7 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             REMOTE_HOST=$PROD_HOST
             FRONTEND_PATH=$PROD_FRONTEND_PATH
           else
@@ -95,7 +95,7 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             REMOTE_HOST=$PROD_HOST
             BACKEND_PATH=$PROD_BACKEND_PATH
             SERVICE_NAME="kaakazini-backend"
@@ -109,7 +109,6 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
             echo "Deploying backend to $BACKEND_PATH on $REMOTE_HOST..."
-            
             rsync -avz --exclude='.git' --delete ./ $BACKEND_PATH
             cd $BACKEND_PATH
 
