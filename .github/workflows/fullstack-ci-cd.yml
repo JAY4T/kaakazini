@@ -63,10 +63,16 @@ jobs:
           PROD_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_PROD }}
           STAGING_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_STAGING }}
         run: |
+          # Create .ssh directory and known_hosts file
           mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          # Add private key
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+          # Set remote host and path
           if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             REMOTE_HOST=$PROD_HOST
             FRONTEND_PATH=$PROD_FRONTEND_PATH
@@ -75,14 +81,14 @@ jobs:
             FRONTEND_PATH=$STAGING_FRONTEND_PATH
           fi
 
-          # Add host to known_hosts safely
+          # Add host fingerprint
           ssh-keygen -R $REMOTE_HOST || true
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
 
           # Test SSH connection
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "echo SSH connection works!"
 
-          # Deploy frontend using rsync
+          # Deploy frontend
           if [ -d build ]; then
             rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
               --exclude='.git' --exclude='node_modules' --delete build/ \
@@ -112,10 +118,16 @@ jobs:
           PROD_BACKEND_PATH: ${{ secrets.BACKEND_PATH_PROD }}
           STAGING_BACKEND_PATH: ${{ secrets.BACKEND_PATH_STAGING }}
         run: |
+          # Create .ssh directory and known_hosts file
           mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          # Add private key
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+          # Set remote host, path, and service
           if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             REMOTE_HOST=$PROD_HOST
             BACKEND_PATH=$PROD_BACKEND_PATH
@@ -126,17 +138,18 @@ jobs:
             SERVICE_NAME="kaakazini-backend-staging"
           fi
 
+          # Add host fingerprint
           ssh-keygen -R $REMOTE_HOST || true
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
 
+          # Deploy backend via SSH
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
-            set -e  # exit on any error
+            set -e
             echo "Deploying backend to $BACKEND_PATH on $REMOTE_HOST..."
 
             rsync -avz --exclude='.git' --delete ./ $BACKEND_PATH
             cd $BACKEND_PATH
 
-            # Create virtualenv if not exists
             if [ ! -d "venv" ]; then
               python3 -m venv venv
             fi
