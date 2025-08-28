@@ -34,3 +34,6 @@ __pycache__/
 *.env.*
 node_modules/
 venv/
+.env.production
+node_modules/
+venv/

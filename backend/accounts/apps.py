@@ -2,8 +2,12 @@
 from django.apps import AppConfig
 
 class AccountsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'accounts'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "accounts"
+
+    def ready(self):
+        # import signals so receivers are registered
+        from . import signals  # noqa
 
     def ready(self):
         import accounts.signals  # Connect signals 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -172,6 +172,11 @@ function LoginPage() {
                       disabled={loading}
                     />
                   </div>
+                  <p className="text-center mt-2">
+  <Link to="/forgot-password" className="text-primary">
+    Forgot Password?
+  </Link>
+</p>
 
                   {error && <div className="alert alert-danger">{error}</div>}
 

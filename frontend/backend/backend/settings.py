@@ -1,4 +1,6 @@
 import os
+from decouple import config
+
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -16,12 +18,19 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
 
 CSRF_TRUSTED_ORIGINS = [
     'https://staging.kaakazini.com',
+    'https://kaakazini.com',
+    'https://www.kaakazini.com',
+
 ]
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     'https://staging.kaakazini.com',
+    'https://kaakazini.com',
+    'https://www.kaakazini.com',
+
+
 ]
 CORS_ALLOW_HEADERS = list(default_headers) + ['authorization']
 
@@ -61,6 +70,8 @@ INSTALLED_APPS = [
     # Local apps
     'api',
     'accounts',
+    "django_rest_passwordreset",     # password reset package
+
 ]
 
 # Middleware
@@ -117,13 +128,18 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        
 
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {
+        "password_reset": "3/hour",
+        "password_reset_confirm": "10/hour",
 }
-
+}
 # JWT settings
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
@@ -161,3 +177,8 @@ CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = 'DENY'
 
 
+
+BREVO_API_KEY = config("BREVO_API_KEY", default="")
+BREVO_SENDER_EMAIL = config("BREVO_SENDER_EMAIL", default="kaakazini.jay4t@gmail.com")
+BREVO_SENDER_NAME = config("BREVO_SENDER_NAME", default="Kaakazini")
+FRONTEND_RESET_URL = config("FRONTEND_RESET_URL", default="https://kaakazini.com/password-reset")
