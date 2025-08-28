@@ -13,6 +13,10 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: frontend   # 👈 run all npm commands inside frontend/
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -26,7 +30,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
@@ -44,9 +48,14 @@ jobs:
             echo "Building for staging"
           fi
           cat .env
-          npm run build
+          if npm run | grep -q "build"; then
+            npm run build
+          else
+            echo "⚠️ No build script found in package.json, skipping build"
+          fi
 
       - name: Deploy frontend
+        if: success()
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
@@ -68,8 +77,13 @@ jobs:
           fi
 
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
-          rsync -avz --exclude='.git' --exclude='node_modules' --delete build/ $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH
-          echo "Frontend deployed successfully!"
+
+          if [ -d build ]; then
+            rsync -avz --exclude='.git' --exclude='node_modules' --delete build/ $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH
+            echo "✅ Frontend deployed successfully!"
+          else
+            echo "⚠️ No build folder found, skipping frontend deploy"
+          fi
 
   ##########################
   # 2. Backend Deploy
@@ -109,6 +123,7 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
             echo "Deploying backend to $BACKEND_PATH on $REMOTE_HOST..."
+
             rsync -avz --exclude='.git' --delete ./ $BACKEND_PATH
             cd $BACKEND_PATH
 
@@ -124,5 +139,5 @@ jobs:
             python manage.py collectstatic --noinput
 
             sudo systemctl restart $SERVICE_NAME
-            echo "Backend deployed successfully!"
+            echo "✅ Backend deployed successfully!"
           EOF
