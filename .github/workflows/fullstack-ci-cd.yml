@@ -15,7 +15,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: frontend  # make sure package.json is here
+        working-directory: frontend
 
     steps:
       - name: Checkout repository
@@ -55,7 +55,6 @@ jobs:
           fi
 
       - name: Deploy frontend
-        if: success()
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
@@ -76,10 +75,15 @@ jobs:
             FRONTEND_PATH=$STAGING_FRONTEND_PATH
           fi
 
+          # Add server to known hosts
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
 
+          # Test SSH connection
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "echo SSH connection works!"
+
+          # Deploy frontend using rsync with explicit key
           if [ -d build ]; then
-            rsync -avz --exclude='.git' --exclude='node_modules' --delete build/ $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH
+            rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" --exclude='.git' --exclude='node_modules' --delete build/ $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH
             echo "✅ Frontend deployed successfully!"
           else
             echo "⚠️ No build folder found, skipping frontend deploy"
@@ -121,7 +125,7 @@ jobs:
 
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
 
-          ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
             echo "Deploying backend to $BACKEND_PATH on $REMOTE_HOST..."
             rsync -avz --exclude='.git' --delete ./ $BACKEND_PATH
             cd $BACKEND_PATH
