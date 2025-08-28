@@ -15,7 +15,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: frontend   # 👈 run all npm commands inside frontend/
+        working-directory: frontend  # make sure package.json is here
 
     steps:
       - name: Checkout repository
@@ -35,7 +35,7 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Set environment and build React app
         run: |
@@ -51,7 +51,7 @@ jobs:
           if npm run | grep -q "build"; then
             npm run build
           else
-            echo "⚠️ No build script found in package.json, skipping build"
+            echo "⚠️ No build script found, skipping build"
           fi
 
       - name: Deploy frontend
@@ -123,7 +123,6 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
             echo "Deploying backend to $BACKEND_PATH on $REMOTE_HOST..."
-
             rsync -avz --exclude='.git' --delete ./ $BACKEND_PATH
             cd $BACKEND_PATH
 
