@@ -14,12 +14,13 @@ from rest_framework.generics import RetrieveAPIView
 from .models import Service
 from .serializers import ServiceSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated # type: ignore
 # from .models import JobRequest
 # from .serializers import ClientSerializer, JobRequestSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import ContactMessage
 from .serializers import ContactMessageSerializer
+from rest_framework import filters # type: ignore
 
 
 
@@ -159,9 +160,10 @@ class AdminProductRejectView(APIView):
 class PublicCraftsmanListView(generics.ListAPIView):
     queryset = Craftsman.objects.filter(is_approved=True)
     serializer_class = CraftsmanSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ['full_name']
-    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend]  
+    filterset_fields = ['profession']        
+    permission_classes = [AllowAny]
+
 
 
 

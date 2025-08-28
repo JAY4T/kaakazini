@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from corsheaders.defaults import default_headers
+from decouple import config
+
 
 from datetime import timedelta
 
@@ -24,10 +26,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7@1j^kcpk_$b#*_pg#5290hk44gfw^rw%ha6uo7=up94ekbxto'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = config("SECRET_KEY")
+DEBUG = config("DEBUG", cast=bool)
 
 ALLOWED_HOSTS = []
 
@@ -58,7 +58,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
 
     'api', 
-    'accounts',
+    'accounts.apps.AccountsConfig',
     # 'clients',
     'corsheaders',
     'djoser',
@@ -66,6 +66,11 @@ INSTALLED_APPS = [
     
 
 ]
+
+UJUMBE_API_KEY = config("UJUMBE_API_KEY")
+UJUMBE_EMAIL = config("UJUMBE_EMAIL")
+UJUMBE_SENDER_ID = config("UJUMBE_SENDER_ID", default="UJUMBESMS")
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -107,14 +112,13 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'kakaazini',
-        'USER': 'kakaadmin',
-        'PASSWORD': 'kazikazi',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': config("DB_NAME"),
+        'USER': config("DB_USER"),
+        'PASSWORD': config("DB_PASSWORD"),
+        'HOST': config("DB_HOST"),
+        'PORT': config("DB_PORT"),
     }
 }
-
 
 
 
@@ -128,6 +132,10 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+
+
 
     ),
     'DEFAULT_PERMISSION_CLASSES': (

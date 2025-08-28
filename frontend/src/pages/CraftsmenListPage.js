@@ -18,7 +18,8 @@ authAxios.interceptors.request.use((config) => {
 
 function CraftsmenList() {
   const [craftsmen, setCraftsmen] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [professionFilter, setProfessionFilter] = useState('');
+  const [availableProfessions, setAvailableProfessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -30,12 +31,17 @@ function CraftsmenList() {
       const response = await axios.get(`${API_BASE_URL}/public-craftsman/`, {
         params: {
           is_approved: true,
-          search: searchTerm,
+          profession: professionFilter,
         },
       });
 
       const data = response.data;
-      setCraftsmen(Array.isArray(data) ? data : data.results || []);
+      const results = Array.isArray(data) ? data : data.results || [];
+      setCraftsmen(results);
+
+      // Extract professions dynamically for the filter dropdown
+      const professions = Array.from(new Set(results.map((c) => c.profession).filter(Boolean)));
+      setAvailableProfessions(professions);
     } catch (err) {
       console.error('Fetch Error:', err);
       setError('Failed to load craftsmen. Please try again later.');
@@ -45,8 +51,8 @@ function CraftsmenList() {
   };
 
   useEffect(() => {
-    fetchCraftsmen();
-  }, [searchTerm]);
+  fetchCraftsmen();
+}, [professionFilter]);  
 
   return (
     <div className="container-fluid">
@@ -57,17 +63,26 @@ function CraftsmenList() {
         {/* Sidebar Filter */}
         <div className="col-md-3 mb-4">
           <div className="card p-3 shadow-sm">
-            <h5 className="mb-3">Search</h5>
-            <div className="form-group mb-3">
-              <label htmlFor="search">Search by Name</label>
-              <input
-                id="search"
-                type="text"
-                className="form-control"
-                placeholder="Enter name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <h5 className="mb-3">Filters</h5>
+
+            
+
+            {/* Filter by profession */}
+            <div className="form-group">
+              <label htmlFor="profession">Profession</label>
+              <select
+                id="profession"
+                className="form-select"
+                value={professionFilter}
+                onChange={(e) => setProfessionFilter(e.target.value)}
+              >
+                <option value="">All</option>
+                {availableProfessions.map((prof, index) => (
+                  <option key={index} value={prof}>
+                    {prof}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -118,7 +133,7 @@ function CraftsmenList() {
                         </p>
                       )}
                       <Link to={`/craftsman/${craftsman.id}`} className="btn btn-primary">
-                        View portfolio
+                        View Portfolio
                       </Link>
                     </div>
                   </div>

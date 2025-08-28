@@ -15,9 +15,23 @@ from django.contrib.auth.backends import ModelBackend
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .serializers import UserProfileSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
+from .serializers import ClientLoginSerializer
 
+from rest_framework import generics, status
+from rest_framework.response import Response
+from .models import CustomUser
+from .serializers import ClientSignupSerializer, ClientLoginSerializer
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+from accounts.utils import send_sms
 
+import logging
 
+logger = logging.getLogger(__name__)
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
@@ -26,7 +40,9 @@ class RegisterView(generics.CreateAPIView):
 
 
 
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID") or '551247510793-ria1stm1obcn36nkkl2is4tknoqaj2sv.apps.googleusercontent.com',
+
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID") or '551247510793-ria1stm1obcn36nkkl2is4tknoqaj2sv.apps.googleusercontent.com'
 
 class GoogleLoginView(APIView):
     permission_classes = [AllowAny]
@@ -46,7 +62,8 @@ class GoogleLoginView(APIView):
             })
         except Exception as e:
             return Response({"detail": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+
 
 
 
@@ -87,7 +104,7 @@ class AdminLoginAPIView(APIView):
             })
 
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
-    
+
 
 
 class ProfileView(APIView):
@@ -97,7 +114,7 @@ class ProfileView(APIView):
         user = request.user
         serializer = UserProfileSerializer(user)
         return Response(serializer.data)
-    
+
 
 
 class LoginAPIView(APIView):
@@ -132,12 +149,7 @@ class ProfileView(APIView):
 
 
 
-from rest_framework import generics, status
-from rest_framework.response import Response
-from .models import CustomUser
-from .serializers import ClientSignupSerializer, ClientLoginSerializer
-from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
+
 
 
 
@@ -148,12 +160,6 @@ class ClientSignupView(generics.CreateAPIView):
 
 
 
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClientLoginSerializer
 
 class ClientLoginView(APIView):
     permission_classes = [AllowAny]

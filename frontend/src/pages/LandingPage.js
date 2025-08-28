@@ -324,7 +324,7 @@ function LandingPage() {
             <div className="col-md-4 mb-4">
               <h5 className="text-uppercase fw-bold">Contact Us</h5>
               <p><i className="fas fa-map-marker-alt me-2 text-primary"></i> Kisumu, Kenya</p>
-              <p><i className="fas fa-envelope me-2 text-primary"></i> support@kaakazini.com</p>
+              <p><i className="fas fa-envelope me-2 text-primary"></i> kaakazini.jay4t@gmail.com</p>
               {/* <p><i className="fas fa-phone me-2 text-primary"></i> +254 716 293 710</p> */}
             </div>
             <div className="col-md-5 mb-4">
