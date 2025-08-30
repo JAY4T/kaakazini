@@ -40,10 +40,13 @@ function LandingPage() {
       {/* Hero Section */}
       <section className="text-center d-flex align-items-center"
         style={{
-          background: `url(${heroImage}) no-repeat center center/cover`,
-          height: '70vh',
+          // background: `url(${heroImage}) no-repeat center center/cover`,
+          background: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${heroImage}) no-repeat center center/cover`,
+          height: '100vh',
           color: 'white',
         }}>
+
+
         <div className="container">
           <h1 className="display-4 fw-bold moving-text" style={{ animation: 'slide 5s infinite alternate' }}>
             Empowering Local Craftsmen
