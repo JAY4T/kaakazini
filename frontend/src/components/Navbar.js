@@ -1,14 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import logo from '../assets/kazini.png'; // <-- import your logo
 
 function Navbar({ cart }) {
   // Calculate the total number of items in the cart
   const totalItems = Object.values(cart || {}).reduce((total, quantity) => total + quantity, 0);
+  
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm sticky-top">
-      <div className="container">
+  // <nav className="navbar navbar-expand-lg navbar-dark bg-transparent position-absolute w-100">
+  <nav
+      className={`navbar navbar-expand-lg fixed-top ${
+        scrolled ? "bg-dark navbar-dark shadow-sm" : "bg-transparent navbar-dark"
+      }`}
+      style={{ transition: "background-color 0.3s ease" }}
+  >
+    <div className="container">
         <Link className="navbar-brand d-flex align-items-center" to="/">
           <img
             src={logo}

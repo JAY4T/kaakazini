@@ -47,7 +47,7 @@ function LandingPage() {
         }}>
 
 
-        <div className="container">
+        <div className="container" style={{ paddingTop: "120px" }}>
           <h1 className="display-4 fw-bold moving-text" style={{ animation: 'slide 5s infinite alternate' }}>
             Empowering Local Craftsmen
           </h1>

@@ -86,23 +86,9 @@ function App() {
         <Route path="/HireSignup" element={<HireSignup />} />
         <Route path="/HireLogin" element={<HireLogin />} />
 
-
-
         <Route path="/admin-login" element={<AdminLoginPage />} />
         <Route path="/hire" element={<HireCraftsmanPage />} />
         <Route path="/services" element={<ServicesPage />} />
-
-
-
-
-
-        
-
-
-        
-
-      
-        
 
       </Routes>
     </Router>
