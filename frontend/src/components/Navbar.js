@@ -24,7 +24,7 @@ function Navbar({ cart }) {
   // <nav className="navbar navbar-expand-lg navbar-dark bg-transparent position-absolute w-100">
   <nav
       className={`navbar navbar-expand-lg fixed-top ${
-        scrolled ? "bg-dark navbar-dark shadow-sm" : "bg-transparent navbar-dark"
+        scrolled ? "bg-light navbar-dark shadow-sm" : "bg-transparent navbar-dark"
       }`}
       style={{ transition: "background-color 0.3s ease" }}
   >
@@ -52,26 +52,26 @@ function Navbar({ cart }) {
         </button>
 
         <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav ms-auto d-flex align-items-center">
+          <ul className="navbar-nav mx-auto d-flex align-items-center">
             <li className="nav-item">
-            <Link className="nav-link" to="/craftsmen">Craftsmen</Link>
+            <Link className={`nav-link ${scrolled ? "text-dark" : "text-white"}`} to="/craftsmen">Craftsmen</Link>
            </li>
            <li className="nav-item">
-           <Link className="nav-link" to="/services">Services</Link>
+           <Link className={`nav-link ${scrolled ? "text-dark" : "text-white"}`}  to="/services">Services</Link>
            </li>
             <li className="nav-item">
-               <Link className="nav-link" to="/admin-login">Admin</Link> 
+               <Link className={`nav-link ${scrolled ? "text-dark" : "text-white"}`}  to="/admin-login">Admin</Link> 
             </li>
 
+            {/* <li className="nav-item">
+               <Link className="nav-link" to="/plans & Pricing ">Plans & Pricing</Link>
+            </li> */}
             <li className="nav-item">
-              {/* <Link className="nav-link" to="/plans & Pricing ">Plans & Pricing</Link> */}
+              <Link className={`nav-link ${scrolled ? "text-dark" : "text-white"}`}  to="/login">Login</Link>
             </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/login">Login</Link>
-            </li>
-            <li className="nav-item">
+            {/* <li className="nav-item">
               <Link className="btn btn-primary ms-2" to="/signup">Join Now</Link>
-            </li>
+            </li> */}
 
             
             {/* <li className="nav-item ms-3">
@@ -80,6 +80,9 @@ function Navbar({ cart }) {
               </Link>
             </li> */}
           </ul>
+           <li className="nav-item">
+              <Link className="btn btn-primary ms-2" to="/signup">Join Now</Link>
+            </li>
         </div>
       </div>
     </nav>
