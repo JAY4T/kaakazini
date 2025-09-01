@@ -53,20 +53,20 @@ function Navbar({ cart }) {
 
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav mx-auto d-flex align-items-center">
-            <li className="nav-item">
+            <li className="nav-item mx-4">
             <Link className={`nav-link ${scrolled ? "text-dark" : "text-white"}`} to="/craftsmen">Craftsmen</Link>
            </li>
-           <li className="nav-item">
+           <li className="nav-item mx-4">
            <Link className={`nav-link ${scrolled ? "text-dark" : "text-white"}`}  to="/services">Services</Link>
            </li>
-            <li className="nav-item">
+            <li className="nav-item mx-4">
                <Link className={`nav-link ${scrolled ? "text-dark" : "text-white"}`}  to="/admin-login">Admin</Link> 
             </li>
 
             {/* <li className="nav-item">
                <Link className="nav-link" to="/plans & Pricing ">Plans & Pricing</Link>
             </li> */}
-            <li className="nav-item">
+            <li className="nav-item mx-4">
               <Link className={`nav-link ${scrolled ? "text-dark" : "text-white"}`}  to="/login">Login</Link>
             </li>
             {/* <li className="nav-item">
@@ -81,7 +81,11 @@ function Navbar({ cart }) {
             </li> */}
           </ul>
            <li className="nav-item">
-              <Link className="btn btn-primary ms-2" to="/signup">Join Now</Link>
+              <Link className="btn ms-2 rounded-pill" style={{ 
+                backgroundColor: "#28a745",  
+                borderColor: "#28a745",      
+                color: "white"               
+              }}to="/signup">Join Now</Link>
             </li>
         </div>
       </div>

@@ -36,3 +36,15 @@
     transform: rotate(360deg);
   }
 }
+
+.btn-green {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: white;
+  transition: background-color 0.2s ease; /* smooth hover */
+}
+
+.btn-green:hover {
+  background-color: #218838; /* darker green on hover */
+  border-color: #1e7e34;
+}
