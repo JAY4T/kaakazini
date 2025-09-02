@@ -5,58 +5,63 @@ Kaakazini is a full-stack web platform built with React.js (frontend) and Django
 
 Backend (Django)
 
-Clone the backend repo:
-
-
+1. Clone the backend repo:
+```bash
 git clone https://github.com/JAY4T/kaakazini/backend.git
+```
 
+2. Navigate to the backend directory:
+```bash
 cd kaakazini/backend
-Set up virtual environment:
+```
 
-
+3. Set up and activate virtual environment:
+```bash
 python3 -m venv venv
-
 source venv/bin/activate
-
+```
+4. Install requirements:
+```bash
 pip install -r requirements.txt
+``` 
 
-Configure environment variables (optional):
+5. Configure environment variables (optional):
+- Use the structure presented in .env.example to create your .env file and replace the placeholders with actual variables
 
-Run migrations and create superuser:
+6. Run migrations and create superuser:
+```bash
+python3 manage.py migrate
+python3 manage.py createsuperuser
 
-
-python manage.py migrate
-
-python manage.py createsuperuser
-
-Start development server:
-
-
+```
+7. Start development server:
+```bash
 python manage.py runserver
+```
 
 # Frontend (React)
 
-Clone the frontend repo:
-
-
+1. Clone the frontend repo:
+```bash
 git clone https://github.com/JAY4T/kaakazini/frontend.git
-
+```
+2. Navigate to the frontend directory
+```bash
 cd kaakazini/frontend
-
-Install dependencies:
-
-
+```
+3. Install dependencies:
+```bash
 npm install
-
-Create .env file:
-
-
+```
+4. Create .env file and add this:
+```bash
 REACT_APP_API_BASE_URL=http://localhost:8000/api
-
-Start frontend:
-
-
+```
+5. Start frontend:
+```bash
 npm start
+```
+If you are using pnpm replace "npm start" with "pnpm start"
 
 # Deployment (Production)
 
