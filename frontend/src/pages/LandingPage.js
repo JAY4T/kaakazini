@@ -5,12 +5,22 @@ import heroImage from '../assets/craftOnline.jpg';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // includes Popper
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+
 
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
 function LandingPage() {
   const [approvedServices, setApprovedServices] = useState([]);
+
+   useEffect(() => {
+    AOS.init({
+      duration: 1000,  // animation duration in ms
+      once: true       // animate only once
+    });
+  }, []);
 
   useEffect(() => {
     async function fetchApprovedServices() {
@@ -105,7 +115,7 @@ function LandingPage() {
 <section className="py-5 bg-light" id="services">
   <div className="container">
     {/* Heading */}
-    <h2 className="text-center mb-3 fw-bold text-primary">
+    <h2 className="text-center mb-3 fw-bold text-primary " data-aos="fade-left">
       Explore Our Services
     </h2>
 
