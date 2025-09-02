@@ -65,22 +65,40 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* About Section */}
-      <section className="py-5 bg-light">
-        <div className="container">
-          <h2 className="text-center mb-4 fw-bold text-primary">About Us</h2>
-          <div className="row">
-            <div className="col-md-6">
-              <p>
-                We aim to empower local craftsmen by providing them with a platform to manage their projects, showcase their work, and grow their business. We believe in the power of craftsmanship to bring unique, handmade products to the world.
-              </p>
-            </div>
-            <div className="col-md-6">
-              <img src="https://www.ariseiip.com/wp-content/uploads/2022/06/textile.png" alt="About Us" className="img-fluid rounded" />
-            </div>
-          </div>
-        </div>
-      </section>
+    {/* About Section */}
+<section className="py-5 bg-light">
+  <div className="container">
+    <div className="text-center mb-5">
+      <h2 className="fw-bold text-primary display-5" style={{ animation: 'zoomFade 1.5s ease-out' }}>About Us</h2>
+      <p className="text-muted fs-5">
+        Empowering local craftsmen to grow, showcase their work, and reach the world.
+      </p>
+    </div>
+
+    <div className="row align-items-center">
+      {/* Text Column */}
+      <div className="col-lg-6 mb-4 mb-lg-0 fade-in-left">
+        <p className="fs-5 lh-lg">
+          At KaaKazini, we are passionate about supporting local craftsmen by providing a platform that helps them manage projects, showcase their unique handmade products, and grow their business. We believe in the power of craftsmanship to bring one-of-a-kind creations to the world while fostering community and opportunity.
+        </p>
+        <p className="fs-5 lh-lg">
+          From connecting with clients to managing orders seamlessly, our platform is designed to elevate the craft and empower artisans to succeed.
+        </p>
+      </div>
+
+      {/* Image Column */}
+      <div className="col-lg-6 text-center fade-in-right">
+        <img 
+          src="https://www.ariseiip.com/wp-content/uploads/2022/06/textile.png" 
+          alt="Craftsmen at Work" 
+          className="img-fluid rounded shadow-lg" 
+          style={{ maxHeight: "400px", objectFit: "cover" }}
+        />
+      </div>
+    </div>
+  </div>
+</section>
+
 
       {/*Services*/}
 
