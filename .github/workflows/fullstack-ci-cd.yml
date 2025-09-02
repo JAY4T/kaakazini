@@ -94,12 +94,15 @@ jobs:
             echo "⚠️ No build folder found, skipping frontend deploy"
           fi
 
-  ##########################
+    ##########################
   # 2. Backend Deploy
   ##########################
   backend:
     runs-on: ubuntu-latest
     needs: frontend
+    defaults:
+      run:
+        working-directory: backend
 
     steps:
       - name: Checkout repository
@@ -138,9 +141,9 @@ jobs:
 
           echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH..."
 
-          # Sync project files
+          # Sync ONLY backend folder (so requirements.txt is included)
           rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-            --exclude='.git' --exclude='node_modules' --delete ./ \
+            --exclude='.git' --exclude='__pycache__' --delete ./ \
             $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
 
           # Run remote setup commands
