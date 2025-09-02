@@ -48,10 +48,10 @@ function LandingPage() {
 
 
         <div className="container" style={{ paddingTop: "120px" }}>
-          <h1 className="display-4 fw-bold moving-text" style={{ animation: 'slide 5s infinite alternate' }}>
+          <h1 className="display-4 fw-bold moving-text" style={{ animation: 'zoomFade 1.5s ease-out' }}>
             Empowering Local Craftsmen
           </h1>
-          <p className="lead mt-3">
+          <p className="lead mt-3 typing" style={{ animation: 'fadeUp 2s ease-out' }}>
             Manage clients, showcase your work, and grow your trade — all in one platform.
           </p>
           <div className="d-flex justify-content-center gap-3 flex-wrap">
