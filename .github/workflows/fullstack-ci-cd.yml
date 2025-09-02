@@ -94,74 +94,90 @@ jobs:
             echo "⚠️ No build folder found, skipping frontend deploy"
           fi
 
-    ##########################
-  # 2. Backend Deploy
-  ##########################
-  backend:
-    runs-on: ubuntu-latest
-    needs: frontend
-    defaults:
-      run:
-        working-directory: backend
+   ##########################
+# 2. Backend Deploy
+##########################
+backend:
+  runs-on: ubuntu-latest
+  needs: frontend
+  defaults:
+    run:
+      working-directory: backend
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Deploy backend
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_USER: ${{ secrets.REMOTE_USER }}
-          PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
-          STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
-          PROD_BACKEND_PATH: ${{ secrets.BACKEND_PATH_PROD }}
-          STAGING_BACKEND_PATH: ${{ secrets.BACKEND_PATH_STAGING }}
-        run: |
-          # Setup SSH
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          touch ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+    - name: Deploy backend
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        REMOTE_USER: ${{ secrets.REMOTE_USER }}
+        PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
+        STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
+        PROD_BACKEND_PATH: ${{ secrets.BACKEND_PATH_PROD }}
+        STAGING_BACKEND_PATH: ${{ secrets.BACKEND_PATH_STAGING }}
+      run: |
+        # Setup SSH
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        touch ~/.ssh/known_hosts
+        chmod 600 ~/.ssh/known_hosts
 
-          # Set remote host, path & service
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            REMOTE_HOST=$PROD_HOST
-            BACKEND_PATH=$PROD_BACKEND_PATH
-            SERVICE_NAME="kaakazini-backend"
-          else
-            REMOTE_HOST=$STAGING_HOST
-            BACKEND_PATH=$STAGING_BACKEND_PATH
-            SERVICE_NAME="kaakazini-backend-staging"
+        # Set remote host, path & service
+        if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+          REMOTE_HOST=$PROD_HOST
+          BACKEND_PATH=$PROD_BACKEND_PATH
+          SERVICE_NAME="kaakazini-backend"
+        else
+          REMOTE_HOST=$STAGING_HOST
+          BACKEND_PATH=$STAGING_BACKEND_PATH
+          SERVICE_NAME="kaakazini-backend-staging"
+        fi
+
+        # Add host fingerprint
+        ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+        echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH..."
+
+        # Sync ONLY backend folder
+        rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+          --exclude='.git' --exclude='__pycache__' --delete ./ \
+          $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
+
+        # Run remote setup commands
+        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << 'EOF'
+          set -e
+          cd $BACKEND_PATH
+
+          # Ensure correct owner for venv
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
           fi
 
-          # Add host fingerprint
-          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts 2>/dev/null
-
-          echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH..."
-
-          # Sync ONLY backend folder (so requirements.txt is included)
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-            --exclude='.git' --exclude='__pycache__' --delete ./ \
-            $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
-
-          # Run remote setup commands
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
-            set -e
-            cd $BACKEND_PATH
-
-            if [ ! -d "venv" ]; then
-              python3 -m venv venv
-            fi
+          # Activate venv
+          if [ -f "venv/bin/activate" ]; then
             source venv/bin/activate
+          else
+            echo "⚠️ venv/bin/activate not found, exiting"
+            exit 1
+          fi
 
-            pip install --upgrade pip
+          # Upgrade pip & install requirements
+          pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
             pip install -r requirements.txt
+          else
+            echo "⚠️ requirements.txt not found, exiting"
+            exit 1
+          fi
 
-            python manage.py migrate
-            python manage.py collectstatic --noinput
+          # Django migrations and collectstatic
+          python manage.py migrate --noinput
+          python manage.py collectstatic --noinput
 
-            sudo systemctl restart $SERVICE_NAME
-            echo "✅ Backend deployed successfully!"
-          EOF
+          # Restart service
+          sudo systemctl restart $SERVICE_NAME
+          echo "✅ Backend deployed successfully!"
+        EOF
