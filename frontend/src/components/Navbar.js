@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
-import logo from '../assets/kazini.png'; // <-- import your logo
+import logo from '../assets/kazini.png';
+import '../index.css';
 
 function Navbar({ cart }) {
   // Calculate the total number of items in the cart
@@ -80,12 +81,9 @@ function Navbar({ cart }) {
               </Link>
             </li> */}
           </ul>
-           <li className="nav-item">
-              <Link className="btn ms-2 rounded-pill" style={{ 
-                backgroundColor: "#28a745",  
-                borderColor: "#28a745",      
-                color: "white"               
-              }}to="/signup">Join Now</Link>
+
+             <li className="nav-item">
+              <Link  className={`btn btn-green-transparent ms-2 rounded-pill ${scrolled ? "btn-green-scrolled" : ""}`}  to="/signup" >Join Now</Link>
             </li>
         </div>
       </div>

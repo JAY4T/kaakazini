@@ -55,20 +55,10 @@ function LandingPage() {
             Manage clients, showcase your work, and grow your trade — all in one platform.
           </p>
           <div className="d-flex justify-content-center gap-3 flex-wrap">
-            <Link to="/signup" className="btn btn-lg mt-4 fw-bold"
-             style={{ 
-              backgroundColor: "#28a745", 
-              borderColor: "#28a745",      
-              color: "white"               
-            }}>
+            <Link to="/signup" className="btn btn-green-transparent btn-lg mt-4 fw-bold">  
               Join as a Craftsman
             </Link>
-            <Link to="/HireSignUp" className="btn btn-lg mt-4 fw-bold" 
-              style={{ 
-                backgroundColor: "#28a745",  // green
-                borderColor: "#28a745",      // match border
-                color: "white"               // text color
-              }}>
+            <Link to="/HireSignUp" className="btn btn-green-solid btn-lg mt-4 fw-bold">
               Hire a Craftsman
             </Link>
           </div>
