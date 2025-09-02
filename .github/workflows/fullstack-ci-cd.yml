@@ -63,16 +63,15 @@ jobs:
           PROD_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_PROD }}
           STAGING_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_STAGING }}
         run: |
-          # Create .ssh directory and known_hosts file
+          # Setup SSH
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-          # Add private key
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          # Set remote host and path
+          # Set remote host & path
           if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             REMOTE_HOST=$PROD_HOST
             FRONTEND_PATH=$PROD_FRONTEND_PATH
@@ -82,13 +81,10 @@ jobs:
           fi
 
           # Add host fingerprint
-          ssh-keygen -R $REMOTE_HOST || true
-          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
+          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts 2>/dev/null
 
-          # Test SSH connection
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "echo SSH connection works!"
+          echo "🚀 Deploying frontend to $REMOTE_HOST:$FRONTEND_PATH..."
 
-          # Deploy frontend
           if [ -d build ]; then
             rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
               --exclude='.git' --exclude='node_modules' --delete build/ \
@@ -118,16 +114,15 @@ jobs:
           PROD_BACKEND_PATH: ${{ secrets.BACKEND_PATH_PROD }}
           STAGING_BACKEND_PATH: ${{ secrets.BACKEND_PATH_STAGING }}
         run: |
-          # Create .ssh directory and known_hosts file
+          # Setup SSH
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-          # Add private key
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          # Set remote host, path, and service
+          # Set remote host, path & service
           if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             REMOTE_HOST=$PROD_HOST
             BACKEND_PATH=$PROD_BACKEND_PATH
@@ -139,15 +134,18 @@ jobs:
           fi
 
           # Add host fingerprint
-          ssh-keygen -R $REMOTE_HOST || true
-          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
+          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts 2>/dev/null
 
-          # Deploy backend via SSH
+          echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH..."
+
+          # Sync project files
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            --exclude='.git' --exclude='node_modules' --delete ./ \
+            $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
+
+          # Run remote setup commands
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
             set -e
-            echo "Deploying backend to $BACKEND_PATH on $REMOTE_HOST..."
-
-            rsync -avz --exclude='.git' --delete ./ $BACKEND_PATH
             cd $BACKEND_PATH
 
             if [ ! -d "venv" ]; then
@@ -161,6 +159,6 @@ jobs:
             python manage.py migrate
             python manage.py collectstatic --noinput
 
-            systemctl restart $SERVICE_NAME
+            sudo systemctl restart $SERVICE_NAME
             echo "✅ Backend deployed successfully!"
           EOF
