@@ -147,11 +147,11 @@ backend:
           $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
 
         # Run remote setup commands
-        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
+        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << 'EOF'
           set -e
           cd $BACKEND_PATH
 
-          # Ensure Python3, venv and pip are installed
+          # Ensure Python3, venv, and pip are installed
           if ! command -v python3 >/dev/null 2>&1; then
             echo "Python3 not found. Installing..."
             sudo apt update
@@ -168,18 +168,34 @@ backend:
             sudo apt install -y python3-pip
           fi
 
-          # Remove old venv if it exists (broken or wrong permissions)
-          rm -rf venv
+          # Activate or create virtual environment
+          if [ -d "venv" ]; then
+              echo "Activating existing virtual environment..."
+          else
+              echo "Creating new virtual environment..."
+              python3 -m venv venv
+          fi
 
-          # Create fresh virtual environment
-          python3 -m venv venv
-
-          # Activate virtual environment
           source venv/bin/activate
 
-          # Upgrade pip and install dependencies
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          # Only install dependencies if requirements.txt changed
+          REQUIREMENTS_HASH_FILE=".requirements_hash"
+          NEW_HASH=$(sha256sum requirements.txt | awk '{print $1}')
+
+          if [ -f "$REQUIREMENTS_HASH_FILE" ]; then
+              OLD_HASH=$(cat $REQUIREMENTS_HASH_FILE)
+          else
+              OLD_HASH=""
+          fi
+
+          if [ "$NEW_HASH" != "$OLD_HASH" ]; then
+              echo "Requirements changed, installing dependencies..."
+              pip install --upgrade pip
+              pip install -r requirements.txt
+              echo "$NEW_HASH" > $REQUIREMENTS_HASH_FILE
+          else
+              echo "No changes in requirements.txt, skipping pip install"
+          fi
 
           # Run Django migrations & collect static files
           python manage.py migrate
