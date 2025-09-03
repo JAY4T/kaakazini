@@ -110,11 +110,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'kakaazini_staging'),
-        'USER': os.getenv('POSTGRES_USER', 'kakaadmin_staging'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'kazikazi'),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'NAME': config('DB_NAME', default='kakaazini_staging'),
+        'USER': config('DB_USER', default='kakaadmin_staging'),
+        'PASSWORD': config('DB_PASSWORD', default='kazikazi'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
