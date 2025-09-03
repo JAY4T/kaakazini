@@ -1,4 +1,3 @@
-import os
 from decouple import config
 
 from pathlib import Path
@@ -12,9 +11,9 @@ load_dotenv()  # Load environment variables from .env file
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-for-dev')
-DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
+SECRET_KEY = config('DJANGO_SECRET_KEY', 'fallback-secret-for-dev')
+DEBUG = config('DJANGO_DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
 
 CSRF_TRUSTED_ORIGINS = [
     'https://staging.kaakazini.com',
@@ -116,11 +115,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DB', default='kakaazini_staging'),
-        'USER': config('POSTGRES_USER', default='kakaadmin_staging'),
-        'PASSWORD': config('POSTGRES_PASSWORD', default='kazikazi'),
-        'HOST': config('POSTGRES_HOST', default='localhost'),
-        'PORT': config('POSTGRES_PORT', default='5432'),
+        'NAME': config('DB_NAME', default='kakaazini_staging'),
+        'USER': config('DB_USER', default='kakaadmin_staging'),
+        'PASSWORD': config('DB_PASSWORD', default='kazikazi'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
