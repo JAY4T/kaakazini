@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+  workflow_dispatch:   # allow manual trigger from Actions tab
 
 jobs:
   ##########################
@@ -125,7 +126,7 @@ backend:
 
     - name: Run Django pre-deploy check
       env:
-        DJANGO_SETTINGS_MODULE: backend.settings   # 👈 update if your settings path differs
+        DJANGO_SETTINGS_MODULE: backend.settings   # 👈 adjust if settings path differs
       run: |
         echo "⚙️ Running Django system checks..."
         python manage.py check --deploy
@@ -165,7 +166,7 @@ backend:
           $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
 
         # Run remote setup + migrations + restart
-        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << 'EOF'
+        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
           cd $BACKEND_PATH
 
           # Ensure venv exists
