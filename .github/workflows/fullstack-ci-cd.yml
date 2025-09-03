@@ -128,6 +128,9 @@ jobs:
       - name: Run Django pre-deploy check
         env:
           DJANGO_SETTINGS_MODULE: backend.settings   # 👈 adjust if settings path differs
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DEBUG: "True"
+          ALLOWED_HOSTS: "staging.kaakazini.com,127.0.0.1,localhost"
         run: |
           echo "⚙️ Running Django system checks..."
           python manage.py check --deploy
