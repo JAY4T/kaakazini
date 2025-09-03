@@ -67,9 +67,7 @@ INSTALLED_APPS = [
 
 ]
 
-UJUMBE_API_KEY = config("UJUMBE_API_KEY")
-UJUMBE_EMAIL = config("UJUMBE_EMAIL")
-UJUMBE_SENDER_ID = config("UJUMBE_SENDER_ID", default="UJUMBESMS")
+
 
 
 MIDDLEWARE = [
@@ -112,15 +110,13 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config("DB_NAME"),
-        'USER': config("DB_USER"),
-        'PASSWORD': config("DB_PASSWORD"),
-        'HOST': config("DB_HOST"),
-        'PORT': config("DB_PORT"),
+        'NAME': os.getenv('POSTGRES_DB', 'kakaazini_staging'),
+        'USER': os.getenv('POSTGRES_USER', 'kakaadmin_staging'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'kazikazi'),
+        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
-
-
 
 
 AUTHENTICATION_BACKENDS = [
