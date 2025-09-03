@@ -141,60 +141,54 @@ backend:
 
         echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH..."
 
-        # Sync ONLY backend folder (so requirements.txt is included)
+        # Sync backend files
         rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-          --exclude='.git' --exclude='__pycache__' --delete ./ \
+          --exclude='.git' --exclude='__pycache__' ./ \
           $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
 
-        # Run remote setup commands
+        # Remote setup
         ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << 'EOF'
           set -e
           cd $BACKEND_PATH
 
           # Ensure Python3, venv, and pip are installed
           if ! command -v python3 >/dev/null 2>&1; then
-            echo "Python3 not found. Installing..."
+            echo "Installing Python3..."
             sudo apt update
             sudo apt install -y python3
           fi
-
           if ! python3 -m venv --help >/dev/null 2>&1; then
-            echo "python3-venv not found. Installing..."
+            echo "Installing python3-venv..."
             sudo apt install -y python3-venv
           fi
-
           if ! command -v pip3 >/dev/null 2>&1; then
-            echo "pip3 not found. Installing..."
+            echo "Installing pip3..."
             sudo apt install -y python3-pip
           fi
 
-          # Activate or create virtual environment
-          if [ -d "venv" ]; then
-              echo "Activating existing virtual environment..."
-          else
-              echo "Creating new virtual environment..."
-              python3 -m venv venv
+          # Create venv if missing, otherwise reuse
+          if [ ! -d "venv" ]; then
+            echo "Creating virtual environment..."
+            python3 -m venv venv
           fi
 
+          # Activate virtual environment
           source venv/bin/activate
 
-          # Only install dependencies if requirements.txt changed
+          # Upgrade pip and install dependencies if requirements changed
           REQUIREMENTS_HASH_FILE=".requirements_hash"
           NEW_HASH=$(sha256sum requirements.txt | awk '{print $1}')
-
+          OLD_HASH=""
           if [ -f "$REQUIREMENTS_HASH_FILE" ]; then
-              OLD_HASH=$(cat $REQUIREMENTS_HASH_FILE)
-          else
-              OLD_HASH=""
+            OLD_HASH=$(cat $REQUIREMENTS_HASH_FILE)
           fi
-
           if [ "$NEW_HASH" != "$OLD_HASH" ]; then
-              echo "Requirements changed, installing dependencies..."
-              pip install --upgrade pip
-              pip install -r requirements.txt
-              echo "$NEW_HASH" > $REQUIREMENTS_HASH_FILE
+            echo "Installing/updating Python dependencies..."
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            echo "$NEW_HASH" > $REQUIREMENTS_HASH_FILE
           else
-              echo "No changes in requirements.txt, skipping pip install"
+            echo "No changes in requirements.txt, skipping pip install"
           fi
 
           # Run Django migrations & collect static files
