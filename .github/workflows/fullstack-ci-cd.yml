@@ -163,7 +163,7 @@ jobs:
           else
             REMOTE_HOST=$STAGING_HOST
             BACKEND_PATH=$STAGING_BACKEND_PATH
-            SERVICE_NAME=kaakazini-dev.service
+            SERVICE_NAME=gunicorn-kaakazini-dev.service
           fi
 
           echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH (service: $SERVICE_NAME)..."
