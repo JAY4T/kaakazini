@@ -112,16 +112,20 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'kakaazini'),
-        'USER': os.getenv('POSTGRES_USER', 'kakaadmin'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'kazikazi'),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'NAME': config('POSTGRES_DB', default='kakaazini_staging'),
+        'USER': config('POSTGRES_USER', default='kakaadmin_staging'),
+        'PASSWORD': config('POSTGRES_PASSWORD', default='kazikazi'),
+        'HOST': config('POSTGRES_HOST', default='localhost'),
+        'PORT': config('POSTGRES_PORT', default='5432'),
     }
 }
+
+    
+
 
 # REST Framework
 REST_FRAMEWORK = {
