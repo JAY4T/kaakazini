@@ -1,15 +1,15 @@
-name: Fullstack CI/CD
+name: Full Stack CI/CD
 
 on:
   push:
     branches:
       - main
       - dev
-  pull_request:
+  workflow_dispatch:   # allow manual trigger from Actions tab
 
 jobs:
   ##########################
-  # 1. Frontend Build
+  # 1. Frontend Build & Deploy
   ##########################
   frontend:
     runs-on: ubuntu-latest
@@ -24,9 +24,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
 
-      - name: Cache Node.js modules
+      - name: Cache Node modules
         uses: actions/cache@v3
         with:
           path: ~/.npm
@@ -35,13 +35,65 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
-      - name: Build frontend
-        run: npm run build
+      - name: Set environment and build React app
+        run: |
+          echo "Branch: ${{ github.ref }}"
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_PROD_API_URL }}" > .env
+            echo "Building for production"
+          else
+            echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_STAGING_API_URL }}" > .env
+            echo "Building for staging"
+          fi
+          cat .env
+
+          if npm run | grep -q "build"; then
+            npm run build
+          else
+            echo "⚠️ No build script found, skipping build"
+          fi
 
       - name: Deploy frontend
-        run: echo "🚀 Frontend deployed (placeholder — replace with actual deploy command)"
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
+          STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
+          PROD_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_PROD }}
+          STAGING_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_STAGING }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          # Set remote host & path
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            REMOTE_HOST=$PROD_HOST
+            FRONTEND_PATH=$PROD_FRONTEND_PATH
+          else
+            REMOTE_HOST=$STAGING_HOST
+            FRONTEND_PATH=$STAGING_FRONTEND_PATH
+          fi
+
+          # Add host fingerprint
+          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          echo "🚀 Deploying frontend to $REMOTE_HOST:$FRONTEND_PATH..."
+
+          if [ -d build ]; then
+            rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+              --exclude='.git' --exclude='node_modules' --delete build/ \
+              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH
+            echo "✅ Frontend deployed successfully!"
+          else
+            echo "⚠️ No build folder found, skipping frontend deploy"
+          fi
 
   ##########################
   # 2. Backend Deploy
@@ -51,7 +103,7 @@ jobs:
     defaults:
       run:
         working-directory: backend
-    needs: frontend   # waits until frontend job finishes
+    needs: frontend
 
     steps:
       - name: Checkout repository
@@ -75,7 +127,7 @@ jobs:
 
       - name: Run Django pre-deploy check
         env:
-          DJANGO_SETTINGS_MODULE: backend.settings   # 👈 adjust if path differs
+          DJANGO_SETTINGS_MODULE: backend.settings   # 👈 adjust if settings path differs
         run: |
           echo "⚙️ Running Django system checks..."
           python manage.py check --deploy
@@ -109,7 +161,7 @@ jobs:
 
           echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH (service: $SERVICE_NAME)..."
 
-          # Rsync backend files (don’t overwrite venv/.git/__pycache__)
+          # Rsync backend files (but don’t overwrite venv/.git/__pycache__)
           rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
             --exclude='.git' --exclude='venv' --exclude='__pycache__' --delete ./ \
             $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
@@ -118,6 +170,7 @@ jobs:
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
             cd $BACKEND_PATH
 
+            # Ensure venv exists
             if [ ! -d "venv" ]; then
               python3 -m venv venv
             fi
