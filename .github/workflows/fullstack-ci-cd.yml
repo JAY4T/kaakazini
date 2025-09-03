@@ -1,15 +1,15 @@
-name: Full Stack CI/CD
+name: Fullstack CI/CD
 
 on:
   push:
     branches:
       - main
       - dev
-  workflow_dispatch:   # allow manual trigger from Actions tab
+  pull_request:
 
 jobs:
   ##########################
-  # 1. Frontend Build & Deploy
+  # 1. Frontend Build
   ##########################
   frontend:
     runs-on: ubuntu-latest
@@ -24,9 +24,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 18
 
-      - name: Cache Node modules
+      - name: Cache Node.js modules
         uses: actions/cache@v3
         with:
           path: ~/.npm
@@ -35,153 +35,101 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install frontend dependencies
-        run: npm install --legacy-peer-deps
+        run: npm install
 
-      - name: Set environment and build React app
-        run: |
-          echo "Branch: ${{ github.ref }}"
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_PROD_API_URL }}" > .env
-            echo "Building for production"
-          else
-            echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_STAGING_API_URL }}" > .env
-            echo "Building for staging"
-          fi
-          cat .env
-
-          if npm run | grep -q "build"; then
-            npm run build
-          else
-            echo "⚠️ No build script found, skipping build"
-          fi
+      - name: Build frontend
+        run: npm run build
 
       - name: Deploy frontend
+        run: echo "🚀 Frontend deployed (placeholder — replace with actual deploy command)"
+
+  ##########################
+  # 2. Backend Deploy
+  ##########################
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    needs: frontend   # waits until frontend job finishes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Cache Python packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Django pre-deploy check
+        env:
+          DJANGO_SETTINGS_MODULE: backend.settings   # 👈 adjust if path differs
+        run: |
+          echo "⚙️ Running Django system checks..."
+          python manage.py check --deploy
+          echo "✅ Django pre-check passed!"
+
+      - name: Deploy backend
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
           PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
           STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
-          PROD_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_PROD }}
-          STAGING_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_STAGING }}
+          PROD_BACKEND_PATH: ${{ secrets.BACKEND_PATH_PROD }}
+          STAGING_BACKEND_PATH: ${{ secrets.BACKEND_PATH_STAGING }}
         run: |
-          # Setup SSH
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          touch ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          ssh-keyscan -H $PROD_HOST $STAGING_HOST >> ~/.ssh/known_hosts 2>/dev/null
 
-          # Set remote host & path
+          # Choose environment based on branch
           if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             REMOTE_HOST=$PROD_HOST
-            FRONTEND_PATH=$PROD_FRONTEND_PATH
+            BACKEND_PATH=$PROD_BACKEND_PATH
+            SERVICE_NAME=kaakazini.service
           else
             REMOTE_HOST=$STAGING_HOST
-            FRONTEND_PATH=$STAGING_FRONTEND_PATH
+            BACKEND_PATH=$STAGING_BACKEND_PATH
+            SERVICE_NAME=kaakazini-dev.service
           fi
 
-          # Add host fingerprint
-          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts 2>/dev/null
+          echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH (service: $SERVICE_NAME)..."
 
-          echo "🚀 Deploying frontend to $REMOTE_HOST:$FRONTEND_PATH..."
+          # Rsync backend files (don’t overwrite venv/.git/__pycache__)
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            --exclude='.git' --exclude='venv' --exclude='__pycache__' --delete ./ \
+            $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
 
-          if [ -d build ]; then
-            rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-              --exclude='.git' --exclude='node_modules' --delete build/ \
-              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH
-            echo "✅ Frontend deployed successfully!"
-          else
-            echo "⚠️ No build folder found, skipping frontend deploy"
-          fi
-##########################
-# 2. Backend Deploy
-##########################
-backend:
-  runs-on: ubuntu-latest
-  defaults:
-    run:
-      working-directory: backend
-  needs: frontend
+          # Run remote setup + migrations + restart
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
+            cd $BACKEND_PATH
 
-  steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.12"
+            source venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
-    - name: Cache Python packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+            python manage.py migrate --noinput
+            python manage.py collectstatic --noinput
 
-    - name: Install backend dependencies
-      run: pip install -r requirements.txt
+            sudo systemctl restart $SERVICE_NAME
+          EOF
 
-    - name: Run Django pre-deploy check
-      env:
-        DJANGO_SETTINGS_MODULE: backend.settings   # 👈 adjust if settings path differs
-      run: |
-        echo "⚙️ Running Django system checks..."
-        python manage.py check --deploy
-        echo "✅ Django pre-check passed!"
-
-    - name: Deploy backend
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        REMOTE_USER: ${{ secrets.REMOTE_USER }}
-        PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
-        STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
-        PROD_BACKEND_PATH: ${{ secrets.BACKEND_PATH_PROD }}
-        STAGING_BACKEND_PATH: ${{ secrets.BACKEND_PATH_STAGING }}
-      run: |
-        mkdir -p ~/.ssh
-        chmod 700 ~/.ssh
-        echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H $PROD_HOST $STAGING_HOST >> ~/.ssh/known_hosts 2>/dev/null
-
-        # Choose environment based on branch
-        if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-          REMOTE_HOST=$PROD_HOST
-          BACKEND_PATH=$PROD_BACKEND_PATH
-          SERVICE_NAME=kaakazini.service
-        else
-          REMOTE_HOST=$STAGING_HOST
-          BACKEND_PATH=$STAGING_BACKEND_PATH
-          SERVICE_NAME=kaakazini-dev.service
-        fi
-
-        echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH (service: $SERVICE_NAME)..."
-
-        # Rsync backend files (but don’t overwrite venv/.git/__pycache__)
-        rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-          --exclude='.git' --exclude='venv' --exclude='__pycache__' --delete ./ \
-          $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
-
-        # Run remote setup + migrations + restart
-        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
-          cd $BACKEND_PATH
-
-          # Ensure venv exists
-          if [ ! -d "venv" ]; then
-            python3 -m venv venv
-          fi
-
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-
-          python manage.py migrate --noinput
-          python manage.py collectstatic --noinput
-
-          sudo systemctl restart $SERVICE_NAME
-        EOF
-
-        echo "✅ Backend deployed successfully!"
+          echo "✅ Backend deployed successfully!"
