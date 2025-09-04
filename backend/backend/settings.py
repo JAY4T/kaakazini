@@ -30,7 +30,7 @@ SECRET_KEY = config("SECRET_KEY", default="fallback-secret-for-dev")
 
 DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["staging.kaakazini.com","localhost","127.0.0.1"]
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 AUTHENTICATION_BACKENDS = ['accounts.authentication.EmailBackend']
@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     # 'clients',
     'corsheaders',
     'djoser',
+    'django_filters',
 
     
 
@@ -129,14 +130,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.SearchFilter',
-
-
-
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
     ),
 }
 
