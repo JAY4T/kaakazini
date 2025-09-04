@@ -89,7 +89,7 @@ jobs:
           if [ -d build ]; then
             rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
               --exclude='.git' --exclude='node_modules' --delete build/ \
-              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH
+              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/build
             echo "✅ Frontend deployed successfully!"
           else
             echo "⚠️ No build folder found, skipping frontend deploy"
@@ -176,7 +176,6 @@ jobs:
           # Run remote setup + migrations + restart
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
             cd $BACKEND_PATH
-
             # Ensure venv exists
             if [ ! -d "venv" ]; then
               python3 -m venv venv
