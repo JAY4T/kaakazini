@@ -55,7 +55,7 @@ jobs:
             echo "⚠️ No build script found, skipping build"
           fi
 
-      - name: Deploy frontend
+            - name: Deploy frontend
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
@@ -72,7 +72,7 @@ jobs:
           touch ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-          # Set remote host & path
+          # Pick env
           if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             REMOTE_HOST=$PROD_HOST
             FRONTEND_PATH=$PROD_FRONTEND_PATH
@@ -81,7 +81,6 @@ jobs:
             FRONTEND_PATH=$STAGING_FRONTEND_PATH
           fi
 
-          # Add host fingerprint
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts 2>/dev/null
 
           echo "🚀 Deploying frontend to $REMOTE_HOST:$FRONTEND_PATH..."
@@ -89,11 +88,12 @@ jobs:
           if [ -d build ]; then
             rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
               --exclude='.git' --exclude='node_modules' --delete build/ \
-              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/build
+              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/
             echo "✅ Frontend deployed successfully!"
           else
             echo "⚠️ No build folder found, skipping frontend deploy"
           fi
+
 
   ##########################
   # 2. Backend Deploy
