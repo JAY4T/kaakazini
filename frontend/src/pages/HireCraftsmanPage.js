@@ -3,7 +3,7 @@ import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
 const HireCraftsmanPage = () => {
   const [activeTab, setActiveTab] = useState('makeRequest');
