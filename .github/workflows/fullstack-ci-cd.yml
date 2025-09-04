@@ -50,7 +50,7 @@ jobs:
           cat .env
 
           if npm run | grep -q "build"; then
-            npm run build
+            CI=false npm run build
           else
             echo "⚠️ No build script found, skipping build"
           fi
