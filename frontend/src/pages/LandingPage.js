@@ -65,7 +65,7 @@ function LandingPage() {
       {/* About Section */}
       <section className="py-5 bg-light">
         <div className="container">
-          <h2 className="text-center mb-4 fw-bold text-primary">About Us</h2>
+          <h2 className="text-center mb-4 fw-bold text-primary">About Kaakazini</h2>
           <div className="row">
             <div className="col-md-6">
               <p>
