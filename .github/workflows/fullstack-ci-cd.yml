@@ -91,9 +91,9 @@ jobs:
             ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "rm -rf $FRONTEND_PATH/*"
 
             # Deploy new build
-            rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-              --exclude='.git' --exclude='node_modules' --delete build/ \
-              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/
+             rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+               --exclude='.git' --exclude='node_modules' --delete ./ \
+               $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/
             echo "✅ Frontend deployed successfully!"
           else
             echo "⚠️ No build folder found, skipping frontend deploy"
