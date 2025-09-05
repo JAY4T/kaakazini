@@ -18,18 +18,9 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import HireSignup from './pages/HireSignUpPage';
 import HireCraftsmanPage from './pages/HireCraftsmanPage';
-
-
+import TermsConditionPage from './pages/TermsConditionPage';
 import HireLogin from './pages/HireLoginPage';
 import ServicesPage from './pages/ServicesPage';
-
-
-
-
-
-
-
-
 
 
 function App() {
@@ -85,26 +76,11 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
         <Route path="/HireSignup" element={<HireSignup />} />
         <Route path="/HireLogin" element={<HireLogin />} />
-
-
-
+        <Route path="/terms" element={<TermsConditionPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
         <Route path="/hire" element={<HireCraftsmanPage />} />
         <Route path="/services" element={<ServicesPage />} />
-
-
-
-
-
-        
-
-
-        
-
-      
-        
-
-      </Routes>
+        </Routes>
     </Router>
   );
 }
