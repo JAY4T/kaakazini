@@ -92,7 +92,7 @@ jobs:
 
             # Deploy new build
             rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-            --delete build/ $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/
+              --exclude='.git' --exclude='node_modules' --delete build/ \
               $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/
             echo "✅ Frontend deployed successfully!"
           else
