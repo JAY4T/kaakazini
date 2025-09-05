@@ -25,7 +25,7 @@ const TermsConditionPage = () => {
           Welcome to Kaakazini! By using our services, you agree to the following terms...
         </p>
         <p>
-          1. You consent to the use of your information for service purposes.<br/>
+          {/* 1. You consent to the use of your information for service purposes.<br/> */}
           2. Payment must be completed before job execution.<br/>
           3. You accept responsibility for providing accurate details.<br/>
           4. Kaakazini is not liable for damages caused by third-party contractors.<br/>
