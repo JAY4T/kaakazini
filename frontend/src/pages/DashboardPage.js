@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import InviteMemberForm from '../components/InviteMemberForm';
 import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
@@ -307,10 +306,7 @@ function DashboardPage() {
           </div>
         )}
       </div>
-<div className="dashboard-section">
-  {/* Other dashboard content here */}
-  <InviteMemberForm />
-</div>
+
     </div>
   );
 }
