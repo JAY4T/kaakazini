@@ -2,19 +2,16 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-// ✅ API base URL set through environment variable (update in your .env.production)
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api'; // fallback to localhost
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
-// ✅ Axios instance with Authorization interceptor
 const authAxios = axios.create({ baseURL: API_BASE_URL });
-
 authAxios.interceptors.request.use(config => {
   const token = sessionStorage.getItem('access_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Normalize "approved" states from backend
+// ---------- helpers ----------
 function truthyApproved(value) {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value === 1;
@@ -24,12 +21,8 @@ function truthyApproved(value) {
   }
   return false;
 }
-
 function isCraftsmanApproved(c) {
-  return truthyApproved(c?.is_approved)
-      || truthyApproved(c?.approved)
-      || truthyApproved(c?.status)
-      || truthyApproved(c?.state);
+  return truthyApproved(c?.is_approved) || truthyApproved(c?.approved) || truthyApproved(c?.status) || truthyApproved(c?.state);
 }
 
 function AdminDashboard() {
@@ -41,9 +34,14 @@ function AdminDashboard() {
   const [approvedFilter, setApprovedFilter] = useState('');
   const [activeSection, setActiveSection] = useState('pending');
 
-  // Job requests state
+  // jobs state
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(false);
+
+  // rejection modal
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectTarget, setRejectTarget] = useState(null);
 
   useEffect(() => {
     fetchCraftsmen();
@@ -65,16 +63,13 @@ function AdminDashboard() {
     setLoading(true);
     try {
       const res = await authAxios.get('admin/craftsman/');
-      const allCraftsmen = Array.isArray(res.data) ? res.data : [];
-
-      const pending = allCraftsmen.filter(c => {
+      const all = Array.isArray(res.data) ? res.data : [];
+      const pending = all.filter(c => {
         const approved = isCraftsmanApproved(c);
         const hasErrors = checkCraftsmanApprovalCriteria(c).length > 0;
         return !approved || hasErrors;
       });
-
-      const approved = allCraftsmen.filter(c => isCraftsmanApproved(c));
-
+      const approved = all.filter(c => isCraftsmanApproved(c));
       setPendingCraftsmen(pending);
       setApprovedCraftsmen(approved);
       setError('');
@@ -91,7 +86,7 @@ function AdminDashboard() {
     return path.startsWith('http') ? path : `${API_BASE_URL}${path.startsWith('/') ? path : '/' + path}`;
   };
 
-  const handleAction = async (type, id, model, craftsman = null) => {
+  const handleAction = async (type, id, model, craftsman = null, reason = null) => {
     if (model === 'craftsman' && type === 'approve') {
       const errors = checkCraftsmanApprovalCriteria(craftsman);
       if (errors.length) {
@@ -100,12 +95,30 @@ function AdminDashboard() {
       }
     }
     try {
-      await authAxios.post(`admin/${model}/${id}/${type}/`);
+      await authAxios.post(`admin/${model}/${id}/${type}/`, reason ? { reason } : {});
       fetchCraftsmen();
+      if (type === 'reject') {
+        alert('Craftsman rejected successfully ✅');
+      }
     } catch (err) {
       console.error(`${type} failed:`, err);
       alert(`Action failed: ${type}`);
     }
+  };
+
+  const openRejectModal = (craftsman) => {
+    setRejectTarget({ id: craftsman.id, model: 'craftsman' });
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+
+  const confirmReject = async () => {
+    if (!rejectReason.trim()) {
+      alert('Please provide a rejection reason.');
+      return;
+    }
+    await handleAction('reject', rejectTarget.id, rejectTarget.model, null, rejectReason);
+    setShowRejectModal(false);
   };
 
   const colorText = (text, color) => <span style={{ color }}>{text}</span>;
@@ -113,7 +126,6 @@ function AdminDashboard() {
   const renderCraftsmenTable = (list, filterValue, setFilterValue, isPending = false) => {
     const q = (filterValue || '').toLowerCase();
     const filtered = list.filter(c => ((c.full_name || '').toLowerCase()).includes(q));
-
     return (
       <>
         <div className="d-flex justify-content-between mb-3">
@@ -142,50 +154,21 @@ function AdminDashboard() {
           <tbody>
             {filtered.length > 0 ? filtered.map(c => {
               const errors = checkCraftsmanApprovalCriteria(c);
-              const mainService = c.services?.[0] || {
-                name: c.primary_service,
-                image: c.service_image,
-              };
+              const mainService = c.services?.[0] || { name: c.primary_service, image: c.service_image };
               const approved = isCraftsmanApproved(c);
-
               return (
-                <tr key={c.id ?? `${(c.full_name || 'craftsman')}-${Math.random()}`} className="align-middle">
-                  <td>
-                    {c.profile ? (
-                      <img src={getImageUrl(c.profile)} alt="" style={{ width: '60px', height: '60px', objectFit: 'cover' }} className="rounded" />
-                    ) : colorText('No image', 'red')}
-                  </td>
+                <tr key={c.id} className="align-middle">
+                  <td>{c.profile ? <img src={getImageUrl(c.profile)} alt="" style={{ width: '60px', height: '60px', objectFit: 'cover' }} className="rounded" /> : colorText('No image', 'red')}</td>
                   <td>{c.full_name || colorText('No name', 'orange')}</td>
                   <td>{c.profession || colorText('No profession', 'purple')}</td>
                   <td>{c.description || colorText('No description', 'brown')}</td>
                   <td>{mainService?.name || colorText('No service', 'blue')}</td>
-                  <td>
-                    {mainService?.image ? (
-                      <img src={getImageUrl(mainService.image)} alt="" style={{ width: '80px', height: '60px', objectFit: 'cover' }} className="rounded" />
-                    ) : colorText('No image', 'red')}
-                  </td>
-                  <td>
-                    {errors.length
-                      ? colorText(errors.join(', '), 'red')
-                      : approved
-                        ? colorText('Approved', 'green')
-                        : colorText('Ready', 'gray')}
-                  </td>
+                  <td>{mainService?.image ? <img src={getImageUrl(mainService.image)} alt="" style={{ width: '80px', height: '60px', objectFit: 'cover' }} className="rounded" /> : colorText('No image', 'red')}</td>
+                  <td>{errors.length ? colorText(errors.join(', '), 'red') : approved ? colorText('Approved', 'green') : colorText('Pending', 'gray')}</td>
                   {isPending && (
                     <td>
-                      <button
-                        className="btn btn-success btn-sm me-2"
-                        disabled={errors.length > 0}
-                        onClick={() => handleAction('approve', c.id, 'craftsman', c)}
-                      >
-                        ✅
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleAction('reject', c.id, 'craftsman')}
-                      >
-                        ❌
-                      </button>
+                      <button className="btn btn-success btn-sm me-2" disabled={errors.length > 0} onClick={() => handleAction('approve', c.id, 'craftsman', c)}>Approve</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => openRejectModal(c)}>Reject</button>
                     </td>
                   )}
                 </tr>
@@ -203,7 +186,7 @@ function AdminDashboard() {
     );
   };
 
-  // ------------------- JOB REQUESTS FUNCTIONS -------------------
+  // ------------------- JOB REQUESTS + REVIEWS -------------------
   const fetchAllJobs = async () => {
     setJobsLoading(true);
     try {
@@ -216,12 +199,25 @@ function AdminDashboard() {
     }
   };
 
-  const updateJob = async (jobId, update) => {
+  const approveReview = async (jobId) => {
     try {
-      await authAxios.patch(`/job-requests/${jobId}/`, update);
+      await authAxios.patch(`/job-requests/${jobId}/`, { review_approved: true });
       fetchAllJobs();
+      alert('✅ Review approved');
     } catch (err) {
-      console.error('Error updating job:', err);
+      console.error('Approve review failed:', err);
+      alert('❌ Failed to approve review');
+    }
+  };
+
+  const rejectReview = async (jobId) => {
+    try {
+      await authAxios.patch(`/job-requests/${jobId}/`, { review_approved: false });
+      fetchAllJobs();
+      alert('❌ Review rejected');
+    } catch (err) {
+      console.error('Reject review failed:', err);
+      alert('❌ Failed to reject review');
     }
   };
 
@@ -239,6 +235,7 @@ function AdminDashboard() {
               <th>Schedule</th>
               <th>Status</th>
               <th>Review</th>
+              <th>Rating</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -248,13 +245,12 @@ function AdminDashboard() {
                 <td>{job.name}</td>
                 <td>{job.service}</td>
                 <td>{new Date(job.schedule).toLocaleString()}</td>
-                <td>
-                  <span className={`badge ${job.status === 'Completed' ? 'bg-success' : job.status === 'Cancelled' ? 'bg-danger' : 'bg-warning text-dark'}`}>{job.status}</span>
-                </td>
+                <td><span className={`badge ${job.status === 'Completed' ? 'bg-success' : job.status === 'Cancelled' ? 'bg-danger' : 'bg-warning text-dark'}`}>{job.status}</span></td>
                 <td>{job.review || <span className="text-muted">No review</span>}</td>
+                <td>{job.rating ? `${job.rating} ⭐` : <span className="text-muted">No rating</span>}</td>
                 <td>
-                  <button className="btn btn-sm btn-success me-2" onClick={() => updateJob(job.id, { status: 'Approved' })}>Approve</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => updateJob(job.id, { status: 'Rejected' })}>Reject</button>
+                  <button className="btn btn-sm btn-success me-2" onClick={() => approveReview(job.id)}>Approve</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => rejectReview(job.id)}>Reject</button>
                 </td>
               </tr>
             ))}
@@ -264,7 +260,6 @@ function AdminDashboard() {
     </div>
   );
 
-  // Load jobs when jobs section is active
   useEffect(() => {
     if (activeSection === 'jobs') {
       fetchAllJobs();
@@ -277,30 +272,9 @@ function AdminDashboard() {
       <div className="bg-dark text-white p-3" style={{ width: '250px' }}>
         <h4 className="mb-4">Admin Panel</h4>
         <ul className="nav flex-column">
-          <li className="nav-item mb-2">
-            <button
-              className={`btn w-100 text-start ${activeSection === 'pending' ? 'btn-primary' : 'btn-outline-light'}`}
-              onClick={() => setActiveSection('pending')}
-            >
-              Pending Craftsmen
-            </button>
-          </li>
-          <li className="nav-item mb-2">
-            <button
-              className={`btn w-100 text-start ${activeSection === 'approved' ? 'btn-primary' : 'btn-outline-light'}`}
-              onClick={() => setActiveSection('approved')}
-            >
-              Approved Craftsmen
-            </button>
-          </li>
-          <li className="nav-item mb-2">
-            <button
-              className={`btn w-100 text-start ${activeSection === 'jobs' ? 'btn-primary' : 'btn-outline-light'}`}
-              onClick={() => setActiveSection('jobs')}
-            >
-              Job Requests Status
-            </button>
-          </li>
+          <li className="nav-item mb-2"><button className={`btn w-100 text-start ${activeSection === 'pending' ? 'btn-primary' : 'btn-outline-light'}`} onClick={() => setActiveSection('pending')}>Pending Craftsmen</button></li>
+          <li className="nav-item mb-2"><button className={`btn w-100 text-start ${activeSection === 'approved' ? 'btn-primary' : 'btn-outline-light'}`} onClick={() => setActiveSection('approved')}>Approved Craftsmen</button></li>
+          <li className="nav-item mb-2"><button className={`btn w-100 text-start ${activeSection === 'jobs' ? 'btn-primary' : 'btn-outline-light'}`} onClick={() => setActiveSection('jobs')}>Job Requests & Reviews</button></li>
         </ul>
       </div>
 
@@ -316,8 +290,29 @@ function AdminDashboard() {
           </>
         )}
       </div>
+
+      {/* Reject Modal (craftsman only) */}
+      {showRejectModal && (
+        <div className="modal fade show d-block" tabIndex="-1" role="dialog">
+          <div className="modal-dialog" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Reject Craftsman</h5>
+                <button type="button" className="btn-close" onClick={() => setShowRejectModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <label>Reason for rejection:</label>
+                <textarea className="form-control mt-2" rows="4" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowRejectModal(false)}>Cancel</button>
+                <button type="button" className="btn btn-danger" onClick={confirmReject}>Confirm Reject</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
 export default AdminDashboard;
