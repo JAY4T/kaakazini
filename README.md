@@ -80,3 +80,8 @@ Build React:
 npm run build
 
 Configure Nginx to serve React & proxy API.
+
+running script for populating approved craftsmen table
+python -m manage shell
+from api.populate_services import populate_services
+populate_services()

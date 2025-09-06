@@ -1,6 +1,5 @@
 import os
 import random
-from django.core.files.base import ContentFile
 from api.models import Craftsman, Service
 from accounts.models import CustomUser
 from datetime import date
@@ -24,11 +23,11 @@ DESCRIPTIONS = [
     "Expert tailor creating custom garments."
 ]
 
-# Use relative paths to your scattered images
+# Relative paths to existing images
 PROFILE_IMAGES = [
-    os.path.join(BASE_DIR, "media", "profiles", "dorof.jpg"),
-    os.path.join(BASE_DIR, "media", "profiles", "aisha.jpg"),
-    os.path.join(BASE_DIR, "media", "profiles", "tailor1.jpg"),
+    "profiles/dorof.jpg",
+    "profiles/aisha.jpg",
+    "profiles/tailor1.jpg",
 ]
 
 SERVICE_NAMES = [
@@ -36,44 +35,28 @@ SERVICE_NAMES = [
 ]
 
 SERVICE_IMAGES = [
-    os.path.join(BASE_DIR, "media", "services", "images", "electricaian.jpg"),
-    os.path.join(BASE_DIR, "media", "services", "images", "welding.jpg"),
-    os.path.join(BASE_DIR, "media", "services", "images", "woodenspoon.jpg"),
-    os.path.join(BASE_DIR, "craftsmen", "clothes.jpg"),
+    "services/images/electricaian.jpg",
+    "services/images/welding.jpg",
+    "services/images/woodenspoon.jpg",
+    "craftsmen/clothes.jpg",
 ]
 
 MIN_APPROVED_CRAFTSMEN = 5  # ensure at least this many approved craftsmen
 
 
-# --- helper to open local file ---
-def load_local_image(path):
-    """Load image from local filesystem as Django File."""
-    try:
-        with open(path, "rb") as f:
-            return ContentFile(f.read(), name=os.path.basename(path))
-    except Exception as e:
-        print(f"⚠️ Failed to load local image {path}: {e}")
-    return None
-
-
 def populate_services():
-    """
-    Populate craftsmen + services with local images.
-    Keeps superusers/real users intact, only clears dummy entries.
-    Ensures at least MIN_APPROVED_CRAFTSMEN approved craftsmen.
-    """
     print("⚡ Starting population...")
 
-    # cleanup dummy data only (not real users)
+    # --- cleanup dummy data only (superusers/real users preserved) ---
     Service.objects.filter(craftsman__user__email__startswith="craftsman").delete()
     Craftsman.objects.filter(user__email__startswith="craftsman").delete()
     CustomUser.objects.filter(email__startswith="craftsman").delete()
-    print("🗑️ Cleared previous dummy craftsmen/services (superusers preserved).")
+    print("🗑️ Cleared previous dummy craftsmen/services.")
 
     approved_craftsmen = 0
     craftsmen_list = []
 
-    # create dummy craftsmen
+    # --- create dummy craftsmen ---
     for i in range(len(FULL_NAMES)):
         email = f"craftsman{i}@example.com"
         user, created = CustomUser.objects.get_or_create(
@@ -93,22 +76,11 @@ def populate_services():
             profession=PROFESSIONS[i],
             description=DESCRIPTIONS[i],
             member_since=date.today(),
+            # Assign profile and service images as relative paths
+            profile=random.choice(PROFILE_IMAGES),
+            service_image=random.choice(SERVICE_IMAGES),
+            primary_service=random.choice(SERVICE_NAMES),
         )
-
-        # profile image
-        profile_path = random.choice(PROFILE_IMAGES)
-        profile_file = load_local_image(profile_path)
-        if profile_file:
-            craftsman.profile.save(f"profile_{i}.jpg", profile_file, save=False)
-
-        # primary service + service_image
-        primary = random.choice(SERVICE_NAMES)
-        craftsman.primary_service = primary
-
-        service_path = random.choice(SERVICE_IMAGES)
-        service_file = load_local_image(service_path)
-        if service_file:
-            craftsman.service_image.save(f"service_{i}.jpg", service_file, save=False)
 
         # approval logic
         if approved_craftsmen < MIN_APPROVED_CRAFTSMEN:
@@ -124,24 +96,21 @@ def populate_services():
         craftsman.save()
         craftsmen_list.append(craftsman)
 
-    # services for each craftsman
+    # --- create services for each craftsman ---
     total_approved_services = 0
     for craftsman in craftsmen_list:
         num_services = random.randint(1, 5)
         for j in range(num_services):
             service_name = random.choice(SERVICE_NAMES)
             img_path = random.choice(SERVICE_IMAGES)
-            img_file = load_local_image(img_path)
 
             svc = Service(
                 craftsman=craftsman,
                 service_name=service_name,
+                image=img_path,  # store relative path only
                 is_approved=random.choice([True, False]),
             )
-            if img_file:
-                svc.image.save(f"{service_name.lower()}_{craftsman.id}_{j}.jpg", img_file, save=True)
-            else:
-                svc.save()
+            svc.save()
 
             if svc.is_approved:
                 total_approved_services += 1
