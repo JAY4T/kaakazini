@@ -5,6 +5,8 @@ import heroImage from '../assets/craftOnline.jpg';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // includes Popper
+import 'bootstrap-icons/font/bootstrap-icons.css';
+import { FaFileAlt, FaSearch, FaStar } from 'react-icons/fa';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 
@@ -18,7 +20,7 @@ function LandingPage() {
    useEffect(() => {
     AOS.init({
       duration: 1000,  // animation duration in ms
-      once: true       // animate only once
+      once: false       // animate only once
     });
   }, []);
 
@@ -79,15 +81,15 @@ function LandingPage() {
 <section className="py-5 bg-light">
   <div className="container">
     <div className="text-center mb-5">
-      <h2 className="fw-bold text-primary display-5" style={{ animation: 'zoomFade 1.5s ease-out' }}>About Us</h2>
-      <p className="text-muted fs-5">
+      <h2 className="fw-bold text-primary display-5" data-aos="fade-left">About Us</h2>
+      <p className="text-muted fs-5" data-aos="fade-right">
         Empowering local craftsmen to grow, showcase their work, and reach the world.
       </p>
     </div>
 
     <div className="row align-items-center">
       {/* Text Column */}
-      <div className="col-lg-6 mb-4 mb-lg-0 fade-in-left">
+      <div className="col-lg-6 mb-4 mb-lg-0" data-aos="fade-right">
         <p className="fs-5 lh-lg">
           At KaaKazini, we are passionate about supporting local craftsmen by providing a platform that helps them manage projects, showcase their unique handmade products, and grow their business. We believe in the power of craftsmanship to bring one-of-a-kind creations to the world while fostering community and opportunity.
         </p>
@@ -97,7 +99,7 @@ function LandingPage() {
       </div>
 
       {/* Image Column */}
-      <div className="col-lg-6 text-center fade-in-right">
+      <div className="col-lg-6 text-center" data-aos="fade-right">
         <img 
           src="https://www.ariseiip.com/wp-content/uploads/2022/06/textile.png" 
           alt="Craftsmen at Work" 
@@ -110,99 +112,90 @@ function LandingPage() {
 </section>
 
 
-      {/*Services*/}
-
+{/* Services */}
 <section className="py-5 bg-light" id="services">
-  <div className="container">
+  <div className="container overflow-hidden">
     {/* Heading */}
-    <h2 className="text-center mb-3 fw-bold text-primary " data-aos="fade-left">
+    <h2 className="text-center fw-bold text-primary display-5" data-aos="fade-left">
       Explore Our Services
     </h2>
-
     {/* Paragraph */}
-    <p className="text-center fs-8 text-secondary mb-3" style={{ fontFamily: 'inherit' }}>
+    <p className="text-center fs-5 lh-lg" data-aos="fade-right">
       Discover a wide variety of skilled services offered by experienced craftsmen.
       From metalwork and carpentry to plumbing and textile design, we connect you with professionals who deliver quality you can trust.
     </p>
 
-    {/* View All Services Button */}
-    <div className="text-end mb-4">
-      <Link to="/services" className="btn btn-outline-primary fw-bold">
-        View All Services
-      </Link>
-    </div>
-
-    {/* Carousel */}
+    {/* Sliding Track */}
     {approvedServices.length === 0 ? (
       <p className="text-center">No approved services available yet.</p>
     ) : (
-      <>
-        <div
-          id="servicesCarousel"
-          className="carousel slide"
-          data-bs-ride="carousel"
-          data-bs-interval="3000"
-        >
-          <div className="carousel-inner">
-            {approvedServices.map((service, index) => (
-              <div key={index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
-                <div className="d-flex justify-content-center">
-                  <div className="card border-0 shadow" style={{ width: '24rem' }}>
-                    <div className="position-relative">
-                      <img
-                        src={getImageUrl(service.service_image)}
-                        className="card-img-top"
-                        alt={service.service}
-                        style={{ height: '340px', objectFit: 'cover' }}
-                      />
-                      <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center text-white bg-dark bg-opacity-75 overlay">
-                        <h5 className="fw-bold">{service.primary_service}</h5>
-                        {/* <p className="text-center px-3 small">
-                          {service.description?.slice(0, 70) || 'Reliable and professional craftsmanship.'}
-                        </p> */}
-                      </div>
-                    </div>
-                    <div className="card-body text-center">
-                      <h5 className="card-title fw-bold mb-0">{service.service}</h5>
-                    </div>
+      <div className="scrolling-container">
+        <div className="scrolling-track d-flex align-items-stretch">
+          {/* Duplicate the services for a seamless infinite loop */}
+          {[...approvedServices, ...approvedServices].map((service, index) => (
+            <div key={index} className="flex-shrink-0 mx-3">
+              <div className="card border-0 shadow-lg rounded-4 overflow-hidden h-100" style={{ width: '20rem' }}>
+                <div className="position-relative">
+                  <img
+                    src={getImageUrl(service.service_image)}
+                    className="card-img-top"
+                    alt={service.service}
+                    style={{ height: '240px', objectFit: 'cover' }}
+                  />
+                  <div className="position-absolute bottom-0 w-100 bg-dark bg-opacity-75 text-white p-3 service-title-overlay">
+                    <h5 className="fw-bold mb-0 text-truncate text-center">{service.primary_service}</h5>
                   </div>
                 </div>
+                <div className="card-body text-center d-flex flex-column justify-content-center">
+                  <h5 className="card-title fw-bold mb-0 text-primary">{service.service}</h5>
+                </div>
               </div>
-            ))}
-          </div>
-
-          {/* Carousel Arrows */}
-          <button
-            className="carousel-control-prev"
-            type="button"
-            data-bs-target="#servicesCarousel"
-            data-bs-slide="prev"
-          >
-            <span className="carousel-control-prev-icon" aria-hidden="true" style={{ filter: 'invert(1)' }} />
-            <span className="visually-hidden">Previous</span>
-          </button>
-          <button
-            className="carousel-control-next"
-            type="button"
-            data-bs-target="#servicesCarousel"
-            data-bs-slide="next"
-          >
-            <span className="carousel-control-next-icon" aria-hidden="true" style={{ filter: 'invert(1)' }} />
-            <span className="visually-hidden">Next</span>
-          </button>
+            </div>
+          ))}
         </div>
-      </>
+      </div>
     )}
+
+    {/* View All Services Button */}
+    <div className="text-center mt-5">
+      <Link to="/services" className="btn btn-primary fw-bold rounded-pill px-5 py-3">
+        View All Services
+      </Link>
+    </div>
   </div>
 
-  {/* Hover overlay styling */}
+  {/* Custom Styles */}
   <style>{`
-    .overlay {
-      opacity: 0;
-      transition: opacity 0.4s ease-in-out;
+    .scrolling-container {
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    
+    .scrolling-track {
+      display: flex;
+      animation: slide-left 40s linear infinite; /* Adjust time to change speed */
     }
 
-    .position-relative:hover .overlay {
+    .scrolling-track:hover {
+      animation-play-state: paused;
+    }
+
+    @keyframes slide-left {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+    
+    .service-title-overlay {
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .card:hover .service-title-overlay {
       opacity: 1;
     }
   `}</style>
@@ -210,43 +203,138 @@ function LandingPage() {
 
 
 
-
-
-      {/* How It Works Section */}
-      <section className="py-5 bg-white" id="how-it-works">
-        <div className="container">
-          <h2 className="text-center mb-4 fw-bold text-primary">How It Works</h2>
-          <div className="row text-center">
-            {[
-              {
-                title: 'Post Project',
-                img: 'https://wordpress-411969-1603232.cloudwaysapps.com/wp-content/uploads/2017/06/how_1.png',
-                text: 'Add projects and in 24 hours craftsmen will start responding.',
-              },
-              {
-                title: 'Browse Quotes',
-                img: 'https://wordpress-411969-1603232.cloudwaysapps.com/wp-content/uploads/2017/06/how_2.png',
-                text: 'Browse received applications and quotes from craftsmen.',
-              },
-              {
-                title: 'Leave Review',
-                img: 'https://wordpress-411969-1603232.cloudwaysapps.com/wp-content/uploads/2017/06/how_3.png',
-                text: 'After a craftsman finishes, you can rate them.',
-              },
-            ].map((step, index) => (
-              <div className="col-md-4 mb-4" key={index}>
-                <div className="card border-0 h-100">
-                  <div className="card-body">
-                    <img src={step.img} alt={step.title} className="mb-3" style={{ width: '100px', height: '100px' }} />
-                    <h5 className="card-title fw-bold">{step.title}</h5>
-                    <p className="card-text">{step.text}</p>
-                  </div>
-                </div>
+     {/* How It Works Section */}
+<section className="py-5 bg-light" id="how-it-works">
+  <div className="container">
+    <h2 className="text-center mb-4 fw-bold text-primary">How It Works</h2>
+    <div className="row text-center d-flex justify-content-center">
+      <div className="col-12">
+        <div className="how-it-works-steps">
+          {/* Step 1: Post Project */}
+          <div className="step-item">
+            <div className="step-icon-wrapper">
+              <span className="step-number">1</span>
+              <div className="step-icon">
+                <i className="bi bi-file-earmark-plus"></i>
               </div>
-            ))}
+            </div>
+            <div className="step-content">
+              <h5 className="fw-bold">Post Project</h5>
+              <p className="text-muted">Tell us about your project, and skilled craftsmen will start responding within 24 hours.</p>
+            </div>
+          </div>
+          
+          {/* Step 2: Browse Quotes */}
+          <div className="step-item">
+            <div className="step-icon-wrapper">
+              <span className="step-number">2</span>
+              <div className="step-icon">
+                <i className="bi bi-search"></i>
+              </div>
+            </div>
+            <div className="step-content">
+              <h5 className="fw-bold">Browse Quotes</h5>
+              <p className="text-muted">Review applications and quotes from various craftsmen to find the best fit for you.</p>
+            </div>
+          </div>
+          
+          {/* Step 3: Leave Review */}
+          <div className="step-item">
+            <div className="step-icon-wrapper">
+              <span className="step-number">3</span>
+              <div className="step-icon">
+                <i className="bi bi-chat-right-dots"></i>
+              </div>
+            </div>
+            <div className="step-content">
+              <h5 className="fw-bold">Leave Review</h5>
+              <p className="text-muted">After the job is complete, you can rate the craftsman's work and provide valuable feedback.</p>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
+  </div>
+  
+  <style>{`
+    .how-it-works-steps {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      position: relative;
+      padding-bottom: 2rem;
+    }
+    .how-it-works-steps::before {
+      content: '';
+      position: absolute;
+      top: 30px;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background-color: #e9ecef;
+      z-index: 0;
+    }
+    .step-item {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      flex: 1;
+      padding: 0 1rem;
+    }
+    .step-icon-wrapper {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+    .step-number {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background-color: #0d6efd;
+      color: white;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 0.9rem;
+      font-weight: bold;
+      border: 2px solid white;
+    }
+    .step-icon {
+      background-color: white;
+      color: #0d6efd;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .step-content h5 {
+      color: #343a40;
+    }
+    .step-content p {
+      font-size: 0.9rem;
+    }
+    @media (max-width: 768px) {
+      .how-it-works-steps {
+        flex-direction: column;
+        align-items: center;
+        padding-bottom: 0;
+      }
+      .how-it-works-steps::before {
+        display: none;
+      }
+      .step-item {
+        margin-bottom: 2rem;
+      }
+    }
+  `}</style>
+</section>
 
       {/* Testimonials */}
       <section className="py-5 bg-light">
