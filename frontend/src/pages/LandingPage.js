@@ -158,7 +158,7 @@ function LandingPage() {
 
     {/* View All Services Button */}
     <div className="text-center mt-5">
-      <Link to="/services" className="btn btn-primary fw-bold rounded-pill px-5 py-3">
+      <Link to="/services" className="btn btn-green-solid fw-bold rounded-pill px-5 py-3">
         View All Services
       </Link>
     </div>
@@ -203,10 +203,10 @@ function LandingPage() {
 
 
 
-     {/* How It Works Section */}
+ {/* How It Works Section */}
 <section className="py-5 bg-light" id="how-it-works">
   <div className="container">
-    <h2 className="text-center mb-4 fw-bold text-primary">How It Works</h2>
+    <h2 className="text-center fw-bold text-primary display-5" data-aos="fade-left">How It Works</h2> 
     <div className="row text-center d-flex justify-content-center">
       <div className="col-12">
         <div className="how-it-works-steps">
@@ -223,7 +223,7 @@ function LandingPage() {
               <p className="text-muted">Tell us about your project, and skilled craftsmen will start responding within 24 hours.</p>
             </div>
           </div>
-          
+
           {/* Step 2: Browse Quotes */}
           <div className="step-item">
             <div className="step-icon-wrapper">
@@ -237,7 +237,7 @@ function LandingPage() {
               <p className="text-muted">Review applications and quotes from various craftsmen to find the best fit for you.</p>
             </div>
           </div>
-          
+
           {/* Step 3: Leave Review */}
           <div className="step-item">
             <div className="step-icon-wrapper">
@@ -255,7 +255,7 @@ function LandingPage() {
       </div>
     </div>
   </div>
-  
+
   <style>{`
     .how-it-works-steps {
       display: flex;
@@ -273,14 +273,29 @@ function LandingPage() {
       height: 2px;
       background-color: #e9ecef;
       z-index: 0;
+      /* Animation for the line */
+      background-image: linear-gradient(to right, #e9ecef 33%, rgba(255,255,255,0) 0%);
+      background-position: top;
+      background-size: 15px 2px;
+      animation: dash 60s linear infinite; /* Increased duration for subtlety */
     }
+    @keyframes dash {
+      from { background-position: 0px top; }
+      to { background-position: -1000px top; }
+    }
+
     .step-item {
       position: relative;
       z-index: 1;
       text-align: center;
       flex: 1;
       padding: 0 1rem;
+      transition: transform 0.3s ease-out;
     }
+    .step-item:hover {
+      transform: translateY(-5px); /* Slight lift on hover */
+    }
+
     .step-icon-wrapper {
       position: relative;
       display: inline-block;
@@ -290,7 +305,7 @@ function LandingPage() {
       position: absolute;
       top: -10px;
       right: -10px;
-      background-color: #0d6efd;
+      background-color: #198754; /* Changed to green */
       color: white;
       border-radius: 50%;
       width: 28px;
@@ -301,10 +316,18 @@ function LandingPage() {
       font-size: 0.9rem;
       font-weight: bold;
       border: 2px solid white;
+      box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); /* Green shadow */
+      animation: pulse-glow 2s infinite; /* Pulsing glow */
     }
+    @keyframes pulse-glow {
+      0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); } /* Green shadow */
+      70% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); } /* Green shadow */
+      100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); } /* Green shadow */
+    }
+
     .step-icon {
       background-color: white;
-      color: #0d6efd;
+      color: #198754; /* Changed to green */
       width: 60px;
       height: 60px;
       border-radius: 50%;
@@ -313,6 +336,24 @@ function LandingPage() {
       align-items: center;
       font-size: 2rem;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      transition: all 0.3s ease-in-out; /* Smooth transitions for hover */
+      animation: icon-pop 0.6s ease-out; /* Initial pop animation */
+      animation-fill-mode: backwards; /* Ensures starting state before animation */
+    }
+    .step-item:nth-child(1) .step-icon { animation-delay: 0.1s; }
+    .step-item:nth-child(2) .step-icon { animation-delay: 0.2s; }
+    .step-item:nth-child(3) .step-icon { animation-delay: 0.3s; }
+
+    @keyframes icon-pop {
+      0% { transform: scale(0); opacity: 0; }
+      80% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    .step-icon:hover {
+      transform: scale(1.1); /* Slightly enlarge on hover */
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2); /* Deeper shadow on hover */
+      color: #157347; /* Slightly darker green on hover */
     }
     .step-content h5 {
       color: #343a40;
@@ -327,7 +368,7 @@ function LandingPage() {
         padding-bottom: 0;
       }
       .how-it-works-steps::before {
-        display: none;
+        display: none; /* Hide the line on small screens */
       }
       .step-item {
         margin-bottom: 2rem;
