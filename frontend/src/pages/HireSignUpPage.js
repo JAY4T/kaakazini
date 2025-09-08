@@ -10,6 +10,7 @@ const HireSignup = () => {
     email: '',
     phone_number: '',
     password: '',
+    confirm_password: '',
     subscription: 'free',
     role: 'client',
     agree: false,
@@ -28,26 +29,36 @@ const HireSignup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!form.agree) {
       setMessage({ text: 'You must agree to the terms.', type: 'danger' });
       return;
     }
 
-    try {
-      const response = await axios.post(`${API_BASE_URL}/client-signup/`, {
-  full_name: form.full_name,
-  email: form.email,
-  phone_number: form.phone_number,
-  password: form.password,
-});
+    if (form.password !== form.confirm_password) {
+      setMessage({ text: 'Passwords do not match.', type: 'danger' });
+      return;
+    }
 
+    try {
+      await axios.post(`${API_BASE_URL}/client-signup/`, {
+        full_name: form.full_name,
+        email: form.email,
+        phone_number: form.phone_number,
+        password: form.password,
+      });
 
       setMessage({ text: 'Signup successful! Redirecting to login...', type: 'success' });
       setTimeout(() => navigate('/HireLogin'), 1500);
     } catch (error) {
-      setMessage({ text: 'Signup failed. ' + (error.response?.data?.error || 'Check your input.'), type: 'danger' });
+      setMessage({
+        text: 'Signup failed. ' + (error.response?.data?.error || 'Check your input.'),
+        type: 'danger',
+      });
     }
   };
+
+  const passwordMismatch = form.confirm_password && form.password !== form.confirm_password;
 
   return (
     <div className="container my-5">
@@ -57,19 +68,75 @@ const HireSignup = () => {
             <h3 className="text-center">Client Sign Up</h3>
             {message.text && <div className={`alert alert-${message.type}`}>{message.text}</div>}
             <form onSubmit={handleSubmit}>
-              <input id="full_name" type="text" placeholder="Full Name" className="form-control mb-3" value={form.full_name} onChange={handleChange} required />
-              <input id="email" type="email" placeholder="Email" className="form-control mb-3" value={form.email} onChange={handleChange} required />
-              <input id="phone_number" type="tel" placeholder="Phone Number" className="form-control mb-3" value={form.phone_number} onChange={handleChange} required />
-              <input id="password" type="password" placeholder="Password" className="form-control mb-3" value={form.password} onChange={handleChange} required />
+              <input
+                id="full_name"
+                type="text"
+                placeholder="Full Name"
+                className="form-control mb-3"
+                value={form.full_name}
+                onChange={handleChange}
+                required
+              />
+              <input
+                id="email"
+                type="email"
+                placeholder="Email"
+                className="form-control mb-3"
+                value={form.email}
+                onChange={handleChange}
+                required
+              />
+              <input
+                id="phone_number"
+                type="tel"
+                placeholder="Phone Number"
+                className="form-control mb-3"
+                value={form.phone_number}
+                onChange={handleChange}
+                required
+              />
+              <input
+                id="password"
+                type="password"
+                placeholder="Password"
+                className="form-control mb-3"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+              {/* ✅ Confirm Password with live validation */}
+              <input
+                id="confirm_password"
+                type="password"
+                placeholder="Confirm Password"
+                className={`form-control mb-1 ${passwordMismatch ? 'is-invalid' : ''}`}
+                value={form.confirm_password}
+                onChange={handleChange}
+                required
+              />
+              {passwordMismatch && (
+                <div className="invalid-feedback">Passwords do not match.</div>
+              )}
+
               <div className="form-check mb-3">
-                <input id="agree" type="checkbox" className="form-check-input" checked={form.agree} onChange={handleChange} />
+                <input
+                  id="agree"
+                  type="checkbox"
+                  className="form-check-input"
+                  checked={form.agree}
+                  onChange={handleChange}
+                />
                 <label className="form-check-label" htmlFor="agree">
                   I agree to the <Link to="/terms">terms and conditions</Link>
                 </label>
               </div>
-              <button className="btn btn-primary w-100" type="submit">Sign Up</button>
+              <button className="btn btn-primary w-100" type="submit">
+                Create Account
+              </button>
             </form>
-            <p className="mt-3 text-center">Already have an account? <Link to="/HireLogin">Login</Link></p>
+            <p className="mt-3 text-center">
+              Already have an account? <Link to="/HireLogin">Login</Link>
+            </p>
           </div>
         </div>
       </div>
