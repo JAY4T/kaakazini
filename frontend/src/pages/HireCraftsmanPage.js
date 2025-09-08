@@ -50,7 +50,7 @@ const HireCraftsmanPage = () => {
 
   const fetchJobs = async (clientId, token) => {
     try {
-      const { data } = await axios.get(`${BASE_URL}job-requests/`, {
+      const { data } = await axios.get(`${BASE_URL}/job-requests/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const clientJobs = data.filter((j) => j.client === clientId);
@@ -114,7 +114,7 @@ const HireCraftsmanPage = () => {
   const updateJob = async (jobId, update) => {
     try {
       const token = sessionStorage.getItem('access_token');
-      await axios.patch(`${BASE_URL}job-requests/${jobId}/`, update, {
+      await axios.patch(`${BASE_URL}/job-requests/${jobId}/`, update, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchJobs(client.id, token);
@@ -243,12 +243,40 @@ const HireCraftsmanPage = () => {
                           <button className="btn btn-sm btn-danger" onClick={() => updateJob(job.id, { status: 'Cancelled' })}>Cancel</button>
                         </td>
                         <td>
-                          {job.status === 'Completed' ? (
-                            <textarea rows="2" placeholder="Leave a comment or review" className="form-control" defaultValue={job.review} onBlur={(e) => updateJob(job.id, { review: e.target.value })} />
-                          ) : (
-                            <span className="text-muted">Complete job to review</span>
-                          )}
-                        </td>
+  {job.status === 'Completed' ? (
+    <div>
+      {/* ⭐ Rating input */}
+      <div className="mb-2">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span
+            key={star}
+            style={{
+              cursor: 'pointer',
+              color: job.rating >= star ? 'gold' : 'lightgray',
+              fontSize: '1.5rem',
+            }}
+            onClick={() => updateJob(job.id, { rating: star })}
+          >
+            ★
+          </span>
+        ))}
+      </div>
+
+      {/* 📝 Review input */}
+      <textarea
+        rows="2"
+        placeholder="Leave a comment or review"
+        className="form-control"
+        defaultValue={job.review}
+        onBlur={(e) => updateJob(job.id, { review: e.target.value })}
+      />
+    </div>
+  ) : (
+    <span className="text-muted">Complete job to review</span>
+  )}
+</td>
+
+
                       </tr>
                     ))}
                   </tbody>
