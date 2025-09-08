@@ -27,7 +27,7 @@ from .models import CustomUser
 from .serializers import ClientSignupSerializer, ClientLoginSerializer
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from .utils import send_sms 
+from .utils import send_sms
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
-    
-    
+
+
     def perform_create(self, serializer):
         user = serializer.save()
 
@@ -74,7 +74,7 @@ class GoogleLoginView(APIView):
             })
         except Exception as e:
             return Response({"detail": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
 
 
 class EmailBackend(ModelBackend):
