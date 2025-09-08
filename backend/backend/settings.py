@@ -204,10 +204,8 @@ X_FRAME_OPTIONS = 'DENY'
 
 
 
-# BREVO_API_KEY = config("BREVO_API_KEY", default="")
-# BREVO_SENDER_EMAIL = config("BREVO_SENDER_EMAIL", default="kaakazini.jay4t@gmail.com")
-# BREVO_SENDER_NAME = config("BREVO_SENDER_NAME", default="Kaakazini")
-# FRONTEND_RESET_URL = config("FRONTEND_RESET_URL", default="https://kaakazini.com/password-reset")
+BREVO_API_KEY = config("BREVO_API_KEY", default="")
+BREVO_SENDER_EMAIL = config("BREVO_SENDER_EMAIL", default="kaakazini.jay4t@gmail.com")
+BREVO_SENDER_NAME = config("BREVO_SENDER_NAME", default="Kaakazini")
+FRONTEND_RESET_URL = config("FRONTEND_RESET_URL", default="https://kaakazini.com/password-reset")
 
-BREVO_API_KEY = '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' 
-DEFAULT_FROM_EMAIL = 'kaakazini.jay4t@gmail.com'   
