@@ -22,9 +22,11 @@ from django.conf.urls.static import static
 urlpatterns = [
    path('admin/', admin.site.urls),
    path('api/', include('accounts.urls')),
+   path('api/', include('api.urls')),  # replace with your actual app name
    path("api/password-reset/", include("django_rest_passwordreset.urls", namespace="password_reset")),
 
-   path('api/', include('api.urls')),  # replace with your actual app name
+
+
 
 
 
