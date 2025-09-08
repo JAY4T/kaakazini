@@ -468,106 +468,183 @@ function LandingPage() {
   `}</style>
 </section>
 
-      {/* FAQs */}
       <section className="py-5 bg-white">
-        <div className="container">
-          <h2 className="text-center mb-4 fw-bold text-primary">Frequently Asked Questions</h2>
-          <div className="accordion" id="faqAccordion">
-            {[
-              {
-                question: "How do I hire a craftsman?",
-                answer: "Click on 'Hire a Craftsman', register your account, and post your project. Craftsmen will reach out to you with quotes."
-              },
-              {
-                question: "Is there a cost to join as a craftsman?",
-                answer: "No, joining the platform as a craftsman is completely free."
-              },
-              {
-                question: "Can I trust the craftsmen on your platform?",
-                answer: "Yes, we review all craftsmen submissions and only approve those with complete and verified profiles."
-              },
-              {
-                question: "How do I leave a review for a craftsman?",
-                answer: "After your project is completed, go to your dashboard and leave a review based on your experience."
-              }
-            ].map((faq, index) => (
-              <div className="accordion-item" key={index}>
-                <h2 className="accordion-header" id={`heading${index}`}>
-                  <button
-                    className={`accordion-button ${index !== 0 ? 'collapsed' : ''}`}
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target={`#collapse${index}`}
-                    aria-expanded={index === 0 ? 'true' : 'false'}
-                    aria-controls={`collapse${index}`}
-                  >
-                    {faq.question}
-                  </button>
-                </h2>
-                <div
-                  id={`collapse${index}`}
-                  className={`accordion-collapse collapse ${index === 0 ? 'show' : ''}`}
-                  aria-labelledby={`heading${index}`}
-                  data-bs-parent="#faqAccordion"
+  <div className="container">
+    <h2 className="text-center mb-5 fw-bold text-primary">Frequently Asked Questions</h2>
+    <div className="row justify-content-center">
+      <div className="col-lg-12">
+        <div className="accordion faq-accordion shadow-lg rounded-3" id="faqAccordion">
+          {[
+            {
+              question: "How do I hire a craftsman?",
+              answer: "Click on 'Hire a Craftsman', register your account, and post your project. Craftsmen will reach out to you with quotes."
+            },
+            {
+              question: "Is there a cost to join as a craftsman?",
+              answer: "No, joining the platform as a craftsman is completely free."
+            },
+            {
+              question: "Can I trust the craftsmen on your platform?",
+              answer: "Yes, we review all craftsmen submissions and only approve those with complete and verified profiles."
+            },
+            {
+              question: "How do I leave a review for a craftsman?",
+              answer: "After your project is completed, go to your dashboard and leave a review based on your experience."
+            }
+          ].map((faq, index) => (
+            <div className="accordion-item" key={index}>
+              <h2 className="accordion-header" id={`heading${index}`}>
+                <button
+                  className={`accordion-button faq-button fw-bold ${index !== 0 ? 'collapsed' : ''}`}
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target={`#collapse${index}`}
+                  aria-expanded={index === 0 ? 'true' : 'false'}
+                  aria-controls={`collapse${index}`}
                 >
-                  <div className="accordion-body">{faq.answer}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-white text-dark pt-5 pb-4 mt-5">
-        <div className="container">
-          <div className="row">
-            <div className="col-md-3 mb-4">
-              <h5 className="text-uppercase fw-bold">Quick Links</h5>
-              <ul className="list-unstyled">
-                <li><Link to="/" className="text-dark text-decoration-none">Home</Link></li>
-                <li><Link to="/signup" className="text-dark text-decoration-none">Join as a Craftsman</Link></li>
-                <li><Link to="/HireSignUp" className="text-dark text-decoration-none">Hire a Craftsman</Link></li>
-                <li><a href="#services" className="text-dark text-decoration-none">Services</a></li>
-                <li><a href="#how-it-works" className="text-dark text-decoration-none">How It Works</a></li>
-              </ul>
-            </div>
-            <div className="col-md-4 mb-4">
-              <h5 className="text-uppercase fw-bold">Contact Us</h5>
-              <p><i className="fas fa-map-marker-alt me-2 text-primary"></i> Kisumu, Kenya</p>
-              <p><i className="fas fa-envelope me-2 text-primary"></i> kaakazini.jay4t@gmail.com</p>
-              {/* <p><i className="fas fa-phone me-2 text-primary"></i> +254 716 293 710</p> */}
-            </div>
-            <div className="col-md-5 mb-4">
-              <h5 className="text-uppercase fw-bold">Find Us</h5>
-              <div style={{ width: '100%', height: '350px', borderRadius: '10px', overflow: 'hidden' }}>
-                <iframe
-  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
-  width="100%"
-  height="400"
-  style={{ border: 0 }}
-  allowFullScreen=""
-  loading="lazy"
-  referrerPolicy="no-referrer-when-downgrade"
-  title="Kisumu Location Map"
-/>
+                  {faq.question}
+                </button>
+              </h2>
+              <div
+                id={`collapse${index}`}
+                className={`accordion-collapse collapse ${index === 0 ? 'show' : ''}`}
+                aria-labelledby={`heading${index}`}
+                data-bs-parent="#faqAccordion"
+              >
+                <div className="accordion-body text-secondary">{faq.answer}</div>
               </div>
             </div>
-          </div>
-          <hr className="border-secondary" />
-          <div className="d-flex justify-content-between align-items-center">
-            <p className="mb-0">&copy; {new Date().getFullYear()} <strong>KaaKazini</strong> - Empowering Craftsmen Everywhere.</p>
-          </div>
+          ))}
         </div>
-      </footer>
+      </div>
+    </div>
+  </div>
+  
+  <style>{`
+    .faq-accordion {
+      border: none !important;
+    }
+    .accordion-item {
+      border: none !important;
+      margin-bottom: 1rem;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.05);
+      transition: box-shadow 0.3s ease-in-out;
+    }
+    .accordion-item:hover {
+      box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+    }
+    .accordion-button.faq-button {
+      background-color: #f8f9fa;
+      color: #343a40;
+      padding: 1.5rem;
+      transition: background-color 0.3s ease-in-out;
+    }
+    .accordion-button.faq-button:hover {
+      background-color: #e9ecef;
+    }
+    .accordion-button:not(.collapsed) {
+      background-color: #e9ecef;
+      color: #0d6efd;
+    }
+    .accordion-button:focus {
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+    }
+    .accordion-button::after {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23212529'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+      transition: transform 0.3s ease-in-out;
+    }
+    .accordion-button:not(.collapsed)::after {
+      transform: rotate(-180deg);
+    }
+    .accordion-body {
+      padding: 1.5rem;
+    }
+  `}</style>
+</section>
 
-      {/* Animation CSS */}
-      <style>{`
-        @keyframes slide {
-          0% { transform: translateX(0px); }
-          100% { transform: translateX(20px); }
-        }
-      `}</style>
+<footer className="bg-dark text-light pt-5 pb-4 mt-5">
+  <div className="container">
+    <div className="row">
+      {/* Quick Links */}
+      <div className="col-lg-3 col-md-6 mb-4">
+        <h5 className="text-uppercase fw-bold mb-3">Quick Links</h5>
+        <ul className="list-unstyled">
+          <li className="mb-2"><Link to="/" className="text-light text-decoration-none">Home</Link></li>
+          <li className="mb-2"><Link to="/signup" className="text-light text-decoration-none">Join as a Craftsman</Link></li>
+          <li className="mb-2"><Link to="/HireSignUp" className="text-light text-decoration-none">Hire a Craftsman</Link></li>
+          <li className="mb-2"><a href="#services" className="text-light text-decoration-none">Services</a></li>
+          <li className="mb-2"><a href="#how-it-works" className="text-light text-decoration-none">How It Works</a></li>
+        </ul>
+      </div>
+
+      {/* Contact Info */}
+      <div className="col-lg-4 col-md-6 mb-4">
+        <h5 className="text-uppercase fw-bold mb-3">Contact Us</h5>
+        <p><i className="fas fa-map-marker-alt me-2 text-primary"></i> Kisumu, Kenya</p>
+        <p><i className="fas fa-envelope me-2 text-primary"></i> kaakazini.jay4t@gmail.com</p>
+        {/* Social Icons */}
+        <div className="mt-4 social-icons">
+          <h6 className="fw-bold mb-3">Follow Us</h6>
+          <a href="#" className="me-3 text-light"><i className="fab fa-facebook-f fa-lg"></i></a>
+          <a href="#" className="me-3 text-light"><i className="fab fa-twitter fa-lg"></i></a>
+          <a href="#" className="me-3 text-light"><i className="fab fa-instagram fa-lg"></i></a>
+          <a href="#" className="me-3 text-light"><i className="fab fa-linkedin-in fa-lg"></i></a>
+        </div>
+      </div>
+      
+      {/* Map */}
+      <div className="col-lg-5 col-md-12 mb-4">
+        <h5 className="text-uppercase fw-bold mb-3">Find Us</h5>
+        <div className="map-container">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
+            width="100%"
+            height="300"
+            style={{ border: 0 }}
+            allowFullScreen=""
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Kisumu Location Map"
+          />
+        </div>
+      </div>
+    </div>
+    
+    <hr className="border-secondary mt-0" />
+    
+    <div className="d-flex justify-content-between align-items-center flex-column flex-md-row">
+      <p className="mb-md-0 text-center text-secondary">© {new Date().getFullYear()} <strong>KaaKazini</strong>. All Rights Reserved.</p>
+      <div className="mt-2 mt-md-0 text-center">
+        <a href="#top" className="text-light text-decoration-none">Back to top <i className="fas fa-arrow-up ms-2"></i></a>
+      </div>
+    </div>
+  </div>
+
+  <style>{`
+    .footer-links li a {
+      transition: color 0.3s ease-in-out;
+    }
+    .footer-links li a:hover {
+      color: #0d6efd !important;
+    }
+    .social-icons a {
+      font-size: 1.5rem;
+      transition: transform 0.3s ease-in-out;
+    }
+    .social-icons a:hover {
+      transform: scale(1.1);
+      color: #0d6efd !important;
+    }
+    .map-container {
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+  `}</style>
+</footer>
     </>
   );
 }
