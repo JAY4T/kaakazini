@@ -1,4 +1,5 @@
 from decouple import config
+import os
 
 from pathlib import Path
 from datetime import timedelta
@@ -7,6 +8,7 @@ from corsheaders.defaults import default_headers
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 
 
@@ -116,11 +118,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DB', default='kakaazini_staging'),
-        'USER': config('POSTGRES_USER', default='kakaadmin_staging'),
-        'PASSWORD': config('POSTGRES_PASSWORD', default='kazikazi'),
-        'HOST': config('POSTGRES_HOST', default='localhost'),
-        'PORT': config('POSTGRES_PORT', default='5432'),
+        'NAME': config('DB_NAME', default='kakaazini_staging'),
+        'USER': config('DB_USER', default='kakaadmin_staging'),
+        'PASSWORD': config('DB_PASSWORD', default='kazikazi'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
@@ -165,9 +167,9 @@ TIME_ZONE = 'Africa/Nairobi'
 USE_I18N = True
 USE_TZ = True
 
-# Static and Media
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'static'
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # Path object
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -179,11 +181,8 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
 X_FRAME_OPTIONS = 'DENY'
 
 
 
-BREVO_API_KEY = config("BREVO_API_KEY", default="")
-BREVO_SENDER_EMAIL = config("BREVO_SENDER_EMAIL", default="kaakazini.jay4t@gmail.com")
-BREVO_SENDER_NAME = config("BREVO_SENDER_NAME", default="Kaakazini")
-FRONTEND_RESET_URL = config("FRONTEND_RESET_URL", default="https://kaakazini.com/password-reset")
