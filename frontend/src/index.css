@@ -20,14 +20,14 @@ code {
 }
 
 .btn-green-transparent:hover {
-  background-color: #218838 !important; /* darker green on hover */
-  border-color: #1e7e34 !important;
+  background-color: #29a745 !important; /* darker green on hover */
+  /* border-color: #1e7e34 !important; */
   color: white !important;
 }
 
 .btn-green-scrolled {
   background-color: #218838 !important; /* darker green on hover */
-  border-color: #1e7e34 !important;
+  /* border-color: #1e7e34 !important; */
   color: white !important;
 }
 
@@ -39,8 +39,9 @@ code {
 }
 
 .btn-green-solid {
-  background-color: #218838 !important; /* darker green on hover */
-  border-color: #1e7e34 !important;
+  /* background-color: #218838 !important; darker green on hover */
+    background-color: #25973e !important; /* darker green on hover */
+  /* border-color: #1e7e34 !important; */
   color: white !important;
 }
 

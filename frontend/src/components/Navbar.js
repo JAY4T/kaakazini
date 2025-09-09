@@ -83,7 +83,7 @@ function Navbar({ cart }) {
           </ul>
 
              <li className="nav-item">
-              <Link  className={`btn btn-green-transparent ms-2 rounded-pill ${scrolled ? "btn-green-scrolled" : ""}`}  to="/signup" >Join Now</Link>
+              <Link  className={`btn btn-green-transparent ms-2 rounded-pill ${scrolled ? "btn-green-solid" : ""}`}  to="/signup" >Join Now</Link>
             </li>
         </div>
       </div>

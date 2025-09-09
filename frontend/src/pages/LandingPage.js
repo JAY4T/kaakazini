@@ -81,7 +81,7 @@ function LandingPage() {
 <section className="py-5 bg-light">
   <div className="container">
     <div className="text-center mb-5">
-      <h2 className="fw-bold text-primary display-5" data-aos="fade-left">About Us</h2>
+      <h2 className="fw-bold text-success display-5" data-aos="fade-left">About Us</h2>
       <p className="text-muted fs-5" data-aos="fade-right">
         Empowering local craftsmen to grow, showcase their work, and reach the world.
       </p>
@@ -116,7 +116,7 @@ function LandingPage() {
 <section className="py-5 bg-light" id="services">
   <div className="container overflow-hidden">
     {/* Heading */}
-    <h2 className="text-center fw-bold text-primary display-5" data-aos="fade-left">
+    <h2 className="text-center fw-bold text-success display-5" data-aos="fade-left">
       Explore Our Services
     </h2>
     {/* Paragraph */}
@@ -206,7 +206,7 @@ function LandingPage() {
  {/* How It Works Section */}
 <section className="py-5 bg-light" id="how-it-works">
   <div className="container">
-    <h2 className="text-center fw-bold text-primary display-5 mb-5" data-aos="fade-left">How It Works</h2> 
+    <h2 className="text-center fw-bold text-success display-5 mb-5" data-aos="fade-left">How It Works</h2> 
     <div className="row text-center d-flex justify-content-center">
       <div className="col-12">
         <div className="how-it-works-steps">
@@ -379,7 +379,7 @@ function LandingPage() {
 
 <section className="py-5 bg-light">
   <div className="container">
-    <h2 className="text-center fw-bold text-primary display-5 mb-5" data-aos="fade-left">What Our Clients Say</h2> {/* Increased mb for more space */}
+    <h2 className="text-center fw-bold text-success display-5 mb-5" data-aos="fade-left">What Our Clients Say</h2> {/* Increased mb for more space */}
     <div className="row justify-content-center"> {/* Added justify-content-center for better alignment if cards aren't full width */}
       {[
         {
@@ -470,7 +470,7 @@ function LandingPage() {
 
       <section className="py-5 bg-white">
   <div className="container">
-    <h2 className="text-center mb-5 fw-bold text-primary">Frequently Asked Questions</h2>
+    <h2 className="text-center mb-5 fw-bold text-success">Frequently Asked Questions</h2>
     <div className="row justify-content-center">
       <div className="col-lg-12">
         <div className="accordion faq-accordion shadow-lg rounded-3" id="faqAccordion">
@@ -583,8 +583,8 @@ function LandingPage() {
       {/* Contact Info */}
       <div className="col-lg-4 col-md-6 mb-4">
         <h5 className="text-uppercase fw-bold mb-3">Contact Us</h5>
-        <p><i className="fas fa-map-marker-alt me-2 text-primary"></i> Kisumu, Kenya</p>
-        <p><i className="fas fa-envelope me-2 text-primary"></i> kaakazini.jay4t@gmail.com</p>
+        <p><i className="fas fa-map-marker-alt me-2 text-success"></i> Kisumu, Kenya</p>
+        <p><i className="fas fa-envelope me-2 text-success"></i> kaakazini.jay4t@gmail.com</p>
         {/* Social Icons */}
         <div className="mt-4 social-icons">
           <h6 className="fw-bold mb-3">Follow Us</h6>
