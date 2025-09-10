@@ -118,3 +118,25 @@ code {
   }
 }
 
+@keyframes flip-right-infinite {
+  0% {
+    opacity: 0;
+    transform: perspective(400px) rotateY(-90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(400px) rotateY(0deg);
+  }
+}
+
+.flip-right-infinite {
+  animation-name: flip-right-infinite;
+  animation-duration: 5s;
+  animation-timing-function: ease-out;
+  animation-iteration-count: infinite; /* This makes it run forever */
+  animation-direction: alternate; /* This makes it flip back and forth */
+}
+
+.flip-right-infinite:hover {
+  animation-play-state: paused;
+}

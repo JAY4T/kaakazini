@@ -158,7 +158,7 @@ function LandingPage() {
 
     {/* View All Services Button */}
     <div className="text-center mt-5">
-      <Link to="/services" className="btn btn-green-solid fw-bold rounded-pill px-5 py-3">
+      <Link to="/services" className="btn btn-green-solid fw-bold rounded-pill px-5 py-3" data-aos="fade-left">
         View All Services
       </Link>
     </div>
@@ -219,8 +219,8 @@ function LandingPage() {
               </div>
             </div>
             <div className="step-content">
-              <h5 className="fw-bold">Post Project</h5>
-              <p className="text-muted">Tell us about your project, and skilled craftsmen will start responding within 24 hours.</p>
+              <h5 className="fw-bold" data-aos="fade-left">Post Project</h5>
+              <p className="text-muted" data-aos="fade-right">Tell us about your project, and skilled craftsmen will start responding within 24 hours.</p>
             </div>
           </div>
 
@@ -233,8 +233,8 @@ function LandingPage() {
               </div>
             </div>
             <div className="step-content">
-              <h5 className="fw-bold">Browse Quotes</h5>
-              <p className="text-muted">Review applications and quotes from various craftsmen to find the best fit for you.</p>
+              <h5 className="fw-bold" data-aos="fade-left">Browse Quotes</h5>
+              <p className="text-muted" data-aos="fade-right">Review applications and quotes from various craftsmen to find the best fit for you.</p>
             </div>
           </div>
 
@@ -247,8 +247,8 @@ function LandingPage() {
               </div>
             </div>
             <div className="step-content">
-              <h5 className="fw-bold">Leave Review</h5>
-              <p className="text-muted">After the job is complete, you can rate the craftsman's work and provide valuable feedback.</p>
+              <h5 className="fw-bold" data-aos="fade-left">Leave Review</h5>
+              <p className="text-muted" data-aos="fade-right">After the job is complete, you can rate the craftsman's work and provide valuable feedback.</p>
             </div>
           </div>
         </div>
@@ -380,7 +380,7 @@ function LandingPage() {
 <section className="py-5 bg-light">
   <div className="container">
     <h2 className="text-center fw-bold text-success display-5 mb-5" data-aos="fade-left">What Our Clients Say</h2> {/* Increased mb for more space */}
-    <div className="row justify-content-center"> {/* Added justify-content-center for better alignment if cards aren't full width */}
+    <div className="row justify-content-center"> {/* justify-content-center for better alignment if cards aren't full width */}
       {[
         {
           quote: "The carpenter I hired was extremely professional. Highly recommend!",
@@ -402,7 +402,7 @@ function LandingPage() {
         },
       ].map((testi, idx) => (
         <div className="col-md-4 mb-4" key={idx}>
-          <div className="card h-100 border-0 testimonial-card-glow text-center shadow-lg"> {/* Changed shadow-sm to shadow-lg and added testimonial-card-glow */}
+          <div className="card h-100 border-0 testimonial-card-glow text-center shadow-lg flip-right-infinite" > {/* Changed shadow-sm to shadow-lg and added testimonial-card-glow */}
             <div className="card-body d-flex flex-column align-items-center p-4"> {/* Added padding */}
               <img src={testi.img} className="rounded-circle testimonial-img-circle mb-3" alt={testi.name} /> {/* Added image */}
               <i className="bi bi-quote display-4 text-muted mb-2"></i>
