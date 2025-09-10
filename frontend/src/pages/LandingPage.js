@@ -53,7 +53,7 @@ function LandingPage() {
       <section className="text-center d-flex align-items-center"
         style={{
           // background: `url(${heroImage}) no-repeat center center/cover`,
-          background: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${heroImage}) no-repeat center center/cover`,
+          background: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.4)), url(${heroImage}) no-repeat center center/cover`,
           height: '100vh',
           color: 'white',
         }}>
@@ -474,10 +474,10 @@ function LandingPage() {
 
       <section className="py-5 bg-white">
   <div className="container">
-    <h2 className="text-center mb-5 fw-bold text-success">Frequently Asked Questions</h2>
+    <h2 className="text-center mb-5 fw-bold text-success" data-aos="fade-left">Frequently Asked Questions</h2>
     <div className="row justify-content-center">
       <div className="col-lg-12">
-        <div className="accordion faq-accordion shadow-lg rounded-3" id="faqAccordion">
+        <div className="accordion faq-accordion shadow-lg rounded-3" id="faqAccordion" data-aos="fade-right">
           {[
             {
               question: "How do I hire a craftsman?",
@@ -577,8 +577,8 @@ function LandingPage() {
     <div className="row">
       {/* Quick Links */}
       <div className="col-lg-3 col-md-6 mb-4">
-        <h5 className="text-uppercase fw-bold mb-3">Quick Links</h5>
-        <ul className="list-unstyled">
+        <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Quick Links</h5>
+        <ul className="list-unstyled" data-aos="fade-right">
           <li className="mb-2"><Link to="/" className="text-light text-decoration-none">Home</Link></li>
           <li className="mb-2"><Link to="/signup" className="text-light text-decoration-none">Join as a Craftsman</Link></li>
           <li className="mb-2"><Link to="/HireSignUp" className="text-light text-decoration-none">Hire a Craftsman</Link></li>
@@ -589,11 +589,11 @@ function LandingPage() {
 
       {/* Contact Info */}
       <div className="col-lg-4 col-md-6 mb-4">
-        <h5 className="text-uppercase fw-bold mb-3">Contact Us</h5>
-        <p><i className="fas fa-map-marker-alt me-2 text-success"></i> Kisumu, Kenya</p>
-        <p><i className="fas fa-envelope me-2 text-success"></i> kaakazini.jay4t@gmail.com</p>
+        <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Contact Us</h5>
+        <p><i className="fas fa-map-marker-alt me-2 " data-aos="fade-right"></i> Kisumu, Kenya</p>
+        <p><i className="fas fa-envelope me-2" data-aos="fade-right"></i> kaakazini.jay4t@gmail.com</p>
         {/* Social Icons */}
-        <div className="mt-4 social-icons">
+        <div className="mt-4 social-icons" data-aos="fade-right">
           <h6 className="fw-bold mb-3">Follow Us</h6>
           <a href="#" className="me-3 text-light"><i className="fab fa-facebook-f fa-lg"></i></a>
           <a href="#" className="me-3 text-light"><i className="fab fa-twitter fa-lg"></i></a>
@@ -604,8 +604,8 @@ function LandingPage() {
       
       {/* Map */}
       <div className="col-lg-5 col-md-12 mb-4">
-        <h5 className="text-uppercase fw-bold mb-3">Find Us</h5>
-        <div className="map-container">
+        <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Find Us</h5>
+        <div className="map-container" data-aos="fade-right">
           <iframe
             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
             width="100%"
@@ -623,7 +623,7 @@ function LandingPage() {
     <hr className="border-secondary mt-0" />
     
     <div className="d-flex justify-content-between align-items-center flex-column flex-md-row">
-      <p className="mb-md-0 text-center text-secondary">© {new Date().getFullYear()} <strong>KaaKazini</strong>. All Rights Reserved.</p>
+      <p className="mb-md-0 text-center ">© {new Date().getFullYear()} <strong>KaaKazini</strong>. All Rights Reserved.</p>
       <div className="mt-2 mt-md-0 text-center">
         <a href="#top" className="text-light text-decoration-none">Back to top <i className="fas fa-arrow-up ms-2"></i></a>
       </div>
@@ -632,7 +632,7 @@ function LandingPage() {
 
   <style>{`
     .footer {
-     background-color: #196429ff;
+     background-color: #1b692cff;
     }
     .footer-links li a {
       transition: color 0.3s ease-in-out;
