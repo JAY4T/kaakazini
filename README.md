@@ -53,6 +53,10 @@ cd kaakazini/frontend
 ```bash
 npm install
 ```
+or if using pnpm:
+```bash
+pnpm install
+```
 4. Create .env file and add this:
 ```bash
 REACT_APP_API_BASE_URL=http://localhost:8000/api
@@ -62,6 +66,13 @@ REACT_APP_API_BASE_URL=http://localhost:8000/api
 npm start
 ```
 If you are using pnpm replace "npm start" with "pnpm start"
+
+## Running script for populating approved craftsmen table
+```bash
+python -m manage.py shell
+from api.populate_services import populate_services
+populate_services()
+```
 
 # Deployment (Production)
 
@@ -81,7 +92,3 @@ npm run build
 
 Configure Nginx to serve React & proxy API.
 
-running script for populating approved craftsmen table
-python -m manage shell
-from api.populate_services import populate_services
-populate_services()
