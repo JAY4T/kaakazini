@@ -12,6 +12,7 @@ code {
     monospace;
 }
 
+
 .btn-green-transparent {
   background-color: transparent !important;  /* force override Bootstrap blue */
   border: 2px solid #28a745 !important;
@@ -43,12 +44,15 @@ code {
     background-color: #25973e !important; /* darker green on hover */
   /* border-color: #1e7e34 !important; */
   color: white !important;
+  transition: transform 0.8s ease-in-out;
+
 }
 
 .btn-green-solid:hover {
   background-color: #29a745 !important; /* darker green on hover */
-  border-color: #1e7e34 !important;
+  /* border-color: #1e7e34 !important; */
   color: white !important;
+    transform: scale(1.015); /* grows by 10% */
 }
 /* Hover effect for nav-links */
 .navbar-nav .nav-link:hover {
@@ -113,3 +117,4 @@ code {
     transform: translateX(0);
   }
 }
+

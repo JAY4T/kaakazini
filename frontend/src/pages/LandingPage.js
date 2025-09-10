@@ -53,7 +53,7 @@ function LandingPage() {
       <section className="text-center d-flex align-items-center"
         style={{
           // background: `url(${heroImage}) no-repeat center center/cover`,
-          background: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${heroImage}) no-repeat center center/cover`,
+          background: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${heroImage}) no-repeat center center/cover`,
           height: '100vh',
           color: 'white',
         }}>
@@ -147,7 +147,7 @@ function LandingPage() {
                   </div>
                 </div>
                 <div className="card-body text-center d-flex flex-column justify-content-center">
-                  <h5 className="card-title fw-bold mb-0 text-primary">{service.service}</h5>
+                  <h5 className="card-title fw-bold mb-0 text-green">{service.service}</h5>
                 </div>
               </div>
             </div>
@@ -418,7 +418,7 @@ function LandingPage() {
                   <i key={i} className="far fa-star" />
                 ))}
               </div>
-              <h5 className="card-title mt-3 fw-bold text-primary">– {testi.name}</h5> {/* Applied text-primary to name for emphasis */}
+              <h5 className="card-title mt-3 fw-bold text-green">– {testi.name}</h5> 
             </div>
           </div>
         </div>
@@ -436,14 +436,16 @@ function LandingPage() {
     .testimonial-card-glow:hover {
       transform: translateY(-10px);
       /* Custom glow effect */
-      box-shadow: 0 0.5rem 2rem rgba(13, 110, 253, 0.3), 0 0.25rem 1rem rgba(0,0,0,0.1) !important; /* Blue glow */
-    }
+      // box-shadow: 0 0.5rem 2rem rgba(13, 110, 253, 0.3), 0 0.25rem 1rem rgba(0,0,0,0.1) !important; /* Blue glow */
+        box-shadow: 0 0.5rem 2rem rgba(33, 253, 13, 0.3), 0 0.25rem 1rem rgba(0,0,0,0.1) !important; /* Blue glow */
+      }
 
     .testimonial-img-circle {
       width: 90px; /* Slightly smaller for elegance */
       height: 90px;
       object-fit: cover;
-      border: 3px solid #0d6efd; /* Blue border for the image */
+      // border: 3px solid #0d6efd; /* Blue border for the image */
+      border: 3px solid #29a745;
       box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.1);
     }
 
@@ -453,10 +455,12 @@ function LandingPage() {
     }
 
     .testimonial-card-glow .card-body h5 {
-      color: #0d6efd; /* Primary blue for names */
+      color: #2fc552; 
       margin-top: 1rem;
     }
-
+    .text-green{
+      color: #2fc552;
+    }
     .testimonial-card-glow .bi-quote {
       font-size: 3.5rem; /* Slightly larger quote icon */
       color: #adb5bd; /* Lighter grey for subtle icon */
@@ -524,6 +528,9 @@ function LandingPage() {
     .faq-accordion {
       border: none !important;
     }
+    .text-green{
+      color: #2fc552;
+    }
     .accordion-item {
       border: none !important;
       margin-bottom: 1rem;
@@ -546,7 +553,7 @@ function LandingPage() {
     }
     .accordion-button:not(.collapsed) {
       background-color: #e9ecef;
-      color: #0d6efd;
+      color: #2fc552;
     }
     .accordion-button:focus {
       border-color: #86b7fe;
@@ -565,7 +572,7 @@ function LandingPage() {
   `}</style>
 </section>
 
-<footer className="bg-dark text-light pt-5 pb-4 mt-5">
+<footer className="footer text-light pt-5 pb-4 mt-5">
   <div className="container">
     <div className="row">
       {/* Quick Links */}
@@ -624,6 +631,9 @@ function LandingPage() {
   </div>
 
   <style>{`
+    .footer {
+     background-color: #196429ff;
+    }
     .footer-links li a {
       transition: color 0.3s ease-in-out;
     }
