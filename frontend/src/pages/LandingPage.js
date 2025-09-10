@@ -60,9 +60,12 @@ function LandingPage() {
 
 
         <div className="container" style={{ paddingTop: "120px" }}>
-          <h1 className="display-4 fw-bold moving-text" style={{ animation: 'zoomFade 1.5s ease-out' }}>
+          <h1 className="display-4 fw-bold moving-text" style={{ animation: 'zoomFade 3.5s ease-out, slide 3s infinite alternate' }}>
             Empowering Local Craftsmen
           </h1>
+          {/* <h1 className="display-4 fw-bold moving-text" style={{ animation: 'slide 5s infinite alternate' }}>
+            Empowering Local Craftsmen
+          </h1> */}
           <p className="lead mt-3 typing" style={{ animation: 'fadeUp 2s ease-out' }}>
             Manage clients, showcase your work, and grow your trade — all in one platform.
           </p>
@@ -653,6 +656,10 @@ function LandingPage() {
       overflow: hidden;
       box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
+     @keyframes slide {
+          0% { transform: translateX(0px); }
+          100% { transform: translateX(20px); }
+        }
   `}</style>
 </footer>
     </>
