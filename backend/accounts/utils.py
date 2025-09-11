@@ -22,12 +22,12 @@ def send_welcome_email(email: str, full_name: str):
     api_instance = transactional_emails_api.TransactionalEmailsApi(ApiClient(configuration))
 
     email_content = SendSmtpEmail(
-        sender={"name": "Kaakazini", "email": "noreply@kaakazini.com"},
+        sender={"name": "KaaKazini", "email": "kaakazini.jay4t@gmail.com"},
         to=[{"email": email, "name": full_name or "User"}],
-        subject="Welcome to Kaakazini 🎉",
+        subject="Welcome to Kaakazini !!",
         html_content=f"""
             <p>Hi {full_name or 'User'},</p>
-            <p>Welcome to <b>Kaakazini</b>! 🎉</p>
+            <p>Welcome to <b>Kaakazini</b>! !!</p>
             <p>Your account has been created successfully.</p>
         """,
     )
