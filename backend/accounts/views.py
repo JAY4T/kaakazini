@@ -28,6 +28,8 @@ from .serializers import ClientSignupSerializer, ClientLoginSerializer
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .utils import complete_signup
+from .utils import send_welcome_email
+
 
 import logging
 
