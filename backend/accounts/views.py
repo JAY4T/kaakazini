@@ -27,7 +27,8 @@ from .models import CustomUser
 from .serializers import ClientSignupSerializer, ClientLoginSerializer
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from .utils import send_sms
+from .utils import complete_signup
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,24 +37,19 @@ logger = logging.getLogger(__name__)
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
-
-
+    
     def perform_create(self, serializer):
         user = serializer.save()
 
-        # Format phone number to international (e.g., 07xxxxxxxx -> 2547xxxxxxxx)
-        phone = user.phone_number
-        if phone.startswith("07"):
-            phone = "254" + phone[1:]
+        # Complete signup: send Brevo email + generate JWT
+        tokens = complete_signup(user)
 
-        message = f"Welcome to Kaakazini, {user.full_name}! You have successfully registered."
-
-        try:
-            send_sms(phone, message)
-        except Exception as e:
-            logger.error(f"Failed to send SMS to {phone}: {e}")
-
-
+        return Response({
+            "detail": "Craftsman account created successfully",
+            **tokens
+        }, status=status.HTTP_201_CREATED)
+    
+    
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID") or '551247510793-ria1stm1obcn36nkkl2is4tknoqaj2sv.apps.googleusercontent.com'
 
 class GoogleLoginView(APIView):
@@ -61,21 +57,35 @@ class GoogleLoginView(APIView):
 
     def post(self, request):
         token = request.data.get("token")
+        if not token:
+            return Response({"detail": "No token provided"}, status=400)
 
         try:
             idinfo = id_token.verify_oauth2_token(token, requests.Request(), GOOGLE_CLIENT_ID)
             email = idinfo["email"]
             full_name = idinfo.get("name", "")
-            user, created = CustomUser.objects.get_or_create(email=email, defaults={"full_name": full_name})
+
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={"full_name": full_name}
+            )
+
+            # DEBUG: log user creation
+            logger.info(f"User {email} created? {created}")
+
+            # Send welcome email only if newly created
+            if created:
+                logger.info(f"Sending welcome email to {email}")
+                complete_signup(user)
+
             refresh = RefreshToken.for_user(user)
             return Response({
                 "refresh": str(refresh),
-                "access": str(refresh.access_token)
+                "access": str(refresh.access_token),
             })
         except Exception as e:
-            return Response({"detail": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
-
-
+            logger.error(f"Google signup failed for token: {token}, error: {e}")
+            return Response({"detail": "Invalid Google token"}, status=400)
 
 class EmailBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
@@ -166,7 +176,18 @@ class ProfileView(APIView):
 class ClientSignupView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = ClientSignupSerializer
-    permission_classes = [AllowAny]  # ✅ Add this
+    permission_classes = [AllowAny]  
+
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+
+        # ✅ Send Brevo welcome email here
+        from .utils import send_welcome_email
+        try:
+            send_welcome_email(user.email, user.full_name)
+        except Exception as e:
+            logger.error(f"Failed to send Brevo email to {user.email}: {e}")
 
 
 
