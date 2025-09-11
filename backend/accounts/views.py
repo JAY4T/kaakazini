@@ -70,21 +70,27 @@ class GoogleLoginView(APIView):
                 defaults={"full_name": full_name}
             )
 
-            # DEBUG: log user creation
             logger.info(f"User {email} created? {created}")
 
-            # Send welcome email only if newly created
+            # 🔑 Always send an email
             if created:
-                logger.info(f"Sending welcome email to {email}")
-                complete_signup(user)
+                logger.info(f"Sending WELCOME email to {email}")
+                send_welcome_email(user.email, user.full_name)
+            else:
+                logger.info(f"Sending LOGIN notification email to {email}")
+                send_welcome_email(
+                    user.email,
+                    user.full_name or "User"
+                )  # you could make a separate function for login emails if needed
 
             refresh = RefreshToken.for_user(user)
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
+                "created": created,  # helpful flag for frontend
             })
         except Exception as e:
-            logger.error(f"Google signup failed for token: {token}, error: {e}")
+            logger.error(f"Google signup/login failed for token: {token}, error: {e}")
             return Response({"detail": "Invalid Google token"}, status=400)
 
 class EmailBackend(ModelBackend):
