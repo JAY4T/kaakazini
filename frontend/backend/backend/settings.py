@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
@@ -182,14 +183,4 @@ X_FRAME_OPTIONS = 'DENY'
 # BREVO (SENDINBLUE) CONFIG
 # ---------------------------
 
-import os
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp-relay.brevo.com"
-EMAIL_PORT = 465  # Use 465 if you prefer SSL
-EMAIL_USE_TLS = False  # True for 587, False for 465
-EMAIL_USE_SSL = True
-
-EMAIL_HOST_USER = os.getenv("BREVO_EMAIL", "935244001@smtp-brevo.com")  # Your Brevo registered email
-EMAIL_HOST_PASSWORD = os.getenv("BREVO_SMTP_KEY")  # Your SMTP API key
-DEFAULT_FROM_EMAIL = f"Kaakazini <{EMAIL_HOST_USER}>"
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
