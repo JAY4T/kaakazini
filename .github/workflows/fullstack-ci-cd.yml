@@ -188,9 +188,8 @@ jobs:
             source venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt
-            
-            export BREVO_EMAIL=$BREVO_EMAIL
-            export BREVO_SMTP_KEY=$BREVO_SMTP_KEY
+
+            export BREVO_API_KEY=$BREVO_API_KEY
 
             python manage.py migrate --noinput
             python manage.py collectstatic --noinput
