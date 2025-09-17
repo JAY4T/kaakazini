@@ -21,12 +21,10 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import ContactMessage
 from .serializers import ContactMessageSerializer
 from rest_framework import filters # type: ignore
+from api.utils import send_craftsman_approval_email
 
-
-
-
-
-
+import logging
+logger = logging.getLogger(__name__)
 
 
 
@@ -113,6 +111,12 @@ class AdminCraftsmanApproveView(APIView):
         craftsman.status = 'approved'
         craftsman.is_approved = True
         craftsman.save()
+# Send approval email safely
+        try:
+            send_craftsman_approval_email(craftsman.user.email, craftsman.full_name)
+        except Exception as e:
+            logger.error(f"Failed to send approval email to {craftsman.user.email}: {e}")
+
         return Response({'status': 'approved'})
 
 # Reject Craftsman
