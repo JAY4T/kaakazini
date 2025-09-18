@@ -52,7 +52,7 @@ function Navbar({ cart }) {
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/admin-login" onClick={handleLinkClick}>
-                Admin
+                {/* Admin */}
               </Link>
             </li>
             <li className="nav-item">
