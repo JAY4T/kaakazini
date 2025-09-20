@@ -1,12 +1,13 @@
-// src/pages/ResetPasswordPage.jsx
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
+
 function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
+  const uid = searchParams.get("uid") || "";
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [message, setMessage] = useState("");
@@ -15,24 +16,26 @@ function ResetPasswordPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!token) setError("No reset token found in the URL.");
-  }, [token]);
+    if (!token || !uid) {
+      setError("Invalid or expired reset link.");
+    }
+  }, [token, uid]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
     setError("");
 
-    if (!token) return setError("No token provided.");
+    if (!token || !uid) return setError("Invalid reset link.");
     if (password.length < 8) return setError("Password must be at least 8 characters.");
     if (password !== confirm) return setError("Passwords do not match.");
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/password-reset/confirm/`, {
+      const res = await fetch(`${API_BASE_URL}/password-reset-confirm/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ uid, token, password }), // ✅ include uid
       });
 
       if (!res.ok) {
