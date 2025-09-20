@@ -23,6 +23,8 @@ import HireCraftsmanPage from './pages/HireCraftsmanPage';
 import TermsConditionPage from './pages/TermsConditionPage';
 import HireLogin from './pages/HireLoginPage';
 import ServicesPage from './pages/ServicesPage';
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+
 
 
 
@@ -67,7 +69,9 @@ function App() {
         />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />  
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} /> 
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
 
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/profiles/:username" element={<PublicProfile />} />
