@@ -29,7 +29,16 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .utils import complete_signup
 from .utils import send_welcome_email
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.models import User
+from django.conf import settings
+from .utils import send_email
 
+
+
+User = get_user_model()
 
 import logging
 
@@ -74,7 +83,7 @@ class GoogleLoginView(APIView):
 
             logger.info(f"User {email} created? {created}")
 
-            # 🔑 Always send an email
+            # Always send an email
             if created:
                 logger.info(f"Sending WELCOME email to {email}")
                 send_welcome_email(user.email, user.full_name)
@@ -218,3 +227,73 @@ class ClientLoginView(APIView):
                 'role': user.role,
             }
         })
+
+
+class PasswordResetView(APIView):
+    permission_classes = [AllowAny]   
+
+    def post(self, request):
+        email = request.data.get("email")
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "If the email exists, a reset link has been sent."},
+                status=status.HTTP_200_OK,
+            )
+
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        # ✅ Use FRONTEND_URL from settings
+        frontend_url = getattr(settings, "FRONTEND_URL", "https://staging.kaakazini.com")
+        reset_link = f"{frontend_url}/reset-password?token={token}&uid={uid}"
+
+        subject = "Password Reset Request"
+        html_content = f"""
+            <p>Hello {getattr(user, "full_name", user.email) or 'User'},</p>
+
+            <p>You requested a password reset for your Kaakazini account.</p>
+            <p>Click the link below to reset your password:</p>
+            <p><a href="{reset_link}" target="_blank">Reset Password</a></p>
+            <br>
+            <p>If you didn’t request this, you can ignore this email.</p>
+        """
+        send_email(user.email, subject, html_content)
+
+        return Response({"detail": "Password reset email sent."}, status=status.HTTP_200_OK)
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]  
+
+    def post(self, request):
+        uid = request.data.get("uid")
+        token = request.data.get("token")
+        password = request.data.get("password")
+
+        try:
+            uid_decoded = urlsafe_base64_decode(uid).decode()
+            user = User.objects.get(pk=uid_decoded)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({"detail": "Invalid link"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update password
+        user.set_password(password)
+        user.save()
+
+        # Send password reset confirmation email
+        subject = "Your password has been changed"
+        html_content = f"""
+            <p>Hello {getattr(user, 'full_name', user.email) or 'User'},</p>
+            <p>Your password for your Kaakazini account has been successfully changed.</p>
+            <p>If you did not perform this action, please contact support immediately.</p>
+            <br>
+            <p>Thank you,<br>Kaakazini Team</p>
+        """
+        send_email(user.email, subject, html_content)
+
+        return Response({"detail": "Password has been reset and confirmation email sent."}, status=status.HTTP_200_OK)
