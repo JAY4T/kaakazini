@@ -23,14 +23,14 @@ def send_craftsman_approval_email(email: str, full_name: str):
     email_content = SendSmtpEmail(
         sender={"name": "Kaakazini Team", "email": "noreply@kaakazini.com"},
         reply_to={"name": "Kaakazini Team", "email": "support@kaakazini.com"},
-        to=[{"email": email, "name": full_name or "User"}],  # <- fallback to "User"
+        to=[{"email": email, "name": full_name or "User"}],  
         subject="Your Craftsman Profile Has Been Approved",
         html_content=f"""
         <p>Hi {full_name or 'User'},</p>
         <p>Good news! Your profile on <b>Kaakazini</b> has been approved by the admin.</p>
         <p>You can now access all features.</p>
         <br>
-        <p>— The Kaakazini Team</p>
+        <p>— JAY4T Team</p> 
         """
     )
 
