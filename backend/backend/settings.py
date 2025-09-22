@@ -1,51 +1,36 @@
+import os
 from pathlib import Path
-from datetime import timedelta
-from decouple import config
 from corsheaders.defaults import default_headers
+from decouple import config, Csv
+from datetime import timedelta
 
-# ---------------------------
-# BASE DIR
-# ---------------------------
+# Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ---------------------------
-# SECURITY
-# ---------------------------
-SECRET_KEY = config('DJANGO_SECRET_KEY', default='fallback-secret-for-dev')
-DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+# Security
+SECRET_KEY = config("SECRET_KEY")
+DEBUG = config("DEBUG", default=False, cast=bool)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost,kaakazini.com,www.kaakazini.com", cast=Csv())
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://staging.kaakazini.com',
-    'https://kaakazini.com',
-    'https://www.kaakazini.com',
-]
 
-# ---------------------------
-# CORS
-# ---------------------------
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    'https://staging.kaakazini.com',
-    'https://kaakazini.com',
-    'https://www.kaakazini.com',
-]
-CORS_ALLOW_HEADERS = list(default_headers) + ['authorization']
-CORS_ALLOW_CREDENTIALS = True
-CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
-
-# ---------------------------
-# CUSTOM USER MODEL & AUTH
-# ---------------------------
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL")
+BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME")
+# Custom user model
 AUTH_USER_MODEL = 'accounts.CustomUser'
 AUTHENTICATION_BACKENDS = [
     'accounts.authentication.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-# ---------------------------
-# INSTALLED APPS
-# ---------------------------
+
+
+
+# CORS
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = list(default_headers) + ['authorization']
+
+# Installed apps
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -54,21 +39,21 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Third-party
+    # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'djoser',
-
-    # Local apps
-    'api',
-    'accounts',
     'django_rest_passwordreset',
+
+
+    # Project apps
+    'api',
+    'accounts.apps.AccountsConfig',
+
 ]
 
-# ---------------------------
-# MIDDLEWARE
-# ---------------------------
+# Middleware
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -80,15 +65,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# ---------------------------
-# URLS & TEMPLATES
-# ---------------------------
 ROOT_URLCONF = 'backend.urls'
 
+# Templates
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'pages'/'templates'],  # optional
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -102,23 +85,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-# ---------------------------
-# DATABASE
-# ---------------------------
+# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='kakaazini_staging'),
-        'USER': config('DB_USER', default='kakaadmin_staging'),
-        'PASSWORD': config('DB_PASSWORD', default='kazikazi'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+        'NAME': config("DB_NAME"),
+        'USER': config("DB_USER"),
+        'PASSWORD': config("DB_PASSWORD"),
+        'HOST': config("DB_HOST", default="localhost"),
+        'PORT': config("DB_PORT", default=5432, cast=int),
     }
 }
 
-# ---------------------------
-# REST FRAMEWORK & JWT
-# ---------------------------
+# REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -127,11 +106,6 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
-    "DEFAULT_THROTTLE_RATES": {
-        "password_reset": "3/hour",
-        "password_reset_confirm": "10/hour",
-    }
 }
 
 SIMPLE_JWT = {
@@ -139,9 +113,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
-# ---------------------------
-# PASSWORD VALIDATION
-# ---------------------------
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -149,37 +121,32 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# ---------------------------
-# INTERNATIONALIZATION
-# ---------------------------
+# Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Africa/Nairobi'
+TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# ---------------------------
-# STATIC & MEDIA
-# ---------------------------
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+# Static files
+STATIC_URL = '/backend-static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ---------------------------
-# SECURITY HEADERS
-# ---------------------------
+# Security settings
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = 'DENY'
 
-# ---------------------------
-# BREVO (SENDINBLUE) CONFIG
-# ---------------------------
+FRONTEND_URL = "https://kaakazini.com"
 
-BREVO_API_KEY = config("BREVO_API_KEY", default="")
+
+
+
