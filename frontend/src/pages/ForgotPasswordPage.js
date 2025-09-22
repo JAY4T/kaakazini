@@ -1,99 +1,76 @@
-// import React from 'react';
-// import emailjs from '@emailjs/browser';
-// import 'bootstrap/dist/css/bootstrap.min.css';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
-// function ForgotPassword({ email, setEmail, backToLogin }) {
-//   const handleForgotPassword = (e) => {
-//     e.preventDefault();
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
-//     const resetPasswordLink = `https://yourwebsite.com/reset-password?email=${encodeURIComponent(email)}`;
 
-//     const templateParams = {
-//       user_email: email,
-//       reset_link: resetPasswordLink,
-//     };
+function ForgotPasswordPage() {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-//     emailjs
-//       .send(
-//         process.env.REACT_APP_EMAILJS_SERVICE_ID || 'service_zpy2zgi',
-//         process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_k8lm489',
-//         templateParams,
-//         process.env.REACT_APP_EMAILJS_PUBLIC_KEY || '0uWDtjAcTEivfd7UT'
-//       )
-//       .then((response) => {
-//         console.log('SUCCESS!', response.status, response.text);
-//         alert('Password reset instructions sent to your email.');
-//         setEmail('');
-//         backToLogin();
-//       })
-//       .catch((err) => {
-//         console.error('FAILED...', err);
-//         alert('Something went wrong. Please try again.');
-//       });
-//   };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    setError("");
+    setLoading(true);
 
-//   return (
-//     <div
-//       className="container-fluid"
-//       style={{
-//         minHeight: '100vh',
-//         display: 'flex',
-//         justifyContent: 'center',
-//         alignItems: 'center',
-//         background: 'linear-gradient(135deg, #e0eafc, #cfdef3)',
-//         padding: '20px',
-//       }}
-//     >
-//       <div className="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
-//         <div className="card shadow border-0 rounded-4">
-//           <div className="card-body p-5">
-//             <h3 className="text-center fw-bold text-primary mb-3">
-//               Forgot Password
-//             </h3>
-//             <p className="text-center text-muted mb-4">
-//               Enter your email address and we'll send you a link to reset your password.
-//             </p>
+    try {
+      const res = await fetch(`${API_BASE_URL}/password-reset/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-//             <form onSubmit={handleForgotPassword}>
-//               <div className="form-group mb-3">
-//                 <label htmlFor="email" className="form-label fw-semibold">
-//                   Email Address
-//                 </label>
-//                 <input
-//                   id="email"
-//                   type="email"
-//                   className="form-control form-control-lg rounded-3 shadow-sm"
-//                   placeholder="you@example.com"
-//                   value={email}
-//                   onChange={(e) => setEmail(e.target.value)}
-//                   required
-//                 />
-//               </div>
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.detail || "Failed to request password reset");
+      }
 
-//               <div className="d-grid mt-4">
-//                 <button
-//                   type="submit"
-//                   className="btn btn-primary btn-lg rounded-pill"
-//                 >
-//                   Send Reset Link
-//                 </button>
-//               </div>
+      setMessage("If this email is registered, you’ll receive reset instructions shortly.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-//               <div className="text-center mt-4">
-//                 <button
-//                   type="button"
-//                   className="btn btn-link text-decoration-none text-primary fw-medium"
-//                   onClick={backToLogin}
-//                 >
-//                   ← Back to Login
-//                 </button>
-//               </div>
-//             </form>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
+  return (
+    <div className="d-flex align-items-center justify-content-center vh-100 bg-light">
+      <div className="card shadow-lg border-0" style={{ maxWidth: 420, width: "100%" }}>
+        <div className="card-body p-4">
+          <h3 className="text-center mb-4 fw-bold text-primary">Forgot Password</h3>
 
-// // export default ForgotPassword;
+          <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <label className="form-label">Email Address</label>
+              <input
+                type="email"
+                className="form-control"
+                placeholder="Enter your registered email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+
+            <button className="btn btn-primary w-100" type="submit" disabled={loading}>
+              {loading ? "Sending..." : "Send Reset Link"}
+            </button>
+          </form>
+
+          {message && <div className="alert alert-success mt-3 text-center">{message}</div>}
+          {error && <div className="alert alert-danger mt-3 text-center">{error}</div>}
+
+          <p className="mt-3 text-center">
+            <Link to="/login" className="text-decoration-none">Back to Login</Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ForgotPasswordPage;

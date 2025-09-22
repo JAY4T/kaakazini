@@ -172,6 +172,11 @@ function LoginPage() {
                       disabled={loading}
                     />
                   </div>
+                  <p className="text-center mt-2">
+  <Link to="/forgot-password" className="text-primary">
+    Forgot Password?
+  </Link>
+</p>
 
                   {error && <div className="alert alert-danger">{error}</div>}
 
@@ -194,6 +199,7 @@ function LoginPage() {
         </div>
       </div>
     </div>
+    
   );
 }
 

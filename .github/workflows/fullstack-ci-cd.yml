@@ -1,0 +1,200 @@
+name: Full Stack CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:   # allow manual trigger from Actions tab
+
+jobs:
+  ##########################
+  # 1. Frontend Build & Deploy
+  ##########################
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Cache Node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install frontend dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Set environment and build React app
+        run: |
+          echo "Branch: ${{ github.ref }}"
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_PROD_API_URL }}" > .env
+            echo "Building for production"
+          else
+            echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_STAGING_API_URL }}" > .env
+            echo "Building for staging"
+          fi
+          cat .env
+
+          if npm run | grep -q "build"; then
+            CI=false npm run build
+          else
+            echo "⚠️ No build script found, skipping build"
+          fi
+
+      - name: Deploy frontend
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
+          STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
+          PROD_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_PROD }}
+          STAGING_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_STAGING }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          # Set remote host & path
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            REMOTE_HOST=$PROD_HOST
+            FRONTEND_PATH=$PROD_FRONTEND_PATH
+          else
+            REMOTE_HOST=$STAGING_HOST
+            FRONTEND_PATH=$STAGING_FRONTEND_PATH
+          fi
+
+          # Add host fingerprint
+          ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          echo "🚀 Deploying frontend to $REMOTE_HOST:$FRONTEND_PATH..."
+
+          if [ -d build ]; then
+            # Clear old files first (prevents stale assets)
+            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "rm -rf $FRONTEND_PATH/*"
+
+            # Deploy new build
+            rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+              --exclude='.git' --exclude='node_modules' --delete build/ \
+              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/
+            echo "✅ Frontend deployed successfully!"
+          else
+            echo "⚠️ No build folder found, skipping frontend deploy"
+          fi
+
+  ##########################
+  # 2. Backend Deploy
+  ##########################
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    needs: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Cache Python packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Django pre-deploy check
+        env:
+          DJANGO_SETTINGS_MODULE: backend.settings   # 👈 adjust if settings path differs
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DEBUG: "True"
+          ALLOWED_HOSTS: "staging.kaakazini.com,127.0.0.1,localhost"
+        run: |
+          echo "⚙️ Running Django system checks..."
+          python manage.py check --deploy
+          echo "✅ Django pre-check passed!"
+
+      - name: Deploy backend
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
+          STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
+          PROD_BACKEND_PATH: ${{ secrets.BACKEND_PATH_PROD }}
+          STAGING_BACKEND_PATH: ${{ secrets.BACKEND_PATH_STAGING }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $PROD_HOST $STAGING_HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Choose environment based on branch
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            REMOTE_HOST=$PROD_HOST
+            BACKEND_PATH=$PROD_BACKEND_PATH
+            SERVICE_NAME=kaakazini.service
+          else
+            REMOTE_HOST=$STAGING_HOST
+            BACKEND_PATH=$STAGING_BACKEND_PATH
+            SERVICE_NAME=gunicorn-kaakazini-dev.service
+          fi
+
+          echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH (service: $SERVICE_NAME)..."
+
+          # Rsync backend files (but don’t overwrite venv/.git/__pycache__)
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            --exclude='.git' --exclude='venv' --exclude='__pycache__' --delete ./ \
+            $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
+
+          # Run remote setup + migrations + restart
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
+            cd $BACKEND_PATH
+            # Ensure venv exists
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+
+            source venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+            export BREVO_API_KEY=$BREVO_API_KEY
+
+            python manage.py migrate --noinput
+            python manage.py collectstatic --noinput
+
+            sudo systemctl restart $SERVICE_NAME
+          EOF
+
+          echo "✅ Backend deployed successfully!"
