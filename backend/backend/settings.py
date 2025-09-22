@@ -87,13 +87,13 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config("DB_NAME"),
-        'USER': config("DB_USER"),
-        'PASSWORD': config("DB_PASSWORD"),
-        'HOST': config("DB_HOST", default="localhost"),
-        'PORT': config("DB_PORT", default=5432, cast=int),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("DB_NAME", default="kaakazini"),
+        "USER": config("DB_USER", default="kakaadmin"),
+        "PASSWORD": config("DB_PASSWORD", default="kazikazi"),
+        "HOST": config("DB_HOST", default="localhost"),
+        "PORT": config("DB_PORT", default="5432"),
     }
 }
 
@@ -146,6 +146,7 @@ CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = 'DENY'
 
 FRONTEND_URL = "https://kaakazini.com"
+BREVO_API_KEY = config("BREVO_API_KEY", default="")
 
 
 
