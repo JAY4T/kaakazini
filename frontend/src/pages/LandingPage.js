@@ -113,32 +113,40 @@ function LandingPage() {
           data-bs-interval="3000"
         >
           <div className="carousel-inner">
-            {approvedServices.map((service, index) => (
-              <div key={index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
-                <div className="d-flex justify-content-center">
-                  <div className="card border-0 shadow" style={{ width: '24rem' }}>
-                    <div className="position-relative">
-                      <img
-                        src={getImageUrl(service.service_image)}
-                        className="card-img-top"
-                        alt={service.service}
-                        style={{ height: '340px', objectFit: 'cover' }}
-                      />
-                      <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center text-white bg-dark bg-opacity-75 overlay">
-                        <h5 className="fw-bold">{service.primary_service}</h5>
-                        {/* <p className="text-center px-3 small">
-                          {service.description?.slice(0, 70) || 'Reliable and professional craftsmanship.'}
-                        </p> */}
-                      </div>
-                    </div>
-                    <div className="card-body text-center">
-                      <h5 className="card-title fw-bold mb-0">{service.service}</h5>
-                    </div>
-                  </div>
+  {Array.from({ length: Math.ceil(approvedServices.length / 3) }).map((_, slideIndex) => (
+    <div
+      key={slideIndex}
+      className={`carousel-item ${slideIndex === 0 ? 'active' : ''}`}
+    >
+      <div className="d-flex justify-content-center">
+        {approvedServices
+          .slice(slideIndex * 3, slideIndex * 3 + 3) // 3 cards per slide
+          .map((service, index) => (
+            <div
+              key={index}
+              className="card mx-2 border-0 shadow" // mx-2 adds small spacing
+              style={{ width: '18rem' }} // slightly smaller to fit
+            >
+              <div className="position-relative">
+                <img
+                  src={getImageUrl(service.service_image)}
+                  className="card-img-top"
+                  alt={service.service}
+                  style={{ height: '340px', objectFit: 'cover' }}
+                />
+                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center text-white bg-dark bg-opacity-75 overlay">
+                  <h5 className="fw-bold">{service.primary_service}</h5>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="card-body text-center">
+                <h5 className="card-title fw-bold mb-0">{service.service}</h5>
+              </div>
+            </div>
+        ))}
+      </div>
+    </div>
+  ))}
+</div>
 
           {/* Carousel Arrows */}
           <button
