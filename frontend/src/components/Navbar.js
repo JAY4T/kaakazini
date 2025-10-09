@@ -50,21 +50,29 @@ function Navbar({ cart }) {
                 Services
               </Link>
             </li>
+
+           
             <li className="nav-item">
               <Link className="nav-link" to="/admin-login" onClick={handleLinkClick}>
                 {/* Admin */}
+                
               </Link>
             </li>
+            
             <li className="nav-item">
               <Link className="nav-link" to="/login" onClick={handleLinkClick}>
                 Login
               </Link>
             </li>
             <li className="nav-item">
-              <Link className="btn btn-primary ms-2" to="/signup" onClick={handleLinkClick}>
-                Join Now
-              </Link>
-            </li>
+  <Link
+    to="/signup"
+    className="btn btn-green-solid ms-2 rounded-pill"
+  >
+    Join Now
+  </Link>
+</li>
+
             {/* Cart Example (commented) */}
             {/* <li className="nav-item ms-3">
               <Link className="nav-link fs-3" to="/cart" onClick={handleLinkClick}>
