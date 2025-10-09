@@ -5,6 +5,7 @@ import heroImage from '../assets/craftOnline.jpg';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // includes Popper
+
 import { FaFileAlt, FaSearch, FaStar } from 'react-icons/fa';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
