@@ -1,6 +1,6 @@
 // HireLogin.js
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
@@ -13,6 +13,10 @@ const HireLogin = () => {
 
   const [message, setMessage] = useState({ text: '', type: '' });
   const navigate = useNavigate();
+  const location = useLocation();   // 👈 to get the "from" route
+
+  // fallback if no state was passed (go to dashboard after login)
+  const from = location.state?.from?.pathname || "/hire";
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -35,9 +39,12 @@ const HireLogin = () => {
 
       sessionStorage.setItem('access_token', res.data.token);
       sessionStorage.setItem('client', JSON.stringify(res.data.user));
+
       setMessage({ text: 'Login successful! Redirecting...', type: 'success' });
 
-      setTimeout(() => navigate('/hire'), 1500);
+      // 👇 Redirect back to where the client was going (e.g. /hire/:id)
+      setTimeout(() => navigate(from), 1500);
+
     } catch (error) {
       setMessage({
         text: 'Login failed. ' + (error.response?.data?.detail || 'Invalid credentials.'),
