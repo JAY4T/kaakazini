@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
 const authAxios = axios.create({ baseURL: API_BASE_URL });
 authAxios.interceptors.request.use(config => {
@@ -42,6 +42,9 @@ function AdminDashboard() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectTarget, setRejectTarget] = useState(null);
+
+  // NEW: Track selected craftsman per job
+  const [selectedCraftsmen, setSelectedCraftsmen] = useState({});
 
   useEffect(() => {
     fetchCraftsmen();
@@ -97,9 +100,9 @@ function AdminDashboard() {
     try {
       await authAxios.post(`admin/${model}/${id}/${type}/`, reason ? { reason } : {});
       fetchCraftsmen();
-      if (type === 'reject') {
-        alert('Craftsman rejected successfully ✅');
-      }
+
+      if (type === 'approve') alert('✅ Craftsman approved successfully!');
+      else if (type === 'reject') alert('❌ Craftsman rejected successfully');
     } catch (err) {
       console.error(`${type} failed:`, err);
       alert(`Action failed: ${type}`);
@@ -186,7 +189,7 @@ function AdminDashboard() {
     );
   };
 
-  // ------------------- JOB REQUESTS + REVIEWS -------------------
+  // ------------------- JOB REQUESTS + ASSIGNMENT -------------------
   const fetchAllJobs = async () => {
     setJobsLoading(true);
     try {
@@ -199,25 +202,19 @@ function AdminDashboard() {
     }
   };
 
-  const approveReview = async (jobId) => {
-    try {
-      await authAxios.patch(`/job-requests/${jobId}/`, { review_approved: true });
-      fetchAllJobs();
-      alert('✅ Review approved');
-    } catch (err) {
-      console.error('Approve review failed:', err);
-      alert('❌ Failed to approve review');
+  const assignCraftsman = async (jobId) => {
+    const craftsmanId = selectedCraftsmen[jobId];
+    if (!craftsmanId) {
+      alert('Please select a craftsman first.');
+      return;
     }
-  };
-
-  const rejectReview = async (jobId) => {
     try {
-      await authAxios.patch(`/job-requests/${jobId}/`, { review_approved: false });
+      await authAxios.patch(`/job-requests/${jobId}/assign/`, { craftsman_id: craftsmanId });
+      alert('✅ Craftsman assigned successfully!');
       fetchAllJobs();
-      alert('❌ Review rejected');
     } catch (err) {
-      console.error('Reject review failed:', err);
-      alert('❌ Failed to reject review');
+      console.error('Error assigning craftsman:', err);
+      alert('❌ Failed to assign craftsman');
     }
   };
 
@@ -234,26 +231,45 @@ function AdminDashboard() {
               <th>Service</th>
               <th>Schedule</th>
               <th>Status</th>
-              <th>Review</th>
-              <th>Rating</th>
-              <th>Actions</th>
+              <th>Assign Craftsman</th>
             </tr>
           </thead>
           <tbody>
-            {jobs.map(job => (
-              <tr key={job.id}>
-                <td>{job.name}</td>
-                <td>{job.service}</td>
-                <td>{new Date(job.schedule).toLocaleString()}</td>
-                <td><span className={`badge ${job.status === 'Completed' ? 'bg-success' : job.status === 'Cancelled' ? 'bg-danger' : 'bg-warning text-dark'}`}>{job.status}</span></td>
-                <td>{job.review || <span className="text-muted">No review</span>}</td>
-                <td>{job.rating ? `${job.rating} ⭐` : <span className="text-muted">No rating</span>}</td>
-                <td>
-                  <button className="btn btn-sm btn-success me-2" onClick={() => approveReview(job.id)}>Approve</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => rejectReview(job.id)}>Reject</button>
-                </td>
-              </tr>
-            ))}
+            {jobs.map(job => {
+              // Filter approved craftsmen by job’s service
+              const serviceCraftsmen = approvedCraftsmen.filter(c => c.primary_service === job.service);
+              return (
+                <tr key={job.id}>
+                  <td>{job.name}</td>
+                  <td>{job.service}</td>
+                  <td>{new Date(job.schedule).toLocaleString()}</td>
+                  <td><span className={`badge ${job.status === 'Completed' ? 'bg-success' : job.status === 'Cancelled' ? 'bg-danger' : 'bg-warning text-dark'}`}>{job.status}</span></td>
+                  <td>
+                    <div className="d-flex">
+                      <select
+                        className="form-select form-select-sm me-2"
+                        value={selectedCraftsmen[job.id] || ''}
+                        onChange={(e) => setSelectedCraftsmen(prev => ({ ...prev, [job.id]: e.target.value }))}
+                      >
+                        <option value="">Select craftsman</option>
+                        {serviceCraftsmen.length > 0 ? (
+                          serviceCraftsmen.map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.full_name} ({c.primary_service})
+                            </option>
+                          ))
+                        ) : (
+                          <option disabled>No approved craftsmen for this service</option>
+                        )}
+                      </select>
+                      <button className="btn btn-sm btn-primary" onClick={() => assignCraftsman(job.id)}>
+                        Assign
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -261,9 +277,7 @@ function AdminDashboard() {
   );
 
   useEffect(() => {
-    if (activeSection === 'jobs') {
-      fetchAllJobs();
-    }
+    if (activeSection === 'jobs') fetchAllJobs();
   }, [activeSection]);
 
   return (
@@ -274,7 +288,7 @@ function AdminDashboard() {
         <ul className="nav flex-column">
           <li className="nav-item mb-2"><button className={`btn w-100 text-start ${activeSection === 'pending' ? 'btn-primary' : 'btn-outline-light'}`} onClick={() => setActiveSection('pending')}>Pending Craftsmen</button></li>
           <li className="nav-item mb-2"><button className={`btn w-100 text-start ${activeSection === 'approved' ? 'btn-primary' : 'btn-outline-light'}`} onClick={() => setActiveSection('approved')}>Approved Craftsmen</button></li>
-          <li className="nav-item mb-2"><button className={`btn w-100 text-start ${activeSection === 'jobs' ? 'btn-primary' : 'btn-outline-light'}`} onClick={() => setActiveSection('jobs')}>Job Requests & Reviews</button></li>
+          <li className="nav-item mb-2"><button className={`btn w-100 text-start ${activeSection === 'jobs' ? 'btn-primary' : 'btn-outline-light'}`} onClick={() => setActiveSection('jobs')}>Job Requests</button></li>
         </ul>
       </div>
 
@@ -291,7 +305,7 @@ function AdminDashboard() {
         )}
       </div>
 
-      {/* Reject Modal (craftsman only) */}
+      {/* Reject Modal */}
       {showRejectModal && (
         <div className="modal fade show d-block" tabIndex="-1" role="dialog">
           <div className="modal-dialog" role="document">
@@ -315,4 +329,5 @@ function AdminDashboard() {
     </div>
   );
 }
+
 export default AdminDashboard;

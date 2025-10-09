@@ -22,6 +22,8 @@ from .models import ContactMessage
 from .serializers import ContactMessageSerializer
 from rest_framework import filters # type: ignore
 from api.utils import send_craftsman_approval_email
+from .models import Review, Craftsman
+from .serializers import ReviewSerializer
 
 import logging
 logger = logging.getLogger(__name__)
@@ -240,12 +242,25 @@ from rest_framework import generics, permissions
 from .models import JobRequest
 from .serializers import JobRequestSerializer
 
+# views.py
+from rest_framework import generics, permissions
+from .models import JobRequest
+from .serializers import JobRequestSerializer
+
 class JobRequestListCreateView(generics.ListCreateAPIView):
-    queryset = JobRequest.objects.all()
     serializer_class = JobRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        # Only return jobs assigned to the craftsman if user is a craftsman
+        if hasattr(user, "craftsman"):
+            return JobRequest.objects.filter(craftsman=user.craftsman).order_by("-created_at")
+        # For clients, return jobs created by the user
+        return JobRequest.objects.filter(client=user).order_by("-created_at")
+
     def perform_create(self, serializer):
+        # Assign the logged-in user as the client
         serializer.save(client=self.request.user)
 
 
@@ -253,3 +268,81 @@ class JobRequestDetailView(generics.RetrieveUpdateAPIView):
     queryset = JobRequest.objects.all()
     serializer_class = JobRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+from rest_framework import generics
+from .models import Review
+from .serializers import ReviewSerializer
+from rest_framework.permissions import IsAuthenticated
+
+class ReviewListCreateView(generics.ListCreateAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+class CraftsmanReviewListView(generics.ListAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        craftsman_id = self.kwargs['craftsman_id']
+        return Review.objects.filter(craftsman_id=craftsman_id)
+
+
+
+# views.py
+from rest_framework import generics, status
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from .models import JobRequest, Craftsman
+from .serializers import JobRequestSerializer
+
+class AssignCraftsmanView(generics.UpdateAPIView):
+    """
+    Allows an admin to assign a craftsman to a specific job request.
+    """
+    queryset = JobRequest.objects.all()
+    serializer_class = JobRequestSerializer
+    permission_classes = [IsAdminUser]
+
+    def update(self, request, *args, **kwargs):
+        job_id = kwargs.get("pk")  # matches URL pattern /job-requests/<pk>/assign/
+        try:
+            job = self.get_queryset().get(pk=job_id)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        craftsman_id = request.data.get("craftsman_id")
+        if not craftsman_id:
+            return Response({"error": "Craftsman ID required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            craftsman = Craftsman.objects.get(id=craftsman_id, is_approved=True)
+        except Craftsman.DoesNotExist:
+            return Response({"error": "Craftsman not found or not approved"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Assign craftsman
+        job.craftsman = craftsman
+        job.status = "Assigned"
+        job.save()
+
+        serializer = self.get_serializer(job)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+
+    from rest_framework import generics, permissions
+from .models import JobRequest
+from .serializers import JobRequestSerializer
+
+class CraftsmanJobListView(generics.ListAPIView):
+    serializer_class = JobRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'craftsman'):
+            # Return jobs assigned by admin to this craftsman
+            return JobRequest.objects.filter(craftsman=user.craftsman)
+        return JobRequest.objects.none()
+

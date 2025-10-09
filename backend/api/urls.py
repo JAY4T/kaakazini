@@ -3,7 +3,12 @@ from .views import (
     CraftsmanDetailView, ProductListCreateView, ProductDetailView,
     AdminCraftsmanListView, AdminCraftsmanApproveView, AdminCraftsmanRejectView,
     AdminProductListView, AdminProductApproveView, AdminProductRejectView,  PublicCraftsmanListView,PublicCraftsmanDetailView, ServiceListCreateView, ServiceDetailView,
-   ApproveCraftsmanView,ContactMessageCreateView,JobRequestListCreateView, JobRequestDetailView
+   ApproveCraftsmanView,ContactMessageCreateView,JobRequestListCreateView, JobRequestDetailView,
+    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView
+
+
+
+
 
     
  
@@ -51,11 +56,19 @@ urlpatterns = [
 
     path('job-requests/', JobRequestListCreateView.as_view(), name='job-request-list'),
     path('job-requests/<int:pk>/', JobRequestDetailView.as_view(), name='job-request-detail'),
+    path('job-requests/<int:pk>/assign/', AssignCraftsmanView.as_view(), name='assign-craftsman'),
+
+
     
     
     # contact us
 
     path('contact/', ContactMessageCreateView.as_view(), name='submit-contact'),
+
+    # Reviews and Ratings
+    path('reviews/', ReviewListCreateView.as_view(), name='review-list-create'),
+    path('craftsman/<int:craftsman_id>/reviews/', CraftsmanReviewListView.as_view(), name='craftsman-reviews'),
+
 
 
 

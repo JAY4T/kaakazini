@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 # from .models import Client
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import ContactMessage
-from .models import JobRequest
+from .models import JobRequest, Craftsman
 
 # from accounts.models import Client
 
@@ -81,7 +81,42 @@ class ContactMessageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+
+from .models import JobRequest, Craftsman
+
 class JobRequestSerializer(serializers.ModelSerializer):
+    craftsman = serializers.SerializerMethodField(read_only=True)  # Nested craftsman info
+    craftsman_name = serializers.CharField(source='craftsman.user.full_name', read_only=True)
+
     class Meta:
         model = JobRequest
+        fields = ['id', 'service', 'description', 'status', 'craftsman', 'craftsman_name', 'created_at']
+        read_only_fields = ['created_at']
+
+    def get_craftsman(self, obj):
+        if obj.craftsman:
+            return {
+                'id': obj.craftsman.id,
+                'full_name': obj.craftsman.user.full_name,
+                'profession': obj.craftsman.profession,
+            }
+        return None
+
+
+
+
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    craftsman_name = serializers.CharField(source='craftsman.user.full_name', read_only=True)
+
+    class Meta:
+        model = Review
         fields = '__all__'
+        read_only_fields = ['created_at']
+
+    def create(self, validated_data):
+        if not validated_data.get("job"):
+            craftsman = validated_data.get("craftsman")
+            validated_data["job"] = JobRequest.objects.filter(craftsman=craftsman).last()
+        return super().create(validated_data)
