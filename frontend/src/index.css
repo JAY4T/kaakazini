@@ -1,3 +1,6 @@
+
+
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -11,3 +14,121 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+
+.btn-green-transparent {
+  background-color: transparent !important;  /* force override Bootstrap blue */
+  border: 2px solid #28a745 !important;
+  color: white !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.btn-green-transparent:hover {
+  background-color: #29a745 !important; /* darker green on hover */
+  /* border-color: #1e7e34 !important; */
+  color: white !important;
+}
+
+.btn-green-scrolled {
+  background-color: #218838 !important; /* darker green on hover */
+  /* border-color: #1e7e34 !important; */
+  color: white !important;
+}
+
+
+.btn-green:active {
+  background-color: #1e7e34 !important; /* even darker green on active */
+  border-color: #1c7430 !important;
+  color: white !important;
+}
+
+.btn-green-solid {
+  /* background-color: #218838 !important; darker green on hover */
+    background-color: #25973e !important; /* darker green on hover */
+  /* border-color: #1e7e34 !important; */
+  color: white !important;
+  transition: transform 0.8s ease-in-out;
+
+}
+
+.btn-green-solid:hover {
+  background-color: #29a745 !important; /* darker green on hover */
+  /* border-color: #1e7e34 !important; */
+  color: white !important;
+    transform: scale(1.015); /* grows by 10% */
+}
+/* Hover effect for nav-links */
+.navbar-nav .nav-link:hover {
+  color: #2fc552 !important; /* green hover */
+  text-decoration: none;      
+}
+
+/* Active link underline */
+.navbar-nav .nav-link.active {
+  border-bottom: 2px solid #28a745; /* green underline */
+  padding-bottom: 2px;
+  color: #28a745 !important; /* match active text with green */
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zoomFade {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+/* Fade-in from left */
+.fade-in-left {
+  opacity: 0;
+  transform: translateX(-50px);
+  animation: fadeInLeft 1s ease-out forwards;
+}
+
+@keyframes fadeInLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Fade-in from right */
+.fade-in-right {
+  opacity: 0;
+  transform: translateX(50px);
+  animation: fadeInRight 1s ease-out forwards;
+}
+
+@keyframes fadeInRight {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes flip-right-infinite {
+  0% {
+    opacity: 0;
+    transform: perspective(400px) rotateY(-90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(400px) rotateY(0deg);
+  }
+}
+
