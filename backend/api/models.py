@@ -74,17 +74,30 @@ class GalleryImage(models.Model):
     image = models.ImageField(upload_to='craftsmen/gallery/')
 
 
+
+
 class Review(models.Model):
-    craftsman = models.ForeignKey(Craftsman, related_name='reviews', on_delete=models.CASCADE)
+    job = models.ForeignKey(
+        "JobRequest",
+        related_name="reviews",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    craftsman = models.ForeignKey("Craftsman", related_name="reviews", on_delete=models.CASCADE)
     reviewer = models.CharField(max_length=255)
     location = models.CharField(max_length=255, blank=True, null=True)
     rating = models.IntegerField()
     comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+
+    class Meta:
+        unique_together = ('job', 'reviewer')
 
     def __str__(self):
-        return f"Review by {self.reviewer} for {self.craftsman.full_name}"
-
-
+        return f"Review by {self.reviewer} for {self.craftsman}"
+    
+    
 # class Client(models.Model):
 #     user = models.OneToOneField(User, on_delete=models.CASCADE)
 #     phone = models.CharField(max_length=20)
@@ -96,10 +109,14 @@ class Review(models.Model):
 class JobRequest(models.Model):
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
+        ('Assigned', 'Assigned'),
         ('Completed', 'Completed'),
         ('Cancelled', 'Cancelled'),
     ]
     client = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    craftsman = models.ForeignKey(  # 👈 add this field
+        'Craftsman', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_jobs'
+    )
     name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
     service = models.CharField(max_length=50, choices=PRIMARY_SERVICE_CHOICES)
@@ -110,17 +127,13 @@ class JobRequest(models.Model):
     description = models.TextField()
     isUrgent = models.BooleanField(default=False)
     media = models.FileField(upload_to='uploads/', blank=True, null=True)
-
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     review = models.TextField(blank=True, null=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        label = dict(PRIMARY_SERVICE_CHOICES).get(self.service, self.service)
-        if self.service == 'other' and self.custom_service:
-            label = self.custom_service
-        return f"{label} for {self.name} ({self.status})"
+        return f"{self.service} for {self.name} ({self.status})"
+
 
 
 class ContactMessage(models.Model):
