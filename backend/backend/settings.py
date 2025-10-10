@@ -1,11 +1,10 @@
+import os
 from pathlib import Path
-from datetime import timedelta
-from decouple import config
 from corsheaders.defaults import default_headers
+from decouple import config, Csv
+from datetime import timedelta
 
-# ---------------------------
-# BASE DIR
-# ---------------------------
+# Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ---------------------------
@@ -52,9 +51,14 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
-# ---------------------------
-# INSTALLED APPS
-# ---------------------------
+
+
+
+# CORS
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = list(default_headers) + ['authorization']
+
+# Installed apps
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -75,9 +79,7 @@ INSTALLED_APPS = [
     "accounts",
 ]
 
-# ---------------------------
-# MIDDLEWARE
-# ---------------------------
+# Middleware
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # must be very high
     "django.middleware.security.SecurityMiddleware",
@@ -94,6 +96,7 @@ MIDDLEWARE = [
 # ---------------------------
 ROOT_URLCONF = "backend.urls"
 
+# Templates
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -111,9 +114,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backend.wsgi.application"
 
-# ---------------------------
-# DATABASE
-# ---------------------------
+# Database
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -125,9 +126,7 @@ DATABASES = {
     }
 }
 
-# ---------------------------
-# REST FRAMEWORK & JWT
-# ---------------------------
+# REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -148,9 +147,7 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
 
-# ---------------------------
-# PASSWORD VALIDATION
-# ---------------------------
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -178,19 +175,14 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ---------------------------
-# SECURITY HEADERS
-# ---------------------------
+# Security settings
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = not DEBUG  # Secure in production
 CSRF_COOKIE_SECURE = not DEBUG     # Secure in production
 X_FRAME_OPTIONS = "DENY"
 
-# ---------------------------
-# BREVO (SENDINBLUE) CONFIG
-# ---------------------------
-
+FRONTEND_URL = "https://kaakazini.com"
 BREVO_API_KEY = config("BREVO_API_KEY", default="")
 FRONTEND_URL = "https://staging.kaakazini.com"
 
