@@ -51,30 +51,62 @@ function LandingPage() {
 
   return (
     <>
-      {/* Hero Section */}
-      <section className="text-center d-flex align-items-center"
-        style={{
-          background: `url(${heroImage}) no-repeat center center/cover`,
-          height: '60vh',
-          color: 'white',
-        }}>
-        <div className="container">
-          <h1 className="display-4 fw-bold moving-text" style={{ animation: 'slide 5s infinite alternate' }}>
-            Empowering Local Craftsmen
-          </h1>
-          <p className="lead mt-3">
-            Manage clients, showcase your work, and grow your trade — all in one platform.
-          </p>
-          <div className="d-flex justify-content-center gap-3 flex-wrap">
-            <Link to="/signup" className="btn btn-green-transparent btn-lg mt-4 fw-bold">  
-              Join as a Craftsman
-            </Link>
-            <Link to="/HireSignUp" className="btn btn-green-solid btn-lg mt-4 fw-bold">
-              Hire a Craftsman
-            </Link>
-          </div>
-        </div>
-      </section>
+    {/* Global CSS */}
+<style>{`
+  @media (max-width: 768px) {
+    body, html {
+      overflow-x: hidden;
+    }
+  }
+
+  /* Card hover overlay */
+  .overlay {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+  }
+
+  .position-relative:hover .overlay {
+    opacity: 1;
+  }
+`}</style>
+
+{/* Hero Section */}
+<section
+  className="text-center d-flex align-items-center"
+  style={{
+    background: `url(${heroImage}) no-repeat center center/cover`,
+    height: '70vh', // increased size
+    color: 'white',
+    width: '100%',
+    overflowX: 'hidden'
+  }}
+>
+  <div className="container">
+    <h1
+      className="display-4 fw-bold moving-text"
+      style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }} // larger heading
+    >
+      Empowering Local Craftsmen
+    </h1>
+    <p className="lead mt-3" style={{ fontSize: '1.3rem' }}> {/* larger text */}
+      Manage clients, showcase your work, and grow your trade — all in one platform.
+    </p>
+    <div className="d-flex justify-content-center gap-3 flex-wrap">
+      <Link
+        to="/signup"
+        className="btn btn-green-transparent btn-lg mt-3 fw-bold"
+      >
+        Join as a Craftsman
+      </Link>
+      <Link
+        to="/HireSignUp"
+        className="btn btn-green-solid btn-lg mt-3 fw-bold"
+      >
+        Hire a Craftsman
+      </Link>
+    </div>
+  </div>
+</section>  
 
 {/* Impact / Statistics */}
 <section className="py-5 bg-light text-center" id="impact">
