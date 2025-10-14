@@ -51,8 +51,7 @@ function LandingPage() {
 
   return (
     <>
-
-   {/* Global CSS */}
+    {/* Global CSS */}
 <style>{`
   @media (max-width: 768px) {
     body, html {
@@ -107,7 +106,7 @@ function LandingPage() {
       </Link>
     </div>
   </div>
-</section>
+</section>  
 
 
 
