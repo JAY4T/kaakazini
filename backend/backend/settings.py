@@ -141,28 +141,23 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 USE_SPACES = config("USE_SPACES", default=True, cast=bool)
 
 if USE_SPACES:
-    SPACES_ACCESS_KEY_ID = config("SPACES_ACCESS_KEY_ID")
-    SPACES_SECRET_ACCESS_KEY = config("SPACES_SECRET_ACCESS_KEY")
-    SPACES_BUCKET_NAME = config("SPACES_BUCKET_NAME")
-    SPACES_REGION = config("SPACES_REGION", default="fra1")
-    SPACES_ENDPOINT_URL = config(
+    AWS_ACCESS_KEY_ID = config("SPACES_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = config("SPACES_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = config("SPACES_BUCKET_NAME")
+    AWS_S3_REGION_NAME = config("SPACES_REGION", default="fra1")
+    AWS_S3_ENDPOINT_URL = config(
         "SPACES_ENDPOINT_URL",
-        default=f"https://{SPACES_REGION}.digitaloceanspaces.com"
+        default=f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
     )
-
-    MEDIA_URL = f"{SPACES_ENDPOINT_URL}/{SPACES_BUCKET_NAME}/"
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-
-    AWS_ACCESS_KEY_ID = SPACES_ACCESS_KEY_ID
-    AWS_SECRET_ACCESS_KEY = SPACES_SECRET_ACCESS_KEY
-    AWS_STORAGE_BUCKET_NAME = SPACES_BUCKET_NAME
-    AWS_S3_REGION_NAME = SPACES_REGION
-    AWS_S3_ENDPOINT_URL = SPACES_ENDPOINT_URL
     AWS_DEFAULT_ACL = "public-read"
-    AWS_S3_CUSTOM_DOMAIN = f"{SPACES_BUCKET_NAME}.{SPACES_REGION}.digitaloceanspaces.com"
+    AWS_QUERYSTRING_AUTH = False  # Important! disables temporary signed URLs
+
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
+
 
 # ---------------------------
 # SECURITY
