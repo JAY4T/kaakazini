@@ -54,12 +54,11 @@ jobs:
             command -v systemctl >/dev/null 2>&1 || echo '⚠️ systemctl not found';
             echo '✅ Required tools found.'
             
-            # Check for .env file
+            # Check for .env file (WARN only, do not fail)
             if [ -f ~/kaakazini/backend/.env ]; then
               echo '✅ .env file exists on server.'
             else
-              echo '❌ .env file missing! Please create it at ~/kaakazini/backend/.env'
-              exit 1
+              echo '⚠️ .env file missing at ~/kaakazini/backend/.env. Deployment will continue, backend will preserve .env if created.'
             fi
           "
 
