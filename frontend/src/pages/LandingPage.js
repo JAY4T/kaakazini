@@ -51,54 +51,63 @@ function LandingPage() {
 
   return (
     <>
-      {/* Hero Section */}
-      <section className="text-center d-flex align-items-center"
-        style={{
-          background: `url(${heroImage}) no-repeat center center/cover`,
-          height: '60vh',
-          color: 'white',
-        }}>
-        <div className="container">
-          <h1 className="display-4 fw-bold moving-text" style={{ animation: 'slide 5s infinite alternate' }}>
-            Empowering Local Craftsmen
-          </h1>
-          <p className="lead mt-3">
-            Manage clients, showcase your work, and grow your trade — all in one platform.
-          </p>
-          <div className="d-flex justify-content-center gap-3 flex-wrap">
-            <Link to="/signup" className="btn btn-green-transparent btn-lg mt-4 fw-bold">  
-              Join as a Craftsman
-            </Link>
-            <Link to="/HireSignUp" className="btn btn-green-solid btn-lg mt-4 fw-bold">
-              Hire a Craftsman
-            </Link>
-          </div>
-        </div>
-      </section>
 
-{/* Impact / Statistics */}
-<section className="py-5 bg-light text-center" id="impact">
+   {/* Global CSS */}
+<style>{`
+  @media (max-width: 768px) {
+    body, html {
+      overflow-x: hidden;
+    }
+  }
+
+  /* Card hover overlay */
+  .overlay {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+  }
+
+  .position-relative:hover .overlay {
+    opacity: 1;
+  }
+`}</style>
+
+{/* Hero Section */}
+<section
+  className="text-center d-flex align-items-center"
+  style={{
+    background: `url(${heroImage}) no-repeat center center/cover`,
+    height: '70vh', // increased size
+    color: 'white',
+    width: '100%',
+    overflowX: 'hidden'
+  }}
+>
   <div className="container">
-    <div className="row text-center justify-content-center">
-      {[
-        { icon: "bi-people-fill", label: "Active Craftsmen", value: 100 },
-        { icon: "bi-clipboard-check", label: "Jobs Completed", value: 50 },
-        { icon: "bi-emoji-smile-fill", label: "Happy Clients", value: 30 },
-        { icon: "bi-shop", label: "Shops Connected", value: 2 },
-      ].map((stat, idx) => (
-        <div className="col-md-3 mb-4" key={idx}>
-          <i 
-            className={`bi ${stat.icon} mb-2`}
-            style={{ fontSize: "2.5rem", color: "#28a745" }}
-          ></i>
-          <h3 className="fw-bold">{stat.value}+</h3>
-          <p className="mb-0 fw-bold">{stat.label}</p>
-        </div>
-      ))}
+    <h1
+      className="display-4 fw-bold moving-text"
+      style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }} // larger heading
+    >
+      Empowering Local Craftsmen
+    </h1>
+    <p className="lead mt-3" style={{ fontSize: '1.3rem' }}> {/* larger text */}
+      Manage clients, showcase your work, and grow your trade — all in one platform.
+    </p>
+    <div className="d-flex justify-content-center gap-3 flex-wrap">
+      <Link
+        to="/signup"
+        className="btn btn-green-transparent btn-lg mt-3 fw-bold"
+      >
+        Join as a Craftsman
+      </Link>
+      <Link
+        to="/HireSignUp"
+        className="btn btn-green-solid btn-lg mt-3 fw-bold"
+      >
+        Hire a Craftsman
+      </Link>
     </div>
   </div>
 </section>
-
 
 
 
@@ -595,7 +604,32 @@ Tell us about your project, and skilled craftsmen will start responding within 2
   `}</style>
 </section>
 
-     
+     {/* Impact / Statistics */}
+<section className="py-5 bg-light text-center" id="impact">
+  <div className="container">
+    <div className="row text-center justify-content-center">
+      {[
+        { icon: "bi-people-fill", label: "Active Craftsmen", value: 100 },
+        { icon: "bi-clipboard-check", label: "Jobs Completed", value: 50 },
+        { icon: "bi-emoji-smile-fill", label: "Happy Clients", value: 30 },
+        { icon: "bi-shop", label: "Shops Connected", value: 2 },
+      ].map((stat, idx) => (
+        <div className="col-md-3 mb-4" key={idx}>
+          <i 
+            className={`bi ${stat.icon} mb-2`}
+            style={{ fontSize: "2.5rem", color: "#28a745" }}
+          ></i>
+          <h3 className="fw-bold">{stat.value}+</h3>
+          <p className="mb-0 fw-bold">{stat.label}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+
+
+
 
 {/* Add this global CSS for hover effect */}
 <style>{`
