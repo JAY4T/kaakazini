@@ -508,48 +508,61 @@ Tell us about your project, and skilled craftsmen will start responding within 2
  
 
 
-      <section className="py-5 bg-light">
+   <section className="py-5 bg-light">
   <div className="container">
-    <h2 className="text-center fw-bold text-success display-6 mb-5" data-aos="fade-left">What Our Clients Say</h2> {/* Increased mb for more space */}
-    <div className="row justify-content-center"> {/* justify-content-center for better alignment if cards aren't full width */}
+    <h2
+      className="text-center fw-bold text-success display-6 mb-5"
+      data-aos="fade-left"
+    >
+      What Our Clients Say
+    </h2>
+    <div className="row justify-content-center">
       {[
         {
-          quote: "The carpenter I hired was extremely professional. Highly recommend!",
+          quote:
+            "The carpenter I hired was extremely professional. Highly recommend!",
           stars: 4,
           name: "Sarah M.",
-          img: "https://i.pravatar.cc/150?img=47", // Unique placeholder image
+          img: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=600", // Kenyan woman smiling
         },
         {
           quote: "The metalworker exceeded my expectations. Great job!",
           stars: 5,
           name: "James K.",
-          img: "https://i.pravatar.cc/150?img=68", // Unique placeholder image
+          img: "https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=600", // African man smiling
         },
         {
-          quote: "The textile artist made a beautiful custom outfit. Loved it!",
+          quote:
+            "The textile artist made a beautiful custom outfit. Loved it!",
           stars: 3.5,
           name: "Linda O.",
-          img: "https://i.pravatar.cc/150?img=25", // Unique placeholder image
+          img: "https://images.pexels.com/photos/2775323/pexels-photo-2775323.jpeg?auto=compress&cs=tinysrgb&w=600", // African woman in colorful dress
         },
       ].map((testi, idx) => (
         <div className="col-md-4 mb-4" key={idx}>
-          <div className="card h-100 border-0 testimonial-card-glow text-center shadow-lg flip-right-infinite" > {/* Changed shadow-sm to shadow-lg and added testimonial-card-glow */}
-            <div className="card-body d-flex flex-column align-items-center p-4"> {/* Added padding */}
-              <img src={testi.img} className="rounded-circle testimonial-img-circle mb-3" alt={testi.name} /> {/* Added image */}
+          <div className="card h-100 border-0 testimonial-card-glow text-center shadow-lg flip-right-infinite">
+            <div className="card-body d-flex flex-column align-items-center p-4">
+              <img
+                src={testi.img}
+                className="rounded-circle testimonial-img-circle mb-3 bg-white p-2"
+                alt={testi.name}
+              />
               <i className="bi bi-quote display-4 text-muted mb-2"></i>
-              <p className="card-text fst-italic flex-grow-1 mb-3">"{testi.quote}"</p>
+              <p className="card-text fst-italic flex-grow-1 mb-3">
+                "{testi.quote}"
+              </p>
               <div className="text-warning mb-2">
                 {[...Array(Math.floor(testi.stars))].map((_, i) => (
                   <i key={i} className="fas fa-star" />
                 ))}
-                {testi.stars % 1 !== 0 && (
-                  <i className="fas fa-star-half-alt" />
-                )}
+                {testi.stars % 1 !== 0 && <i className="fas fa-star-half-alt" />}
                 {[...Array(5 - Math.ceil(testi.stars))].map((_, i) => (
                   <i key={i} className="far fa-star" />
                 ))}
               </div>
-              <h5 className="card-title mt-3 fw-bold text-green">– {testi.name}</h5> 
+              <h5 className="card-title mt-3 fw-bold text-green">
+                – {testi.name}
+              </h5>
             </div>
           </div>
         </div>
@@ -560,49 +573,49 @@ Tell us about your project, and skilled craftsmen will start responding within 2
   <style>{`
     .testimonial-card-glow {
       transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-      border-radius: 0.75rem; /* Slightly rounded corners */
+      border-radius: 0.75rem;
       background-color: #fff;
     }
 
     .testimonial-card-glow:hover {
       transform: translateY(-10px);
-      /* Custom glow effect */
-      // box-shadow: 0 0.5rem 2rem rgba(13, 110, 253, 0.3), 0 0.25rem 1rem rgba(0,0,0,0.1) !important; /* Blue glow */
-        box-shadow: 0 0.5rem 2rem rgba(33, 253, 13, 0.3), 0 0.25rem 1rem rgba(0,0,0,0.1) !important; /* Blue glow */
-      }
+      box-shadow: 0 0.5rem 2rem rgba(33, 253, 13, 0.3),
+                  0 0.25rem 1rem rgba(0,0,0,0.1) !important;
+    }
 
     .testimonial-img-circle {
-      width: 90px; /* Slightly smaller for elegance */
+      width: 90px;
       height: 90px;
       object-fit: cover;
-      // border: 3px solid #0d6efd; /* Blue border for the image */
       border: 3px solid #29a745;
       box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.1);
     }
 
     .testimonial-card-glow .card-body p {
-      font-size: 1.15rem; /* Slightly larger font for quotes */
-      color: #495057; /* Darker grey for better readability */
+      font-size: 1.15rem;
+      color: #495057;
     }
 
     .testimonial-card-glow .card-body h5 {
-      color: #2fc552; 
+      color: #2fc552;
       margin-top: 1rem;
     }
-    .text-green{
+
+    .text-green {
       color: #2fc552;
     }
+
     .testimonial-card-glow .bi-quote {
-      font-size: 3.5rem; /* Slightly larger quote icon */
-      color: #adb5bd; /* Lighter grey for subtle icon */
+      font-size: 3.5rem;
+      color: #adb5bd;
     }
 
     .testimonial-card-glow .text-warning i {
-      color: #ffc107; /* Standard warning yellow for stars */
+      color: #ffc107;
     }
   `}</style>
 </section>
-
+   
      {/* Impact / Statistics */}
 <section className="py-5 bg-light text-center" id="impact">
   <div className="container">

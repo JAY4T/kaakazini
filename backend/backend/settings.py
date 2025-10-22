@@ -35,8 +35,8 @@ INSTALLED_APPS = [
     "corsheaders",
     "djoser",
     "django_rest_passwordreset",
-    "storages",  # for DigitalOcean Spaces
-
+    "storages", 
+    
     # Local apps
     "api",
     "accounts",
@@ -138,25 +138,31 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # ---------------------------
 # DIGITALOCEAN SPACES STORAGE
 # ---------------------------
-USE_SPACES = config("USE_SPACES", default=True, cast=bool)
+USE_SPACES = config("USE_SPACES", default=False, cast=bool)
 
 if USE_SPACES:
     AWS_ACCESS_KEY_ID = config("SPACES_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY = config("SPACES_SECRET_ACCESS_KEY")
     AWS_STORAGE_BUCKET_NAME = config("SPACES_BUCKET_NAME")
     AWS_S3_REGION_NAME = config("SPACES_REGION", default="fra1")
-    AWS_S3_ENDPOINT_URL = config(
-        "SPACES_ENDPOINT_URL",
-        default=f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
-    )
+    AWS_S3_ENDPOINT_URL = config("SPACES_ENDPOINT_URL", default=f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com")
+    AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
+
     AWS_DEFAULT_ACL = "public-read"
-    AWS_QUERYSTRING_AUTH = False  # Important! disables temporary signed URLs
+    AWS_QUERYSTRING_AUTH = False
 
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
+
+    # ✅ FIXED: no "media/" prefix, since bucket root is empty
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+    MEDIA_ROOT = ""
+    print("✅ USING DIGITALOCEAN SPACES STORAGE (no media/ prefix)")
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
+    print("🗂 USING LOCAL MEDIA STORAGE")
+
+
 
 
 # ---------------------------
@@ -178,6 +184,4 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 BREVO_API_KEY = config("BREVO_API_KEY", default="")
-FRONTEND_URL = "https://kaakazini.com"
-FRONTEND_URL = "https://staging.kaakazini.com"
-
+FRONTEND_URL = config("FRONTEND_URL", default="https://kaakazini.com")
