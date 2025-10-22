@@ -156,11 +156,9 @@ if USE_SPACES:
     # ✅ FIXED: no "media/" prefix, since bucket root is empty
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
     MEDIA_ROOT = ""
-    print("✅ USING DIGITALOCEAN SPACES STORAGE (no media/ prefix)")
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
-    print("🗂 USING LOCAL MEDIA STORAGE")
 
 
 
