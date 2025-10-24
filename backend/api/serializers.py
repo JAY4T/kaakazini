@@ -82,7 +82,7 @@ class ContactMessageSerializer(serializers.ModelSerializer):
 
 
 
-from .models import JobRequest, Craftsman
+
 
 class JobRequestSerializer(serializers.ModelSerializer):
     craftsman = serializers.SerializerMethodField(read_only=True)  # Nested craftsman info
@@ -90,8 +90,12 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = JobRequest
-        fields = ['id', 'service', 'description', 'status', 'craftsman', 'craftsman_name', 'created_at']
-        read_only_fields = ['created_at']
+        fields = [
+            'id', 'service', 'description', 'status', 'craftsman', 'craftsman_name',
+            'schedule', 'address', 'location', 'name', 'phone', 'custom_service',
+            'isUrgent', 'media', 'review', 'created_at'
+        ]
+        read_only_fields = ['created_at', 'craftsman', 'craftsman_name', 'status']
 
     def get_craftsman(self, obj):
         if obj.craftsman:
@@ -101,6 +105,11 @@ class JobRequestSerializer(serializers.ModelSerializer):
                 'profession': obj.craftsman.profession,
             }
         return None
+
+    def create(self, validated_data):
+        # Always attach the current user as client
+        return JobRequest.objects.create(client=self.context['request'].user, **validated_data)
+
 
 
 

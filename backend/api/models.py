@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from accounts.models import CustomUser
+from django.utils import timezone
+
 
 
 User = get_user_model()
@@ -121,7 +123,9 @@ class JobRequest(models.Model):
     phone = models.CharField(max_length=20)
     service = models.CharField(max_length=50, choices=PRIMARY_SERVICE_CHOICES)
     custom_service = models.CharField(max_length=255, blank=True, null=True)
-    schedule = models.DateTimeField()
+    schedule = models.DateTimeField(default=timezone.now)  
+
+
     address = models.CharField(max_length=255)
     location = models.CharField(max_length=100)
     description = models.TextField()
