@@ -93,13 +93,13 @@ function LandingPage() {
     </p>
     <div className="d-flex justify-content-center gap-3 flex-wrap">
       <Link
-        to="/signup"
+        to="/login"
         className="btn btn-green-transparent btn-lg mt-3 fw-bold"
       >
         Join as a Craftsman
       </Link>
       <Link
-        to="/HireSignUp"
+        to="/Hirelogin"
         className="btn btn-green-solid btn-lg mt-3 fw-bold"
       >
         Hire a Craftsman
