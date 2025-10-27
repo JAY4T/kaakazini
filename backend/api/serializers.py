@@ -106,10 +106,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
             }
         return None
 
-    def create(self, validated_data):
-        # Always attach the current user as client
-        return JobRequest.objects.create(client=self.context['request'].user, **validated_data)
-
+    
 
 
 
