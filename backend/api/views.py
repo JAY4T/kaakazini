@@ -10,7 +10,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import (
     Craftsman, Product, Service, JobRequest,
-    ContactMessage, Review
+    ContactMessage, Review,
+    ServiceImage, ServiceVideo
 )
 from .serializers import (
     CraftsmanSerializer, ProductSerializer,
@@ -19,6 +20,9 @@ from .serializers import (
 )
 from .permissions import IsOwner
 from api.utils import send_craftsman_approval_email
+from .serializers import JobRequestSerializer
+from .models import JobRequest
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,28 +36,101 @@ class CraftsmanListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
 
+
 class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
+    """
+    Allows a craftsman to view or update their profile,
+    including uploading profile picture, proof document,
+    service image, gallery images, and service videos.
+    """
     serializer_class = CraftsmanSerializer
-    permission_classes = [IsAuthenticated, IsOwner]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self):
-        craftsman, _created = Craftsman.objects.get_or_create(user=self.request.user)
+        # Get or create the craftsman profile
+        craftsman, _ = Craftsman.objects.get_or_create(user=self.request.user)
         return craftsman
 
+    def patch(self, request, *args, **kwargs):
+        craftsman = self.get_object()
 
+        # Update regular fields
+        serializer = self.get_serializer(craftsman, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # -------------------
+        # Handle main service image
+        # -------------------
+        if 'service_image' in request.FILES:
+            craftsman.service_image = request.FILES['service_image']
+            craftsman.save()
+
+        # -------------------
+        # Handle multiple gallery/service images
+        # -------------------
+        # ✅ Handle multiple service images (correct key)
+        service_images = request.FILES.getlist('service_images')
+        for img in service_images:
+            ServiceImage.objects.create(craftsman=craftsman, image=img)
+
+        # -------------------
+        # Handle multiple service videos
+        # -------------------
+        service_videos = request.FILES.getlist('service_videos')
+        for vid in service_videos:
+            ServiceVideo.objects.create(craftsman=craftsman, video=vid)
+
+        # Return updated craftsman data
+        return Response(self.get_serializer(craftsman).data, status=status.HTTP_200_OK)
+
+class ServiceCreateView(generics.CreateAPIView):
+    """
+    Allows a craftsman to add a new service to their profile.
+    """
+    serializer_class = ServiceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        craftsman = Craftsman.objects.get(user=self.request.user)
+        serializer.save(craftsman=craftsman)
+
+
+class ServiceUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Allows a craftsman to update or delete their own service.
+    """
+    serializer_class = ServiceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        craftsman = Craftsman.objects.get(user=self.request.user)
+        return Service.objects.filter(craftsman=craftsman)
+
+
+
+# Public list
 class PublicCraftsmanListView(generics.ListAPIView):
     queryset = Craftsman.objects.filter(is_approved=True)
     serializer_class = CraftsmanSerializer
-    permission_classes = [AllowAny]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['profession']
+    permission_classes = [permissions.AllowAny]
 
-
-class PublicCraftsmanDetailView(RetrieveAPIView):
+# Public detail by slug
+class PublicCraftsmanDetailView(generics.RetrieveAPIView):
     queryset = Craftsman.objects.filter(is_approved=True)
     serializer_class = CraftsmanSerializer
-    permission_classes = [AllowAny]
-    lookup_field = 'pk'
+    permission_classes = [permissions.AllowAny]
+    lookup_field = 'slug'
+
+# Private detail/update for logged-in craftsman
+class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = CraftsmanSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        craftsman, _ = Craftsman.objects.get_or_create(user=self.request.user)
+        return craftsman
 
 
 class AdminCraftsmanListView(generics.ListAPIView):
@@ -188,18 +265,24 @@ class ServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
 # ----------------------------
 # JobRequest Views
 # ----------------------------
+
+
+
 class JobRequestListCreateView(generics.ListCreateAPIView):
     serializer_class = JobRequestSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return JobRequest.objects.all().order_by("-created_at")
         if hasattr(user, 'craftsman'):
             return JobRequest.objects.filter(craftsman=user.craftsman).order_by("-created_at")
         return JobRequest.objects.filter(client=user).order_by("-created_at")
 
     def perform_create(self, serializer):
         serializer.save(client=self.request.user)
+
 
 
 class JobRequestDetailView(generics.RetrieveUpdateAPIView):

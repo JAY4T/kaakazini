@@ -36,6 +36,9 @@ INSTALLED_APPS = [
     "djoser",
     "django_rest_passwordreset",
     "storages", 
+    "services",
+    "django_extensions",
+
     
     # Local apps
     "api",
@@ -81,9 +84,9 @@ WSGI_APPLICATION = "backend.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="kakaazini_staging"),
-        "USER": config("DB_USER", default="kakaadmin_staging"),
-        "PASSWORD": config("DB_PASSWORD", default="kazikazi"),
+        "NAME": config("DB_NAME", default="kaakazini_local"),
+        "USER": config("DB_USER", default="kakaadmin_local"),
+        "PASSWORD": config("DB_PASSWORD", default="kazikazi_local"),
         "HOST": config("DB_HOST", default="localhost"),
         "PORT": config("DB_PORT", default="5432"),
     }
@@ -135,31 +138,29 @@ CSRF_TRUSTED_ORIGINS = [
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# ---------------------------
-# DIGITALOCEAN SPACES STORAGE
-# ---------------------------
-USE_SPACES = config("USE_SPACES", default=False, cast=bool)
+USE_SPACES = config("USE_SPACES", default=True, cast=bool)
 
 if USE_SPACES:
     AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
     AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
     AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="fra1")
-    AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default=f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com")
-    AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
+    AWS_S3_ENDPOINT_URL = config(
+        "AWS_S3_ENDPOINT_URL",
+        default=f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
+    )
 
+    
+
+    # Automatic storage for Media
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
     AWS_DEFAULT_ACL = "public-read"
     AWS_QUERYSTRING_AUTH = False
 
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-
-    # ✅ FIXED: no "media/" prefix, since bucket root is empty
-    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
-    MEDIA_ROOT = ""
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
-
 
 
 

@@ -4,23 +4,20 @@ from .views import (
     AdminCraftsmanListView, AdminCraftsmanApproveView, AdminCraftsmanRejectView,
     AdminProductListView, AdminProductApproveView, AdminProductRejectView,  PublicCraftsmanListView,PublicCraftsmanDetailView, ServiceListCreateView, ServiceDetailView,
    ApproveCraftsmanView,ContactMessageCreateView,JobRequestListCreateView, JobRequestDetailView,
-    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView
+    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView
 
-
-
-
-
-    
- 
 
 )
 
 urlpatterns = [
     # Craftsman
     path('craftsman/', CraftsmanDetailView.as_view(), name='craftsman-detail'),
-
-
     path('craftsman/<int:pk>/', CraftsmanDetailView.as_view(), name='craftsman-detail'),
+
+    # service endpoints
+    path("services/add/", ServiceCreateView.as_view(), name="service-add"),
+    path("services/<int:pk>/", ServiceUpdateDeleteView.as_view(), name="service-edit-delete"),
+
 
     # Products
     path('products/', ProductListCreateView.as_view(), name='product-list-create'),
@@ -45,7 +42,8 @@ urlpatterns = [
 
     # Public craftsman
     path('public-craftsman/', PublicCraftsmanListView.as_view(),name= 'public-craftsman-list'),
-    path('public-craftsman/<int:pk>/', PublicCraftsmanDetailView.as_view(), name='public-craftsman-detail'),
+    path("public-craftsman/<slug:slug>/", PublicCraftsmanDetailView.as_view(), name="public-craftsman-detail"),
+
 
     # services
     path('services/', ServiceListCreateView.as_view(), name='service-list-create'),

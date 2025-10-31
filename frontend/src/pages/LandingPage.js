@@ -17,23 +17,19 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaak
 
 function LandingPage() {
   const [approvedServices, setApprovedServices] = useState([]);
+const [searchQuery, setSearchQuery] = useState('');
+  const [filteredServices, setFilteredServices] = useState([]);
 
-   useEffect(() => {
-    AOS.init({
-      duration: 1000,  // animation duration in ms
-      once: false       // animate only once
-    });
-  }, []);
-
+  // Fetch approved services
   useEffect(() => {
     async function fetchApprovedServices() {
       try {
-        const response = await axios.
-        get(`${API_BASE_URL}/public-craftsman/`);
+        const response = await axios.get(`${API_BASE_URL}/public-craftsman/`);
         const approved = response.data.filter(
           item => item.status === 'approved' && item.primary_service
         );
         setApprovedServices(approved);
+        setFilteredServices(approved);
       } catch (error) {
         console.error('Error fetching approved services:', error);
       }
@@ -41,6 +37,30 @@ function LandingPage() {
 
     fetchApprovedServices();
   }, []);
+
+  // Initialize animations
+  useEffect(() => {
+    AOS.init({ duration: 1000, once: false });
+  }, []);
+
+  // Live search filtering
+  useEffect(() => {
+    const query = searchQuery.toLowerCase();
+    const filtered = approvedServices.filter(service =>
+      service.name?.toLowerCase().includes(query) ||
+      service.primary_service?.toLowerCase().includes(query) ||
+      service.location?.toLowerCase().includes(query)
+    );
+    setFilteredServices(filtered);
+  }, [searchQuery, approvedServices]);
+
+  const handleSearch = () => {
+    // Already handled by live search effect
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') handleSearch();
+  };
 
   const getImageUrl = path => {
     if (!path) return 'https://via.placeholder.com/300';
@@ -51,146 +71,137 @@ function LandingPage() {
 
   return (
     <>
-    {/* Global CSS */}
-<style>{`
-  @media (max-width: 768px) {
-    body, html {
-      overflow-x: hidden;
-    }
-  }
-
-  /* Card hover overlay */
-  .overlay {
-    opacity: 0;
-    transition: opacity 0.4s ease-in-out;
-  }
-
-  .position-relative:hover .overlay {
-    opacity: 1;
-  }
-`}</style>
-
-{/* Hero Section */}
-<section
-  className="text-center d-flex align-items-center"
-  style={{
-    background: `url(${heroImage}) no-repeat center center/cover`,
-    height: '70vh', // increased size
-    color: 'white',
-    width: '100%',
-    overflowX: 'hidden'
-  }}
->
-  <div className="container">
-    <h1
-      className="display-4 fw-bold moving-text"
-      style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }} // larger heading
-    >
-      Empowering Local Craftsmen
-    </h1>
-    <p className="lead mt-3" style={{ fontSize: '1.3rem' }}> {/* larger text */}
-      Manage clients, showcase your work, and grow your trade — all in one platform.
-    </p>
-    <div className="d-flex justify-content-center gap-3 flex-wrap">
-      <Link
-        to="/login"
-        className="btn btn-green-transparent btn-lg mt-3 fw-bold"
+      {/* Hero Section */}
+      <section
+        className="text-center d-flex align-items-center"
+        style={{
+          background: `url(${heroImage}) no-repeat center center/cover`,
+          height: '70vh',
+          color: 'white',
+          width: '100%',
+          overflowX: 'hidden',
+          position: 'relative',
+        }}
       >
-        Join as a Craftsman
-      </Link>
-      <Link
-        to="/Hirelogin"
-        className="btn btn-green-solid btn-lg mt-3 fw-bold"
-      >
-        Hire a Craftsman
-      </Link>
-    </div>
-  </div>
-</section>  
-
-
-
-       {/* About Section */}
-<section className="py-5 bg-light">
-  <div className="container">
-    <div className="text-center mb-5">
-      <h2 className="fw-bold text-success display-6" data-aos="fade-left">About Us</h2>
-
-      <p className="text-muted fs-5" data-aos="fade-right">
-        Empowering local craftsmen to grow, showcase their work, and reach the world.
-      </p>
-    </div>
-
-    <div className="row align-items-center">
-      {/* Text Column */}
-      <div className="col-lg-6 mb-4 mb-lg-0" data-aos="fade-right">
-        <p className="fs-5 lh-lg">
-          At KaaKazini, we are passionate about supporting local craftsmen by providing a platform that helps them manage projects, showcase their unique handmade products, and grow their business. We believe in the power of craftsmanship to bring one-of-a-kind creations to the world while fostering community and opportunity.
-        </p>
-        <p className="fs-5 lh-lg">
-          From connecting with clients to managing orders seamlessly, our platform is designed to elevate the craft and empower artisans to succeed.
-        </p>
-      </div>
-
-      {/* Image Column */}
-      <div className="col-lg-6 text-center" data-aos="fade-right">
-        <img 
-          src="https://www.ariseiip.com/wp-content/uploads/2022/06/textile.png" 
-          alt="Craftsmen at Work" 
-          className="img-fluid rounded shadow-lg" 
-          style={{ maxHeight: "400px", objectFit: "cover" }}
-        />
-      </div>
-    </div>
-  </div>
-</section>
-
-      {/*Services*/}
-
-{/* Services */}
-<section className="py-5 bg-light" id="services">
-  <div className="container overflow-hidden">
-    {/* Heading */}
-    <h2 className="text-center fw-bold text-success display-6" data-aos="fade-left">
-      Explore Our Services
-    </h2>
-    {/* Paragraph */}
-    <p className="text-center fs-5 lh-lg" data-aos="fade-right">
-      Discover a wide variety of skilled services offered by experienced craftsmen.
-      From metalwork and carpentry to plumbing and textile design, we connect you with professionals who deliver quality you can trust.
-    </p>
-
-    
-          
-
-    
-
-    {/* Carousel */}
-    {approvedServices.length === 0 ? (
-      <p className="text-center">No approved services available yet.</p>
-    ) : (
-      <>
-        <div
-          id="servicesCarousel"
-          className="carousel slide"
-          data-bs-ride="carousel"
-          data-bs-interval="3000"
-        >
-          <div className="carousel-inner">
-  {Array.from({ length: Math.ceil(approvedServices.length / 3) }).map((_, slideIndex) => (
-    <div
-      key={slideIndex}
-      className={`carousel-item ${slideIndex === 0 ? 'active' : ''}`}
-    >
-      <div className="d-flex justify-content-center">
-        {approvedServices
-          .slice(slideIndex * 3, slideIndex * 3 + 3) 
-          .map((service, index) => (
-            <div
-              key={index}
-              className="card mx-2 border-0 shadow" 
-              style={{ width: '18rem' }} 
+        <div className="container">
+          <h1
+            className="display-4 fw-bold moving-text"
+            style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }}
+          >
+            Empowering Local Craftsmen
+          </h1>
+          <p className="lead mt-3" style={{ fontSize: '1.3rem' }}>
+            Manage clients, showcase your work, and grow your trade — all in one platform.
+          </p>
+          <div className="d-flex justify-content-center gap-3 flex-wrap mb-4">
+            <Link
+              to="/login"
+              className="btn btn-green-transparent btn-lg mt-3 fw-bold"
             >
+              Join as a Craftsman
+            </Link>
+            <Link
+              to="/Hirelogin"
+              className="btn btn-green-solid btn-lg mt-3 fw-bold"
+            >
+              Hire a Craftsman
+            </Link>
+          </div>
+
+          {/* Search Bar */}
+          <div className="d-flex justify-content-center mt-4">
+            <div className="input-group" style={{ maxWidth: '500px', width: '100%' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search craftsmen by name, service, or location..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
+                style={{
+                  borderTopLeftRadius: '50px',
+                  borderBottomLeftRadius: '50px',
+                  borderRight: '0',
+                  height: '40px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                }}
+              />
+              <button
+                className="btn btn-green-solid"
+                style={{
+                  borderTopRightRadius: '50px',
+                  borderBottomRightRadius: '50px',
+                  height: '40px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                }}
+                onClick={handleSearch}
+              >
+                <FaSearch className="me-2" /> Search
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section className="py-5 bg-light">
+        <div className="container">
+          <div className="text-center mb-5">
+            <h2 className="fw-bold text-success display-6" data-aos="fade-left">About Us</h2>
+            <p className="text-muted fs-5" data-aos="fade-right">
+              Empowering local craftsmen to grow, showcase their work, and reach the world.
+            </p>
+          </div>
+          <div className="row align-items-center">
+            <div className="col-lg-6 mb-4 mb-lg-0" data-aos="fade-right">
+              <p className="fs-5 lh-lg">
+                At KaaKazini, we are passionate about supporting local craftsmen by providing a platform that helps them manage projects, showcase their unique handmade products, and grow their business. We believe in the power of craftsmanship to bring one-of-a-kind creations to the world while fostering community and opportunity.
+              </p>
+              <p className="fs-5 lh-lg">
+                From connecting with clients to managing orders seamlessly, our platform is designed to elevate the craft and empower artisans to succeed.
+              </p>
+            </div>
+            <div className="col-lg-6 text-center" data-aos="fade-right">
+              <img 
+                src="https://www.ariseiip.com/wp-content/uploads/2022/06/textile.png" 
+                alt="Craftsmen at Work" 
+                className="img-fluid rounded shadow-lg" 
+                style={{ maxHeight: "400px", objectFit: "cover" }}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Services Section */}
+      <section className="py-5 bg-light" id="services">
+        <div className="container overflow-hidden">
+          <h2 className="text-center fw-bold text-success display-6" data-aos="fade-left">
+            Explore Our Services
+          </h2>
+          <p className="text-center fs-5 lh-lg" data-aos="fade-right">
+            Discover a wide variety of skilled services offered by experienced craftsmen.
+            From metalwork and carpentry to plumbing and textile design, we connect you with professionals who deliver quality you can trust.
+          </p>
+
+          {filteredServices.length === 0 ? (
+            <p className="text-center">No services found.</p>
+          ) : (
+            <div
+  id="servicesCarousel"
+  className="carousel slide"
+  data-bs-ride="carousel"
+  data-bs-interval="3000"
+>
+  <div className="carousel-inner">
+    {filteredServices.map((service, index) => (
+      <div
+        key={index}
+        className={`carousel-item ${index === 0 ? 'active' : ''}`}
+      >
+        <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2 justify-content-center">
+          <div className="col d-flex justify-content-center">
+            <div className="card border-0 shadow" style={{ width: '18rem' }}>
               <div className="position-relative">
                 <img
                   src={getImageUrl(service.service_image)}
@@ -206,56 +217,54 @@ function LandingPage() {
                 <h5 className="card-title fw-bold mb-0">{service.service}</h5>
               </div>
             </div>
-        ))}
-      </div>
-    </div>
-  ))}
-</div>
-{/* View All Services Button */}
-    <div className="text-center mt-5">
-      <Link to="/services" className="btn btn-green-solid fw-bold rounded-pill px-5 py-3" data-aos="fade-left">
-        View All Services
-      </Link>
-    </div>
-          {/* Carousel Arrows */}
-          <button
-            className="carousel-control-prev"
-            type="button"
-            data-bs-target="#servicesCarousel"
-            data-bs-slide="prev"
-          >
-            <span className="carousel-control-prev-icon" aria-hidden="true" style={{ filter: 'invert(1)' }} />
-            <span className="visually-hidden">Previous</span>
-          </button>
-          <button
-            className="carousel-control-next"
-            type="button"
-            data-bs-target="#servicesCarousel"
-            data-bs-slide="next"
-          >
-            <span className="carousel-control-next-icon" aria-hidden="true" style={{ filter: 'invert(1)' }} />
-            <span className="visually-hidden">Next</span>
-          </button>
+          </div>
         </div>
-      </>
-    )}
+      </div>
+    ))}
   </div>
 
-  {/* Hover overlay styling */}
-  <style>{`
-    .overlay {
-      opacity: 0;
-      transition: opacity 0.4s ease-in-out;
-    }
+  {/* Carousel Controls */}
+  <button
+    className="carousel-control-prev"
+    type="button"
+    data-bs-target="#servicesCarousel"
+    data-bs-slide="prev"
+  >
+    <span
+      className="carousel-control-prev-icon"
+      aria-hidden="true"
+      style={{ filter: 'invert(1)' }}
+    />
+    <span className="visually-hidden">Previous</span>
+  </button>
+  <button
+    className="carousel-control-next"
+    type="button"
+    data-bs-target="#servicesCarousel"
+    data-bs-slide="next"
+  >
+    <span
+      className="carousel-control-next-icon"
+      aria-hidden="true"
+      style={{ filter: 'invert(1)' }}
+    />
+    <span className="visually-hidden">Next</span>
+  </button>
+</div>
 
-    .position-relative:hover .overlay {
-      opacity: 1;
-    }
-  `}</style>
-</section>
+          )}
 
-
-
+          <style>{`
+            .overlay {
+              opacity: 0;
+              transition: opacity 0.4s ease-in-out;
+            }
+            .position-relative:hover .overlay {
+              opacity: 1;
+            }
+          `}</style>
+        </div>
+      </section>
 
 
      {/* How It Works Section */}
@@ -465,7 +474,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
 
               <div className="card-body text-center">
                 <h5 className="fw-bold">{craftsman.name}</h5>
-                <p className="text-muted">{craftsman.primary_service}</p>
+                <p className="text-muted">{craftsman.full_name}</p>
                 {/* <p>
                   ⭐ {craftsman.rating || "0"} | Jobs Completed:{" "}
                   {craftsman.completed_jobs || "0"}

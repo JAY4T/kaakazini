@@ -6,7 +6,8 @@ const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
 function CraftsmanProfile() {
-  const { id } = useParams();
+  const { slug } = useParams();
+
   const [craftsman, setCraftsman] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -21,10 +22,10 @@ function CraftsmanProfile() {
   const prevStep = () => setCurrentStep((prev) => Math.max(1, prev - 1));
 
   useEffect(() => {
-    if (!id || id === 'undefined' || id === 'null') {
+    if (!slug || slug === 'undefined' || slug === 'null') {
       setNotFound(true);
       setLoading(false);
-      setErrorMsg('Invalid craftsman ID.');
+      setErrorMsg('Invalid craftsman slug.');
       return;
     }
 
@@ -33,16 +34,17 @@ function CraftsmanProfile() {
       setNotFound(false);
       setErrorMsg('');
 
-      const storedData = sessionStorage.getItem(`craftsman-${id}`);
+      const storedData = sessionStorage.getItem(`craftsman-${slug}`);
       if (storedData) {
         setCraftsman(JSON.parse(storedData));
         setLoading(false);
       } else {
         try {
-          const response = await axios.get(`${API_BASE_URL}/public-craftsman/${id}/`);
+          const response = await axios.get(`${API_BASE_URL}/public-craftsman/${slug}/`);
+
           if (response.status === 200 && response.data) {
             setCraftsman(response.data);
-            sessionStorage.setItem(`craftsman-${id}`, JSON.stringify(response.data));
+            sessionStorage.setItem(`craftsman-${slug}`, JSON.stringify(response.data));
           } else {
             setNotFound(true);
             setErrorMsg('No data returned from API.');
@@ -62,15 +64,18 @@ function CraftsmanProfile() {
     };
 
     fetchCraftsman();
-  }, [id]);
+  }, [slug]);
 
-  if (loading) return <div className="text-center py-5 text-secondary fs-5">Loading...</div>;
+  if (loading)
+    return <div className="text-center py-5 text-secondary fs-5">Loading...</div>;
 
   if (notFound || !craftsman)
     return (
       <div className="text-center py-5">
         <h2 className="text-danger fs-4 fw-semibold">Craftsman Not Found</h2>
-        <p className="text-muted mt-2">{errorMsg || 'Please check the URL or select another craftsman.'}</p>
+        <p className="text-muted mt-2">
+          {errorMsg || 'Please check the URL or select another craftsman.'}
+        </p>
       </div>
     );
 
@@ -82,20 +87,21 @@ function CraftsmanProfile() {
 
   const avgRating =
     craftsman.reviews && craftsman.reviews.length > 0
-      ? (craftsman.reviews.reduce((sum, r) => sum + r.rating, 0) / craftsman.reviews.length).toFixed(1)
+      ? (
+          craftsman.reviews.reduce((sum, r) => sum + r.rating, 0) /
+          craftsman.reviews.length
+        ).toFixed(1)
       : null;
 
- 
-
   const handleCopyLink = () => {
-    const profileUrl = `${window.location.origin}/craftsman/${id}`;
+    const profileUrl = `${window.location.origin}/craftsman/${slug}`;
     navigator.clipboard.writeText(profileUrl).then(() => alert('Profile link copied to clipboard!'));
   };
 
   const handleEmailShare = () => {
     const subject = encodeURIComponent(`Check out ${craftsman.name}'s profile`);
     const body = encodeURIComponent(
-      `Hi,\n\nTake a look at this craftsman profile:\n${window.location.origin}/craftsman/${id}`
+      `Hi,\n\nTake a look at this craftsman profile:\n${window.location.origin}/craftsman/${slug}`
     );
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -138,17 +144,15 @@ function CraftsmanProfile() {
             <p className="text-muted">{craftsman.description || 'No information available.'}</p>
           </div>
 
-         {/* Services Offered (only names) */}
-<div className="mb-4">
-  <h4 className="fw-semibold mb-2">Services Offered</h4>
-  {services.length > 0 ? (
-    services.map((service, index) => (
-      <p key={index}>{service.name}</p>
-    ))
-  ) : (
-    <p className="text-muted">No services listed.</p>
-  )}
-</div>
+          {/* Services Offered */}
+          <div className="mb-4">
+            <h4 className="fw-semibold mb-2">Services Offered</h4>
+            {services.length > 0 ? (
+              services.map((service, index) => <p key={index}>{service.name}</p>)
+            ) : (
+              <p className="text-muted">No services listed.</p>
+            )}
+          </div>
 
           {/* Client Reviews */}
           <div className="mb-4">
@@ -176,9 +180,6 @@ function CraftsmanProfile() {
             <h4 className="fw-semibold mb-2">Skills</h4>
             <p className="text-muted">{craftsman.skills || 'N/A'}</p>
           </div>
-
-         
-             
         </div>
       </div>
 

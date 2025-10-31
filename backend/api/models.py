@@ -2,12 +2,12 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from accounts.models import CustomUser
 from django.utils import timezone
+from django.utils.text import slugify
 
 
 
 User = get_user_model()
 
-# Reusable service choices
 PRIMARY_SERVICE_CHOICES = [
     ('Plumbing', 'Plumbing'),
     ('Electrical', 'Electrical'),
@@ -24,6 +24,16 @@ PRIMARY_SERVICE_CHOICES = [
     ('Auto Repair', 'Auto Repair'),
 ]
 
+def unique_slug(instance, slug_field='slug', value_field='full_name'):
+    base_slug = slugify(getattr(instance, value_field) or 'craftsman')
+    slug = base_slug
+    ModelClass = instance.__class__
+    counter = 1
+    while ModelClass.objects.filter(**{slug_field: slug}).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+    return slug
+
 
 class Craftsman(models.Model):
     STATUS_CHOICES = [
@@ -34,24 +44,26 @@ class Craftsman(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     full_name = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True, blank=True, null=True)
+
     profile = models.ImageField(upload_to='profiles/', blank=True, null=True)
     profession = models.CharField(max_length=100, blank=True, null=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
     member_since = models.DateField(null=True, blank=True)
     location = models.CharField(max_length=255, blank=True, null=True)
     skills = models.TextField(blank=True, null=True)
-    primary_service = models.CharField(
-        max_length=255, choices=PRIMARY_SERVICE_CHOICES, blank=True, null=True
-    )
+    primary_service = models.CharField(max_length=255, choices=PRIMARY_SERVICE_CHOICES, blank=True, null=True)
     service_image = models.ImageField(upload_to='services/images/', blank=True, null=True)
-    video = models.URLField(blank=True, null=True)  # YouTube or Vimeo
-    description = models.TextField()
+    video = models.URLField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    proof_document = models.FileField(upload_to='proofs/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     is_approved = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.full_name
+        return self.full_name 
 
+    
 
 class Service(models.Model):
     craftsman = models.ForeignKey(Craftsman, on_delete=models.CASCADE, related_name='services')
@@ -60,6 +72,27 @@ class Service(models.Model):
     image = models.ImageField(upload_to='services/')
     is_approved = models.BooleanField(default=False)  
 
+
+
+
+class ServiceImage(models.Model):
+    craftsman = models.ForeignKey(Craftsman, on_delete=models.CASCADE, related_name="service_images")
+    image = models.ImageField(upload_to="services/images/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.craftsman.full_name} - Image"
+
+
+
+
+class ServiceVideo(models.Model):
+    craftsman = models.ForeignKey(Craftsman, on_delete=models.CASCADE, related_name="service_videos")
+    video = models.FileField(upload_to="services/videos/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.craftsman.full_name} - Video"
 
 class Product(models.Model):
     craftsman = models.ForeignKey(Craftsman, on_delete=models.CASCADE)
