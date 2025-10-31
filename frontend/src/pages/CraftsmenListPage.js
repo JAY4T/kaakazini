@@ -64,8 +64,6 @@ function CraftsmenList() {
           <div className="col-md-3 mb-4">
             <div className="card p-3 shadow-sm">
               <h5 className="mb-3">Search</h5>
-
-              {/* Search by name */}
               <div className="form-group">
                 <label htmlFor="search">Search by Name</label>
                 <div className="input-group">
@@ -79,7 +77,7 @@ function CraftsmenList() {
                   />
                   <button
                     className="btn btn-primary"
-                    onClick={() => fetchCraftsmen()}
+                    onClick={fetchCraftsmen}
                   >
                     Search
                   </button>
@@ -98,48 +96,49 @@ function CraftsmenList() {
               <p className="text-center">No craftsmen found.</p>
             ) : (
               <div className="row">
-                {filteredCraftsmen.map((craftsman) => (
-                  <div className="col-md-4" key={craftsman.id}>
-                    <div className="card shadow-sm mb-4">
-                      <div className="card-body text-center">
-                        <img
-                          src={
-                            craftsman.profile?.trim()
-                              ? craftsman.profile
-                              : 'https://via.placeholder.com/150'
-                          }
-                          alt={craftsman.full_name}
-                          className="mb-3 rounded-circle"
-                          style={{ width: '150px', height: '150px', objectFit: 'cover' }}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = 'https://via.placeholder.com/150';
-                          }}
-                        />
-                        <h5 className="card-title">{craftsman.full_name}</h5>
-                        <p className="card-text">{craftsman.profession}</p>
-                        {craftsman.location && (
-                          <p className="card-text">
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                craftsman.location
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary"
-                            >
-                              <i className="fas fa-map-marker-alt me-1"></i>
-                              {craftsman.location}
-                            </a>
-                          </p>
-                        )}
-                        <Link to={`/craftsman/${craftsman.id}`} className="btn btn-primary">
-                          View Portfolio
-                        </Link>
+                {filteredCraftsmen.map((craftsman) => {
+                  const craftsmanSlug = craftsman.slug || craftsman.id; // fallback if slug is missing
+                  return (
+                    <div className="col-md-4" key={craftsman.id}>
+                      <div className="card shadow-sm mb-4">
+                        <div className="card-body text-center">
+                          <img
+                            src={
+                              craftsman.profile?.trim()
+                                ? craftsman.profile
+                                : 'https://via.placeholder.com/150'
+                            }
+                            alt={craftsman.full_name}
+                            className="mb-3 rounded-circle"
+                            style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://via.placeholder.com/150';
+                            }}
+                          />
+                          <h5 className="card-title">{craftsman.full_name}</h5>
+                          <p className="card-text">{craftsman.profession}</p>
+                          {craftsman.location && (
+                            <p className="card-text">
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(craftsman.location)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary"
+                              >
+                                <i className="fas fa-map-marker-alt me-1"></i>
+                                {craftsman.location}
+                              </a>
+                            </p>
+                          )}
+                          <Link to={`/craftsman/${craftsmanSlug}`} className="btn btn-primary">
+                            View Portfolio
+                          </Link>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

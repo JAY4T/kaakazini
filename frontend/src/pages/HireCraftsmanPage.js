@@ -51,26 +51,30 @@ const HireCraftsmanPage = () => {
   }, []);
 
   const fetchJobs = async (clientId, token) => {
-    try {
-      const { data } = await axios.get(`${BASE_URL}/job-requests/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const clientJobs = data.filter((j) => j.client === clientId);
-      setJobs(clientJobs);
+  try {
+    const { data } = await axios.get(`${BASE_URL}/job-requests/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      // ✅ initialize review states
-      const initialReviews = {};
-      clientJobs.forEach((job) => {
-        initialReviews[job.id] = {
-          rating: job.rating || 0,
-          review: job.review || "",
-        };
-      });
-      setReviews(initialReviews);
-    } catch (err) {
-      console.error("Error fetching jobs:", err);
-    }
-  };
+    const clientJobs = data.filter(
+      (j) => j.client === clientId || j.client?.id === clientId
+    );
+
+    setJobs(clientJobs);
+
+    const initialReviews = {};
+    clientJobs.forEach((job) => {
+      initialReviews[job.id] = {
+        rating: job.rating || 0,
+        review: job.review || "",
+      };
+    });
+    setReviews(initialReviews);
+  } catch (err) {
+    console.error("Error fetching jobs:", err);
+  }
+};
+
 
   const handleIndividualChange = (e) => {
     const { id, value, type, checked, files } = e.target;
@@ -83,45 +87,76 @@ const HireCraftsmanPage = () => {
     }
   };
 
-  const handleIndividualSubmit = async (e) => {
-    e.preventDefault();
-    if (!client || !client.id) return alert("Client ID missing.");
+const handleIndividualSubmit = async (e) => {
+  e.preventDefault();
 
-    const formData = new FormData();
-    formData.append("client", client.id);
-    Object.entries(individualForm).forEach(([key, val]) => {
-      if (val !== null && val !== "") {
-        formData.append(key, key === "schedule" ? new Date(val).toISOString() : val);
-      }
+  if (!client || !client.id) return alert("Client ID missing.");
+
+  const formData = new FormData();
+  formData.append("client", client.id);
+
+  Object.entries(individualForm).forEach(([key, val]) => {
+    if (val !== null && val !== "") {
+      formData.append(
+        key,
+        key === "schedule" ? new Date(val).toISOString() : val
+      );
+    }
+  });
+
+  try {
+    const token = sessionStorage.getItem("access_token");
+
+    // Submit the request
+    await axios.post(`${BASE_URL}/job-requests/`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
     });
 
-    try {
-      const token = sessionStorage.getItem("access_token");
-      await axios.post(`${BASE_URL}/job-requests/`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      fetchJobs(client.id, token);
-      alert("✅ Request submitted!");
-      setShowModal(true);
-      setIndividualForm({
-        name: client.full_name || "",
-        phone: client.phone || client.phone_number || "",
-        service: "",
-        schedule: "",
-        address: "",
-        location: "",
-        description: "",
-        isUrgent: false,
-        media: null,
-      });
-    } catch (err) {
-      console.error("Submission error:", err);
-      alert("❌ Failed to submit request.");
-    }
-  };
+    alert("✅ Request submitted!");
+
+    // Fetch updated jobs for this client
+    const { data } = await axios.get(`${BASE_URL}/job-requests/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // Filter jobs for the current client
+    const clientJobs = data.filter(
+      (j) => j.client?.id === client.id || j.client === client.id
+    );
+
+    setJobs(clientJobs);
+
+    // Reset review states
+    const initialReviews = {};
+    clientJobs.forEach((job) => {
+      initialReviews[job.id] = { rating: job.rating || 0, review: job.review || "" };
+    });
+    setReviews(initialReviews);
+
+    // Reset the form
+    setIndividualForm({
+      name: client.full_name || "",
+      phone: client.phone || client.phone_number || "",
+      service: "",
+      schedule: "",
+      address: "",
+      location: "",
+      description: "",
+      isUrgent: false,
+      media: null,
+    });
+
+    // Switch to "My Requests" tab automatically
+    setActiveTab("myRequests");
+
+  } catch (err) {
+    console.error("Submission error:", err.response?.data || err.message);
+    alert("❌ Failed to submit request.");
+  }
+};
 
   const updateJob = async (jobId, update) => {
     try {

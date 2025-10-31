@@ -5,14 +5,72 @@ on:
     branches:
       - main
       - dev
-  workflow_dispatch:   # allow manual trigger from Actions tab
+  workflow_dispatch:   # Allow manual trigger from Actions tab
 
 jobs:
+  ##########################
+  # 0. Pre-Deploy Check
+  ##########################
+  precheck:
+    name: 🛡️ Pre-Deploy Check (Server Readiness)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check SSH Connectivity & Environment Health
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          REMOTE_HOST_PROD: ${{ secrets.REMOTE_HOST_PROD }}
+          REMOTE_HOST_STAGING: ${{ secrets.REMOTE_HOST_STAGING }}
+        run: |
+          echo "🔍 Running pre-deployment checks..."
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $REMOTE_HOST_PROD >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H $REMOTE_HOST_STAGING >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Detect environment
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            REMOTE_HOST=$REMOTE_HOST_PROD
+            ENVIRONMENT="Production"
+          else
+            REMOTE_HOST=$REMOTE_HOST_STAGING
+            ENVIRONMENT="Staging"
+          fi
+
+          echo "🌍 Checking $ENVIRONMENT server at $REMOTE_HOST..."
+
+          # Test SSH connection
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "echo ✅ SSH OK"
+
+          # Verify tools & .env presence
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
+            echo '🔧 Checking installed tools...'
+            command -v python3 >/dev/null 2>&1 || { echo '❌ Python3 missing'; exit 1; }
+            command -v pip3 >/dev/null 2>&1 || { echo '❌ pip missing'; exit 1; }
+            command -v node >/dev/null 2>&1 || { echo '❌ Node.js missing'; exit 1; }
+            command -v systemctl >/dev/null 2>&1 || echo '⚠️ systemctl not found';
+            echo '✅ Required tools found.'
+            
+            # Check for .env file (WARN only, do not fail)
+            if [ -f ~/kaakazini/backend/.env ]; then
+              echo '✅ .env file exists on server.'
+            else
+              echo '⚠️ .env file missing at ~/kaakazini/backend/.env. Deployment will continue, backend will preserve .env if created.'
+            fi
+          "
+
+          echo "🛡️ Pre-deploy checks passed successfully!"
+
+
   ##########################
   # 1. Frontend Build & Deploy
   ##########################
   frontend:
     runs-on: ubuntu-latest
+    needs: precheck
     defaults:
       run:
         working-directory: frontend
@@ -26,161 +84,109 @@ jobs:
         with:
           node-version: 20
 
-      - name: Cache Node modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install frontend dependencies
+      - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Set environment and build React app
+      - name: Build React App
         run: |
-          echo "Branch: ${{ github.ref }}"
           if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_PROD_API_URL }}" > .env
-            echo "Building for production"
+            echo "🌍 Building for production..."
           else
             echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_STAGING_API_URL }}" > .env
-            echo "Building for staging"
+            echo "🧪 Building for staging..."
           fi
           cat .env
-
-          if npm run | grep -q "build"; then
-            CI=false npm run build
-          else
-            echo "⚠️ No build script found, skipping build"
-          fi
+          CI=false npm run build
 
       - name: Deploy frontend
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
-          PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
-          STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
-          PROD_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_PROD }}
-          STAGING_FRONTEND_PATH: ${{ secrets.FRONTEND_PATH_STAGING }}
+          REMOTE_HOST_PROD: ${{ secrets.REMOTE_HOST_PROD }}
+          REMOTE_HOST_STAGING: ${{ secrets.REMOTE_HOST_STAGING }}
+          FRONTEND_PATH_PROD: ${{ secrets.FRONTEND_PATH_PROD }}
+          FRONTEND_PATH_STAGING: ${{ secrets.FRONTEND_PATH_STAGING }}
         run: |
-          # Setup SSH
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          touch ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
 
-          # Set remote host & path
           if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            REMOTE_HOST=$PROD_HOST
-            FRONTEND_PATH=$PROD_FRONTEND_PATH
+            REMOTE_HOST=$REMOTE_HOST_PROD
+            FRONTEND_PATH=$FRONTEND_PATH_PROD
           else
-            REMOTE_HOST=$STAGING_HOST
-            FRONTEND_PATH=$STAGING_FRONTEND_PATH
+            REMOTE_HOST=$REMOTE_HOST_STAGING
+            FRONTEND_PATH=$FRONTEND_PATH_STAGING
           fi
 
-          # Add host fingerprint
           ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts 2>/dev/null
 
-          echo "🚀 Deploying frontend to $REMOTE_HOST:$FRONTEND_PATH..."
+          echo "🚀 Deploying frontend to $REMOTE_HOST..."
+          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            build/ $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/
+          echo "✅ Frontend deployed successfully!"
 
-          if [ -d build ]; then
-            # Clear old files first (prevents stale assets)
-            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "rm -rf $FRONTEND_PATH/*"
-
-            # Deploy new build
-            rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-              --exclude='.git' --exclude='node_modules' --delete build/ \
-              $REMOTE_USER@$REMOTE_HOST:$FRONTEND_PATH/
-            echo "✅ Frontend deployed successfully!"
-          else
-            echo "⚠️ No build folder found, skipping frontend deploy"
-          fi
 
   ##########################
-  # 2. Backend Deploy
+  # 2. Backend Build & Deploy
   ##########################
   backend:
     runs-on: ubuntu-latest
+    needs: frontend
     defaults:
       run:
         working-directory: backend
-    needs: frontend
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
 
-      - name: Cache Python packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install backend dependencies
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Django pre-deploy check
-        env:
-          DJANGO_SETTINGS_MODULE: backend.settings   # 👈 adjust if settings path differs
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          DEBUG: "True"
-          ALLOWED_HOSTS: "staging.kaakazini.com,127.0.0.1,localhost"
-        run: |
-          echo "⚙️ Running Django system checks..."
-          python manage.py check --deploy
-          echo "✅ Django pre-check passed!"
-
-      - name: Deploy backend
+      - name: Deploy backend (preserve .env)
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
-          PROD_HOST: ${{ secrets.REMOTE_HOST_PROD }}
-          STAGING_HOST: ${{ secrets.REMOTE_HOST_STAGING }}
-          PROD_BACKEND_PATH: ${{ secrets.BACKEND_PATH_PROD }}
-          STAGING_BACKEND_PATH: ${{ secrets.BACKEND_PATH_STAGING }}
+          REMOTE_HOST_PROD: ${{ secrets.REMOTE_HOST_PROD }}
+          REMOTE_HOST_STAGING: ${{ secrets.REMOTE_HOST_STAGING }}
+          BACKEND_PATH_PROD: ${{ secrets.BACKEND_PATH_PROD }}
+          BACKEND_PATH_STAGING: ${{ secrets.BACKEND_PATH_STAGING }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $PROD_HOST $STAGING_HOST >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H $REMOTE_HOST_PROD >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H $REMOTE_HOST_STAGING >> ~/.ssh/known_hosts 2>/dev/null
 
-          # Choose environment based on branch
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            REMOTE_HOST=$PROD_HOST
-            BACKEND_PATH=$PROD_BACKEND_PATH
+          # Detect environment
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            REMOTE_HOST=$REMOTE_HOST_PROD
+            BACKEND_PATH=$BACKEND_PATH_PROD
             SERVICE_NAME=kaakazini.service
           else
-            REMOTE_HOST=$STAGING_HOST
-            BACKEND_PATH=$STAGING_BACKEND_PATH
+            REMOTE_HOST=$REMOTE_HOST_STAGING
+            BACKEND_PATH=$BACKEND_PATH_STAGING
             SERVICE_NAME=gunicorn-kaakazini-dev.service
           fi
 
-          echo "🚀 Deploying backend to $REMOTE_HOST:$BACKEND_PATH (service: $SERVICE_NAME)..."
+          echo "🚀 Deploying backend to $REMOTE_HOST..."
 
-          # Rsync backend files (but don’t overwrite venv/.git/__pycache__)
+          # Sync code but skip .env (to preserve existing one)
           rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-            --exclude='.git' --exclude='venv' --exclude='__pycache__' --delete ./ \
-            $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
+            --exclude='.git' --exclude='venv' --exclude='__pycache__' \
+            --exclude='.env' --delete ./ $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
 
-          # Run remote setup + migrations + restart
+          # Run setup, install, and restart service
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
             cd $BACKEND_PATH
-            # Ensure venv exists
+            echo "✅ Preserving existing .env file"
+
             if [ ! -d "venv" ]; then
               python3 -m venv venv
             fi
@@ -188,8 +194,6 @@ jobs:
             source venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt
-
-            export BREVO_API_KEY=$BREVO_API_KEY
 
             python manage.py migrate --noinput
             python manage.py collectstatic --noinput

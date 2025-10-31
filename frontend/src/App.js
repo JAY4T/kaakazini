@@ -81,7 +81,7 @@ function App() {
         <Route path="/category/metalworking" element={<MetalworkingCategoryPage />} />
         <Route path="/category/textile" element={<TextileCategoryPage />} />
         <Route path="/craftsmen" element={<CraftsmenListPage />} />
-        <Route path="/craftsman/:id" element={<CraftsmanProfilePage />} />
+        <Route path="/craftsman/:slug" element={<CraftsmanProfilePage />} />
         <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
         <Route path="/HireSignUp" element={<HireSignUp />} />
         <Route path="/HireLogin" element={<HireLogin />} />
@@ -92,11 +92,7 @@ function App() {
         <Route path="/orders" element={<OrderTrackingPage />} />
         <Route path="/profile" element={<ClientProfilePage />} /> 
 
-
-
-
-
-        {/* ✅ Protected hire route */}
+       {/* ✅ Protected hire route */}
         <Route
           path="/hire"
           element={
