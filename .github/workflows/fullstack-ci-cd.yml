@@ -129,7 +129,7 @@ jobs:
           echo "✅ Frontend deployed successfully!"
 
 
-  ##########################
+    ##########################
   # 2. Backend Build & Deploy
   ##########################
   backend:
@@ -177,17 +177,19 @@ jobs:
 
           echo "🚀 Deploying backend to $REMOTE_HOST..."
 
-          # Sync code but skip .env (to preserve existing one)
+          # Sync code (exclude sensitive/unnecessary files)
           rsync -avz -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
             --exclude='.git' --exclude='venv' --exclude='__pycache__' \
-            --exclude='.env' --delete ./ $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
+            --exclude='.env' --exclude='*.pyc' --exclude='*.log' --delete \
+            ./ $REMOTE_USER@$REMOTE_HOST:$BACKEND_PATH
 
-          # Run setup, install, and restart service
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
+          # Run post-deploy setup
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << 'EOF'
             cd $BACKEND_PATH
             echo "✅ Preserving existing .env file"
 
             if [ ! -d "venv" ]; then
+              echo "🧱 Creating new virtual environment..."
               python3 -m venv venv
             fi
 
@@ -195,10 +197,13 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
 
+            echo "🗃 Running migrations and collecting static files..."
             python manage.py migrate --noinput
             python manage.py collectstatic --noinput
 
+            echo "🔁 Restarting service..."
             sudo systemctl restart $SERVICE_NAME
+            sudo systemctl status $SERVICE_NAME --no-pager
           EOF
 
           echo "✅ Backend deployed successfully!"
