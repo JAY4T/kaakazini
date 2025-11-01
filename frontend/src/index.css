@@ -132,3 +132,14 @@ code {
   }
 }
 
+
+html, body {
+  overflow-x: hidden !important;
+  width: 100%;
+}
+
+section, .container, .row {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+  overflow-x: hidden !important;
+}
