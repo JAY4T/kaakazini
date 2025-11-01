@@ -76,7 +76,7 @@ const [searchQuery, setSearchQuery] = useState('');
   className="text-center d-flex align-items-center"
   style={{
     background: `url(${heroImage}) no-repeat center center/cover`,
-    height: '100vh',
+    height: '120vh',
     color: 'white',
     width: '100%',
     overflowX: 'hidden',
