@@ -79,7 +79,7 @@ const [searchQuery, setSearchQuery] = useState('');
     height: '120vh',
     color: 'white',
     width: '100%',
-    overflowX: 'hidden',
+    overflowx: 'hidden',
     position: 'relative',
   }}
 >
