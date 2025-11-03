@@ -8,6 +8,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Landing Page Responsiveness Fix */
+  overflow-x: hidden !important;
 }
 
 code {
@@ -132,4 +134,7 @@ code {
   }
 }
 
-
+/* Craftsmen Page Issue Fix */
+.crafts-list {
+  margin-top: 150px !important;
+}
