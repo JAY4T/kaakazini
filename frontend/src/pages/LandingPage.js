@@ -71,77 +71,45 @@ const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <>
-      {/* Hero Section */}
-      <section
-        className="text-center d-flex align-items-center"
-        style={{
-          background: `url(${heroImage}) no-repeat center center/cover`,
-          height: '70vh',
-          color: 'white',
-          width: '100%',
-          overflowX: 'hidden',
-          position: 'relative',
-        }}
+    {/* Hero Section */}
+<section
+  className="text-center d-flex align-items-center"
+  style={{
+    background: `url(${heroImage}) no-repeat center center/cover`,
+    height: '120vh',
+    color: 'white',
+    width: '100%',
+    overflowx: 'hidden',
+    position: 'relative',
+  }}
+>
+  <div className="container">
+    <h1
+      className="display-4 fw-bold moving-text"
+      style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }}
+    >
+      Empowering Local Craftsmen
+    </h1>
+    <p className="lead mt-3" style={{ fontSize: '1.3rem' }}>
+      Manage clients, showcase your work, and grow your trade — all in one platform.
+    </p>
+    <div className="d-flex justify-content-center gap-3 flex-wrap mb-4">
+      <Link
+        to="/login"
+        className="btn btn-green-transparent btn-lg mt-3 fw-bold"
       >
-        <div className="container">
-          <h1
-            className="display-4 fw-bold moving-text"
-            style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }}
-          >
-            Empowering Local Craftsmen
-          </h1>
-          <p className="lead mt-3" style={{ fontSize: '1.3rem' }}>
-            Manage clients, showcase your work, and grow your trade — all in one platform.
-          </p>
-          <div className="d-flex justify-content-center gap-3 flex-wrap mb-4">
-            <Link
-              to="/login"
-              className="btn btn-green-transparent btn-lg mt-3 fw-bold"
-            >
-              Join as a Craftsman
-            </Link>
-            <Link
-              to="/Hirelogin"
-              className="btn btn-green-solid btn-lg mt-3 fw-bold"
-            >
-              Hire a Craftsman
-            </Link>
-          </div>
+        Join as a Craftsman
+      </Link>
+      <Link
+        to="/Hirelogin"
+        className="btn btn-green-solid btn-lg mt-3 fw-bold"
+      >
+        Hire a Craftsman
+      </Link>
+    </div>
+  </div>
+</section>
 
-          {/* Search Bar */}
-          <div className="d-flex justify-content-center mt-4">
-            <div className="input-group" style={{ maxWidth: '500px', width: '100%' }}>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search craftsmen by name, service, or location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={handleKeyPress}
-                style={{
-                  borderTopLeftRadius: '50px',
-                  borderBottomLeftRadius: '50px',
-                  borderRight: '0',
-                  height: '40px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                }}
-              />
-              <button
-                className="btn btn-green-solid"
-                style={{
-                  borderTopRightRadius: '50px',
-                  borderBottomRightRadius: '50px',
-                  height: '40px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                }}
-                onClick={handleSearch}
-              >
-                <FaSearch className="me-2" /> Search
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* About Section */}
       <section className="py-5 bg-light">
@@ -852,7 +820,10 @@ Tell us about your project, and skilled craftsmen will start responding within 2
           0% { transform: translateX(0px); }
           100% { transform: translateX(20px); }
         }
-  `}</style>
+
+  `
+  
+  }</style>
 </footer>
     </>
   );
