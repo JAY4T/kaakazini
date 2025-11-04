@@ -55,7 +55,7 @@ function CraftsmenList() {
 
   return (
     <>
-      <div className="container-fluid">
+      <div className="container-fluid crafts-list">
         <h2 className="text-center my-4">Craftsmen</h2>
         <p className="text-center mb-3 text-muted">Explore our registered craftsmen</p>
 
