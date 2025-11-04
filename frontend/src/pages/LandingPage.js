@@ -3,8 +3,9 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import heroImage from '../assets/craftOnline.jpg';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // includes Popper
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
+
+
 
 import { FaFileAlt, FaSearch, FaStar } from 'react-icons/fa';
 import AOS from 'aos';
@@ -79,10 +80,12 @@ const [searchQuery, setSearchQuery] = useState('');
     height: '120vh',
     color: 'white',
     width: '100%',
-    overflowx: 'hidden',
     position: 'relative',
+    paddingTop: '100px', // 👈 keeps hero below navbar
+    zIndex: 1,
   }}
 >
+
   <div className="container">
     <h1
       className="display-4 fw-bold moving-text"
@@ -93,22 +96,24 @@ const [searchQuery, setSearchQuery] = useState('');
     <p className="lead mt-3" style={{ fontSize: '1.3rem' }}>
       Manage clients, showcase your work, and grow your trade — all in one platform.
     </p>
-    <div className="d-flex justify-content-center gap-3 flex-wrap mb-4">
-      <Link
-        to="/login"
-        className="btn btn-green-transparent btn-lg mt-3 fw-bold"
-      >
-        Join as a Craftsman
-      </Link>
-      <Link
-        to="/Hirelogin"
-        className="btn btn-green-solid btn-lg mt-3 fw-bold"
-      >
-        Hire a Craftsman
-      </Link>
-    </div>
-  </div>
+    <div className="d-flex justify-content-center align-items-center gap-3 mb-4 hero-buttons">
+
+  <Link
+    to="/login"
+    className="btn btn-green-transparent btn-lg fw-bold"
+  >
+    Join as a Craftsman
+  </Link>
+  <Link
+    to="/Hirelogin"
+    className="btn btn-green-solid btn-lg fw-bold"
+  >
+    Hire a Craftsman
+  </Link>
+</div>
+</div>
 </section>
+
 
 
       {/* About Section */}
@@ -823,7 +828,33 @@ Tell us about your project, and skilled craftsmen will start responding within 2
 
   `
   
+  
   }</style>
+  <style>{`
+  .hero-buttons {
+    flex-wrap: nowrap !important; /* prevents wrapping on smaller screens */
+    gap: 1rem;
+  }
+
+  .hero-buttons a {
+    min-width: 150px;
+  }
+
+  @media (max-width: 576px) {
+    .hero-buttons {
+      flex-direction: row !important;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: nowrap !important;
+    }
+    .hero-buttons a {
+      font-size: 0.9rem;
+      padding: 0.6rem 1rem;
+    }
+  }
+`}</style>
+
+  
 </footer>
     </>
   );
