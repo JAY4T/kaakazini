@@ -138,7 +138,7 @@ function LoginPage() {
         alignItems: 'flex-start',
       }}
     >
-      <div className="container" style={{ marginTop: '100px', marginBottom: '50px' }}>
+      <div className="container" style={{ marginTop: '150px', marginBottom: '50px' }}>
         <div className="row justify-content-center">
           <div className="col-md-8 col-lg-6 col-xl-5">
             <div className="card shadow-lg border-0">
