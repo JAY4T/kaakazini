@@ -76,3 +76,17 @@ frontend/build/
 # Mac/Windows junk
 .DS_Store
 Thumbs.db
+ ../backend/.env
+  .env
+
+# Django
+*.pyc
+__pycache__/
+db.sqlite3
+
+# Environments
+venv/
+.env
+
+# Migrations (optional, only if you want to regenerate on deploy)
+# api/migrations/
