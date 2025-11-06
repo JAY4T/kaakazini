@@ -456,49 +456,50 @@ function DashboardPage() {
             {job.status || "Pending"}
           </span>
         </td>
-        <td>
-          {status === "pending" && (
-            <>
-              <button
-                className="btn btn-sm btn-success me-2"
-                onClick={() => handleAcceptJob(job.id)}
-              >
-                Accept
-              </button>
-              <button
-                className="btn btn-sm btn-outline-danger"
-                onClick={() => handleRejectJob(job.id)}
-              >
-                Reject
-              </button>
-            </>
-          )}
+       <td>
+  {["pending", "assigned"].includes(status) && (
+    <>
+      <button
+        className="btn btn-sm btn-success me-2"
+        onClick={() => handleAcceptJob(job.id)}
+      >
+        Accept
+      </button>
+      <button
+        className="btn btn-sm btn-outline-danger"
+        onClick={() => handleRejectJob(job.id)}
+      >
+        Reject
+      </button>
+    </>
+  )}
 
-          {status === "accepted" && (
-            <>
-              <button
-                className="btn btn-sm btn-primary me-2"
-                onClick={() => handleMarkCompleted(job.id)}
-              >
-                Mark Completed
-              </button>
-              <button
-                className="btn btn-sm btn-outline-secondary"
-                onClick={() => navigate(`/upload-proof/${job.id}`)}
-              >
-                Upload Proof
-              </button>
-            </>
-          )}
+  {status === "accepted" && (
+    <>
+      <button
+        className="btn btn-sm btn-primary me-2"
+        onClick={() => handleMarkCompleted(job.id)}
+      >
+        Mark Completed
+      </button>
+      <button
+        className="btn btn-sm btn-outline-secondary"
+        onClick={() => navigate(`/upload-proof/${job.id}`)}
+      >
+        Upload Proof
+      </button>
+    </>
+  )}
 
-          {status === "completed" && (
-            <span className="text-muted small">Done</span>
-          )}
+  {status === "completed" && (
+    <span className="text-muted small">Done</span>
+  )}
 
-          {status === "rejected" && (
-            <span className="text-danger small">Rejected</span>
-          )}
-        </td>
+  {status === "rejected" && (
+    <span className="text-danger small">Rejected</span>
+  )}
+</td>
+
       </tr>
     );
   })}
