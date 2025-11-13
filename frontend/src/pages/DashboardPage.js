@@ -1,22 +1,12 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
-
-const authAxios = axios.create({ baseURL: API_BASE_URL });
-authAxios.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem("access_token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-const getFullImageUrl = (path) => {
-  if (!path) return null;
-  return path.startsWith("http") ? path : `${API_BASE_URL}${path.startsWith("/") ? path : "/" + path}`;
-};
+import { authAxios } from "../api/axiosClient";
+import { getFullImageUrl } from "../utils/helpers";
+import DashboardSidebar from "../components/DashboardSidebar";
+import ProfileTab from "../components/ProfileTab";
+import JobsTab from "../components/JobsTab";
 
 function DashboardPage() {
   const navigate = useNavigate();
@@ -32,7 +22,7 @@ function DashboardPage() {
 
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageFile, setProfileImageFile] = useState(null);
-  const [proofDocument, setProofDocument] = useState(null); // ✅ Craftsman proof
+  const [proofDocument, setProofDocument] = useState(null);
   const [proofDocumentFile, setProofDocumentFile] = useState(null);
 
   const [serviceImages, setServiceImages] = useState([]);
@@ -56,41 +46,61 @@ function DashboardPage() {
     fetchAssignedJobs();
   }, []);
 
+  // === Fetch Craftsman Profile ===
   const fetchCraftsmanData = async () => {
-  try {
-    const res = await authAxios.get("/craftsman/"); // use the private detail endpoint
-    const data = res.data; // this is the single craftsman object
-    setCraftsman(data);
-    setProfileData({
-      description: data.description || "",
-      profession: data.profession || "",
-      location: data.location || "",
-      company_name: data.company_name || "",
-      skills: data.skills || "",
-      primary_service: data.primary_service || "",
-    });
-    setProfileImage(getFullImageUrl(data.profile));
-    setServiceImages(data.service_images?.map(getFullImageUrl) || []);
-    setServiceVideos(data.service_videos?.map(getFullImageUrl) || []);
-    setProofDocument(getFullImageUrl(data.proof_document));
-  } catch (err) {
-    console.error("Error fetching craftsman data", err);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      const res = await authAxios.get("/craftsman/");
+      const data = res.data;
+      setCraftsman(data);
+      setProfileData({
+        description: data.description || "",
+        profession: data.profession || "",
+        location: data.location || "",
+        company_name: data.company_name || "",
+        skills: data.skills || "",
+        primary_service: data.primary_service || "",
+      });
+      setProfileImage(getFullImageUrl(data.profile));
+      setServiceImages(data.service_images?.map(getFullImageUrl) || []);
+      setServiceVideos(data.service_videos?.map(getFullImageUrl) || []);
+      setProofDocument(getFullImageUrl(data.proof_document));
+    } catch (err) {
+      console.error("Error fetching craftsman data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-
+  // === Fetch Jobs & Normalize Status ===
   const fetchAssignedJobs = async () => {
     try {
       const res = await authAxios.get("/job-requests/");
-      setJobs(Array.isArray(res.data) ? res.data : []);
+      let jobsData = Array.isArray(res.data) ? res.data : [];
+
+      // Normalize status so buttons work correctly
+      jobsData = jobsData.map((job) => {
+        const status = job.status?.toLowerCase() || "pending";
+        let normalized = status;
+
+        // Map common API status variations to expected ones
+        if (["pending", "new"].includes(status)) normalized = "pending";
+        if (["accepted", "accept"].includes(status)) normalized = "accepted";
+        if (["in_progress", "in progress", "started"].includes(status)) normalized = "in progress";
+        if (["completed", "done"].includes(status)) normalized = "completed";
+        if (["approved", "approved_by_client"].includes(status)) normalized = "approved";
+        if (["paid", "payment_done"].includes(status)) normalized = "paid";
+        if (["rejected", "declined"].includes(status)) normalized = "rejected";
+
+        return { ...job, status: normalized.charAt(0).toUpperCase() + normalized.slice(1) };
+      });
+
+      setJobs(jobsData);
     } catch (err) {
       console.error("Error fetching jobs", err);
     }
   };
 
-  // === HANDLERS ===
+  // === Profile Handlers ===
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -130,28 +140,17 @@ function DashboardPage() {
 
   const handleEditServiceImage = (e, index) => {
     const file = e.target.files[0];
-    if (file) {
-      const newImgURL = URL.createObjectURL(file);
-      const updatedImages = [...serviceImages];
-      const updatedFiles = [...serviceImageFiles];
-      updatedImages[index] = newImgURL;
-      updatedFiles[index] = file;
-      setServiceImages(updatedImages);
-      setServiceImageFiles(updatedFiles);
-    }
+    if (!file) return;
+    const updatedImages = [...serviceImages];
+    const updatedFiles = [...serviceImageFiles];
+    updatedImages[index] = URL.createObjectURL(file);
+    updatedFiles[index] = file;
+    setServiceImages(updatedImages);
+    setServiceImageFiles(updatedFiles);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setProfileData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // ✅ VALIDATION
   const validateProfile = () => {
-    const required = [
-      "description", "profession", "location",
-      "company_name", "skills", "primary_service",
-    ];
+    const required = ["description", "profession", "location", "company_name", "skills", "primary_service"];
     for (let key of required) {
       if (!profileData[key].trim()) return `${key.replace("_", " ")} is required`;
     }
@@ -183,12 +182,7 @@ function DashboardPage() {
     }
   };
 
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate("/login");
-  };
-
-  // === JOB HANDLERS ===
+  // === Job Handlers ===
   const handleAcceptJob = async (id) => {
     await authAxios.patch(`/job-requests/${id}/`, { status: "Accepted" });
     fetchAssignedJobs();
@@ -199,9 +193,30 @@ function DashboardPage() {
     fetchAssignedJobs();
   };
 
+  const handleStartJob = async (id) => {
+    await authAxios.patch(`/job-requests/${id}/`, { status: "In Progress" });
+    fetchAssignedJobs();
+  };
+
+  const handleUploadProof = async (id, files) => {
+    if (!files || files.length === 0) return;
+    const formData = new FormData();
+    Array.from(files).forEach((file) => formData.append("proof_files", file));
+    await authAxios.patch(`/job-requests/${id}/upload-proof/`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    fetchAssignedJobs();
+    alert("✅ Proof uploaded successfully");
+  };
+
   const handleMarkCompleted = async (id) => {
     await authAxios.patch(`/job-requests/${id}/`, { status: "Completed" });
     fetchAssignedJobs();
+  };
+
+  const handleLogout = () => {
+    sessionStorage.clear();
+    navigate("/login");
   };
 
   if (loading)
@@ -213,304 +228,46 @@ function DashboardPage() {
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
-      {/* Sidebar */}
-      <div className="bg-dark text-white p-3" style={{ width: 250 }}>
-        <h4 className="text-center mb-4">Craftsman Dashboard</h4>
-        {["Profile", "Jobs", "Settings"].map((tab) => (
-          <button
-            key={tab}
-            className={`btn w-100 mb-2 ${activeTab === tab ? "btn-primary" : "btn-outline-light"}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-        <button className="btn btn-danger w-100 mt-3" onClick={handleLogout}>Logout</button>
-      </div>
-
-      {/* MAIN CONTENT */}
+      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} handleLogout={handleLogout} />
       <div className="flex-grow-1 p-4" style={{ background: "#f8f9fa" }}>
         <h2 className="fw-bold mb-4">Welcome, {craftsman.full_name || "Craftsman"}</h2>
 
-        {/* PROFILE TAB */}
         {activeTab === "Profile" && (
-          <div className="card p-4 shadow-sm border-0">
-            {/* Profile Photo */}
-            <div className="d-flex align-items-center mb-4">
-              <img
-                src={profileImage || "https://via.placeholder.com/100"}
-                alt="Profile"
-                className="rounded-circle border me-3"
-                width="100"
-                height="100"
-              />
-              <label className="btn btn-outline-primary btn-sm">
-                Upload Photo
-                <input type="file" hidden accept="image/*" onChange={handleProfileImageChange} />
-              </label>
-            </div>
-
-            {/* Proof Document (Optional) */}
-<div className="mb-3">
-  <label className="form-label fw-bold">
-    Craftsman Proof Document (e.g., certificate){" "}
-    <span className="text-muted fw-normal">(optional)</span>
-  </label>
-  <input
-    type="file"
-    accept=".pdf,image/*"
-    className="form-control"
-    onChange={handleProofDocumentChange}
-  />
-  {proofDocument && (
-    <small className="text-success">
-      Uploaded: {proofDocumentFile ? proofDocumentFile.name : proofDocument.split("/").pop()}
-    </small>
-  )}
-</div>
-
-            {/* Professional Summary */}
-<textarea
-  className="form-control mb-3"
-  rows="2"
-  name="description"
-  placeholder="Add a short professional summary about your company or craftsmanship"
-  value={profileData.description}
-  onChange={handleInputChange}
-/>
-
-
-            {/* Select Fields */}
-            <div className="row">
-              <div className="col-md-6 mb-3">
-                <select name="profession" className="form-select" value={profileData.profession} onChange={handleInputChange}>
-                  <option value="">Select Profession</option>
-                  {professionOptions.map((opt) => <option key={opt}>{opt}</option>)}
-                </select>
-              </div>
-              <div className="col-md-6 mb-3">
-                <select name="skills" className="form-select" value={profileData.skills} onChange={handleInputChange}>
-                  <option value="">Select Skill</option>
-                  {skillOptions.map((opt) => <option key={opt}>{opt}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <input
-              className="form-control mb-3"
-              name="company_name"
-              placeholder="Company Name"
-              value={profileData.company_name}
-              onChange={handleInputChange}
-            />
-
-            <select name="location" className="form-select mb-3" value={profileData.location} onChange={handleInputChange}>
-              <option value="">Select Location</option>
-              {["South B", "Westlands", "Karen", "Embakasi", "Nakuru", "Eldoret"].map((loc) => (
-                <option key={loc}>{loc}</option>
-              ))}
-            </select>
-
-            <select name="primary_service" className="form-select mb-3" value={profileData.primary_service} onChange={handleInputChange}>
-              <option value="">Select Service</option>
-              {serviceOptions.map((s) => <option key={s}>{s}</option>)}
-            </select>
-
-            {/* Service Images */}
-<div className="mb-3">
-  <div className="d-flex flex-wrap gap-3">
-    {serviceImages.map((img, i) => (
-      <div key={i} className="position-relative">
-        <img src={img} className="img-thumbnail" width="120" height="100" alt="" />
-        <button
-          className="btn btn-sm btn-light position-absolute top-0 end-0 m-1"
-          onClick={() => handleRemoveServiceImage(i)}
-        >
-          <i className="bi bi-x-lg text-danger"></i>
-        </button>
-        <label htmlFor={`edit-${i}`} className="btn btn-sm btn-light position-absolute bottom-0 end-0 m-1">
-          <i className="bi bi-pencil-fill text-primary"></i>
-          <input
-            id={`edit-${i}`}
-            type="file"
-            hidden
-            accept="image/*"
-            onChange={(e) => handleEditServiceImage(e, i)}
+          <ProfileTab
+            craftsman={craftsman}
+            profileData={profileData}
+            setProfileData={setProfileData}
+            profileImage={profileImage}
+            handleProfileImageChange={handleProfileImageChange}
+            handleProofDocumentChange={handleProofDocumentChange}
+            proofDocument={proofDocument}
+            proofDocumentFile={proofDocumentFile}
+            professionOptions={professionOptions}
+            skillOptions={skillOptions}
+            serviceOptions={serviceOptions}
+            serviceImages={serviceImages}
+            handleRemoveServiceImage={handleRemoveServiceImage}
+            handleEditServiceImage={handleEditServiceImage}
+            handleServiceImagesChange={handleServiceImagesChange}
+            serviceVideos={serviceVideos}
+            handleRemoveServiceVideo={handleRemoveServiceVideo}
+            handleServiceVideosChange={handleServiceVideosChange}
+            saveProfile={saveProfile}
+            validateProfile={validateProfile}
           />
-        </label>
-      </div>
-    ))}
-
-    {/* Plus Button with Label */}
-    <label
-      htmlFor="serviceImages"
-      className="border rounded d-flex flex-column justify-content-center align-items-center"
-      style={{ width: 150, height: 120, background: "#f8f9fa", cursor: "pointer" }}
-    >
-      <i className="bi bi-plus-lg fs-3 text-secondary"></i>
-      <span className="small text-muted">Upload service image</span>
-      <input
-        id="serviceImages"
-        type="file"
-        hidden
-        multiple
-        accept="image/*"
-        onChange={handleServiceImagesChange}
-      />
-    </label>
-  </div>
-</div>
-
-            {/* Service Videos */}
-            <div className="mb-3">
-              <h6>Service Videos <span className="text-muted small">(optional)</span></h6>
-              <div className="d-flex flex-wrap gap-3">
-                {serviceVideos.map((vid, i) => (
-                  <div key={i} className="position-relative">
-                    <video src={vid} width="180" height="120" controls></video>
-                    <button
-                      className="btn btn-sm btn-light position-absolute top-0 end-0 m-1"
-                      onClick={() => handleRemoveServiceVideo(i)}
-                    >
-                      <i className="bi bi-x-lg text-danger"></i>
-                    </button>
-                  </div>
-                ))}
-                <label
-                  htmlFor="serviceVideos"
-                  className="border rounded d-flex flex-column justify-content-center align-items-center"
-                  style={{ width: 150, height: 120, background: "#f8f9fa", cursor: "pointer" }}
-                >
-                  <i className="bi bi-plus-lg fs-3 text-secondary"></i>
-                  <span className="small text-muted">Upload service video</span>
-                  <input
-                    id="serviceVideos"
-                    type="file"
-                    hidden
-                    multiple
-                    accept="video/*"
-                    onChange={handleServiceVideosChange}
-                  />
-                </label>
-              </div>
-            </div>
-
-            <p className="text-muted">
-              <strong>Status:</strong>{" "}
-              <span className={`badge ${craftsman.status === "Approved" ? "bg-success" : "bg-warning text-dark"}`}>
-                {craftsman.status || "Pending Approval"}
-              </span>
-            </p>
-
-            <button
-              className="btn btn-success mt-3"
-              onClick={saveProfile}
-              disabled={!!validateProfile()}
-            >
-              Save Changes
-            </button>
-          </div>
         )}
 
-        {/* JOBS TAB */}
-{activeTab === "Jobs" && (
-  <div className="card p-4 shadow-sm border-0">
-    <h4 className="mb-3 fw-bold">Assigned Jobs</h4>
-
-    {jobs.length === 0 ? (
-      <p className="text-muted">No assigned jobs yet.</p>
-    ) : (
-      <div className="table-responsive">
-        <table className="table align-middle">
-          <thead className="table-light">
-            <tr>
-              <th>#</th>
-              <th>Client</th>
-              <th>Service</th>
-              <th>Location</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-  {jobs.map((job, i) => {
-    const status = job.status?.toLowerCase() || ""; // normalize status
-    return (
-      <tr key={job.id}>
-        <td>{i + 1}</td>
-        <td>{job.client?.full_name || "N/A"}</td>
-        <td>{job.service || "N/A"}</td>
-        <td>{job.location || "N/A"}</td>
-        <td>
-          <span
-            className={`badge ${
-              status === "accepted"
-                ? "bg-success"
-                : status === "rejected"
-                ? "bg-danger"
-                : status === "completed"
-                ? "bg-secondary"
-                : "bg-warning text-dark"
-            }`}
-          >
-            {job.status || "Pending"}
-          </span>
-        </td>
-       <td>
-  {["pending", "assigned"].includes(status) && (
-    <>
-      <button
-        className="btn btn-sm btn-success me-2"
-        onClick={() => handleAcceptJob(job.id)}
-      >
-        Accept
-      </button>
-      <button
-        className="btn btn-sm btn-outline-danger"
-        onClick={() => handleRejectJob(job.id)}
-      >
-        Reject
-      </button>
-    </>
-  )}
-
-  {status === "accepted" && (
-    <>
-      <button
-        className="btn btn-sm btn-primary me-2"
-        onClick={() => handleMarkCompleted(job.id)}
-      >
-        Mark Completed
-      </button>
-      <button
-        className="btn btn-sm btn-outline-secondary"
-        onClick={() => navigate(`/upload-proof/${job.id}`)}
-      >
-        Upload Proof
-      </button>
-    </>
-  )}
-
-  {status === "completed" && (
-    <span className="text-muted small">Done</span>
-  )}
-
-  {status === "rejected" && (
-    <span className="text-danger small">Rejected</span>
-  )}
-</td>
-
-      </tr>
-    );
-  })}
-</tbody>
-
-        </table>
+        {activeTab === "Jobs" && (
+          <JobsTab
+            jobs={jobs}
+            handleAcceptJob={handleAcceptJob}
+            handleRejectJob={handleRejectJob}
+            handleStartJob={handleStartJob}
+            handleUploadProof={handleUploadProof}
+            handleMarkCompleted={handleMarkCompleted}
+          />
+        )}
       </div>
-    )}
-  </div>
-)}
-</div>
     </div>
   );
 }
