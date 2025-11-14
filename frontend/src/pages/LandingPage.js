@@ -177,11 +177,9 @@ const [searchQuery, setSearchQuery] = useState('');
             <div className="card border-0 shadow" style={{ width: '18rem' }}>
               <div className="position-relative">
                 <img
-                  src={getImageUrl(service.service_image)}
-                  className="card-img-top"
-                  alt={service.service}
-                  style={{ height: '340px', objectFit: 'cover' }}
-                />
+  src={getImageUrl(service.images?.[0]?.image)}
+  className="card-img-top"
+/>
                 <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center text-white bg-dark bg-opacity-75 overlay">
                   <h5 className="fw-bold">{service.primary_service}</h5>
                 </div>
