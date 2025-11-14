@@ -10,6 +10,7 @@ import JobsTab from "../components/JobsTab";
 
 function DashboardPage() {
   const navigate = useNavigate();
+
   const [craftsman, setCraftsman] = useState({});
   const [profileData, setProfileData] = useState({
     description: "",
@@ -26,8 +27,8 @@ function DashboardPage() {
   const [proofDocumentFile, setProofDocumentFile] = useState(null);
 
   const [serviceImages, setServiceImages] = useState([]);
-  const [serviceVideos, setServiceVideos] = useState([]);
   const [serviceImageFiles, setServiceImageFiles] = useState([]);
+  const [serviceVideos, setServiceVideos] = useState([]);
   const [serviceVideoFiles, setServiceVideoFiles] = useState([]);
 
   const [jobs, setJobs] = useState([]);
@@ -41,17 +42,18 @@ function DashboardPage() {
     "Tiling", "Interior Design", "Landscaping", "Masonry", "AC Repair", "Woodwork", "Auto Repair",
   ];
 
+  // === Fetch Craftsman Profile ===
   useEffect(() => {
     fetchCraftsmanData();
     fetchAssignedJobs();
   }, []);
 
-  // === Fetch Craftsman Profile ===
   const fetchCraftsmanData = async () => {
     try {
       const res = await authAxios.get("/craftsman/");
       const data = res.data;
       setCraftsman(data);
+
       setProfileData({
         description: data.description || "",
         profession: data.profession || "",
@@ -60,6 +62,7 @@ function DashboardPage() {
         skills: data.skills || "",
         primary_service: data.primary_service || "",
       });
+
       setProfileImage(getFullImageUrl(data.profile));
       setServiceImages(data.service_images?.map(getFullImageUrl) || []);
       setServiceVideos(data.service_videos?.map(getFullImageUrl) || []);
@@ -77,21 +80,18 @@ function DashboardPage() {
       const res = await authAxios.get("/job-requests/");
       let jobsData = Array.isArray(res.data) ? res.data : [];
 
-      // Normalize status so buttons work correctly
       jobsData = jobsData.map((job) => {
-        const status = job.status?.toLowerCase() || "pending";
-        let normalized = status;
+        let status = job.status?.toLowerCase() || "pending";
 
-        // Map common API status variations to expected ones
-        if (["pending", "new"].includes(status)) normalized = "pending";
-        if (["accepted", "accept"].includes(status)) normalized = "accepted";
-        if (["in_progress", "in progress", "started"].includes(status)) normalized = "in progress";
-        if (["completed", "done"].includes(status)) normalized = "completed";
-        if (["approved", "approved_by_client"].includes(status)) normalized = "approved";
-        if (["paid", "payment_done"].includes(status)) normalized = "paid";
-        if (["rejected", "declined"].includes(status)) normalized = "rejected";
+        if (["pending", "new"].includes(status)) status = "Pending";
+        if (["accepted", "accept"].includes(status)) status = "Accepted";
+        if (["in_progress", "in progress", "started"].includes(status)) status = "In Progress";
+        if (["completed", "done"].includes(status)) status = "Completed";
+        if (["approved", "approved_by_client"].includes(status)) status = "Approved";
+        if (["paid", "payment_done"].includes(status)) status = "Paid";
+        if (["rejected", "declined"].includes(status)) status = "Rejected";
 
-        return { ...job, status: normalized.charAt(0).toUpperCase() + normalized.slice(1) };
+        return { ...job, status };
       });
 
       setJobs(jobsData);
@@ -110,20 +110,23 @@ function DashboardPage() {
 
   const handleProofDocumentChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setProofDocumentFile(file);
-      setProofDocument(file.name);
-    }
+    if (!file) return;
+    setProofDocumentFile(file);
+    setProofDocument(file.name);
   };
 
   const handleServiceImagesChange = (e) => {
     const files = Array.from(e.target.files);
+    if (!files.length) return;
+
     setServiceImageFiles((prev) => [...prev, ...files]);
     setServiceImages((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
   };
 
   const handleServiceVideosChange = (e) => {
     const files = Array.from(e.target.files);
+    if (!files.length) return;
+
     setServiceVideoFiles((prev) => [...prev, ...files]);
     setServiceVideos((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
   };
@@ -141,10 +144,13 @@ function DashboardPage() {
   const handleEditServiceImage = (e, index) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const updatedImages = [...serviceImages];
     const updatedFiles = [...serviceImageFiles];
+
     updatedImages[index] = URL.createObjectURL(file);
     updatedFiles[index] = file;
+
     setServiceImages(updatedImages);
     setServiceImageFiles(updatedFiles);
   };
@@ -166,15 +172,23 @@ function DashboardPage() {
     try {
       const formData = new FormData();
       Object.entries(profileData).forEach(([k, v]) => formData.append(k, v));
+
       if (profileImageFile) formData.append("profile", profileImageFile);
       if (proofDocumentFile) formData.append("proof_document", proofDocumentFile);
+
+      // Add new service images/videos while keeping old ones
       serviceImageFiles.forEach((img) => formData.append("service_images", img));
       serviceVideoFiles.forEach((vid) => formData.append("service_videos", vid));
 
       const res = await authAxios.patch("/craftsman/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
       setCraftsman(res.data);
+      setServiceImages(res.data.service_images?.map(getFullImageUrl) || []);
+      setServiceVideos(res.data.service_videos?.map(getFullImageUrl) || []);
+      setServiceImageFiles([]);
+      setServiceVideoFiles([]);
       alert("✅ Profile submitted successfully! Pending verification.");
     } catch (err) {
       console.error(err);
@@ -202,9 +216,11 @@ function DashboardPage() {
     if (!files || files.length === 0) return;
     const formData = new FormData();
     Array.from(files).forEach((file) => formData.append("proof_files", file));
+
     await authAxios.patch(`/job-requests/${id}/upload-proof/`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+
     fetchAssignedJobs();
     alert("✅ Proof uploaded successfully");
   };

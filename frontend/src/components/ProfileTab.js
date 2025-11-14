@@ -48,8 +48,7 @@ function ProfileTab({
       {/* Proof Document */}
       <div className="mb-3">
         <label className="form-label fw-bold">
-          Craftsman Proof Document (e.g., certificate)
-          <span className="text-muted fw-normal"> (optional)</span>
+          Craftsman Proof Document <span className="text-muted fw-normal">(optional)</span>
         </label>
         <input type="file" accept=".pdf,image/*" className="form-control" onChange={handleProofDocumentChange} />
         {proofDocument && (
