@@ -7,13 +7,11 @@ from .models import (
     ServiceImage, ServiceVideo, ContactMessage, JobRequest
 )
 
-
 # ------------------------- Gallery Image -------------------------
 class GalleryImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = GalleryImage
         fields = ['image']
-
 
 # ------------------------- Review -------------------------
 class ReviewSerializer(serializers.ModelSerializer):
@@ -30,100 +28,113 @@ class ReviewSerializer(serializers.ModelSerializer):
             validated_data["job"] = JobRequest.objects.filter(craftsman=craftsman).last()
         return super().create(validated_data)
 
-
 # ------------------------- Service Images & Videos -------------------------
 class ServiceImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceImage
-        fields = '__all__'
-
+        fields = ['id', 'image']
 
 class ServiceVideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceVideo
-        fields = '__all__'
+        fields = ['id', 'video']
 
-
-# ------------------------- Service -------------------------
 class ServiceSerializer(serializers.ModelSerializer):
-    images = ServiceImageSerializer(many=True, read_only=True)
-    videos = ServiceVideoSerializer(many=True, read_only=True)
+    images = ServiceImageSerializer(many=True, read_only=True, source='craftsman.service_images')
+    videos = ServiceVideoSerializer(many=True, read_only=True, source='craftsman.service_videos')
 
     class Meta:
         model = Service
-        fields = '__all__'
+        fields = ['id', 'service_name', 'custom_service_name', 'image', 'images', 'videos', 'is_approved']
 
-
-
+# ------------------------- Craftsman -------------------------
 class CraftsmanSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.full_name', read_only=True)
-    slug = serializers.SlugField(read_only=True)
     gallery_images = serializers.SerializerMethodField()
-    service_image = serializers.SerializerMethodField()
     service_images = serializers.SerializerMethodField()
+    services = serializers.SerializerMethodField()
     reviews = ReviewSerializer(many=True, read_only=True)
-    services = ServiceSerializer(many=True, read_only=True)
 
     class Meta:
         model = Craftsman
         fields = [
-            'id', 'slug', 'full_name', 'profile', 'description', 'status',
+            'id', 'full_name', 'slug', 'profile', 'description', 'status',
             'profession', 'company_name', 'member_since', 'location', 'skills',
-            'primary_service', 'service_image', 'service_images',
-            'video', 'proof_document', 'is_approved',
+            'primary_service', 'service_images', 'video', 'is_approved',
             'gallery_images', 'reviews', 'services'
         ]
 
-    def get_gallery_images(self, obj):
-        request = self.context.get('request')
-        if obj.gallery_images.exists():
-            return [request.build_absolute_uri(img.image.url) for img in obj.gallery_images.all()]
-        return []
-
-    def get_service_image(self, obj):
-        request = self.context.get('request')
-        if obj.service_image:
-            return request.build_absolute_uri(obj.service_image.url)
-        return None
-
     def get_service_images(self, obj):
+        """
+        Combine Craftsman main image + ServiceImage model images + Service model main images
+        Deduplicate globally
+        """
         request = self.context.get('request')
-        if hasattr(obj, 'service_images') and obj.service_images.exists():
-            return [request.build_absolute_uri(img.image.url) for img in obj.service_images.all()]
-        return []
+        images_set = set()
 
-    # ✅ ADD THIS UPDATE METHOD
-    def update(self, instance, validated_data):
+        # Add Craftsman main service_image
+        if obj.service_image:
+            images_set.add(request.build_absolute_uri(obj.service_image.url))
+
+        # Add ServiceImage model images
+        for img in obj.service_images.all():
+            images_set.add(request.build_absolute_uri(img.image.url))
+
+        # Add main images from approved services
+        for svc in obj.services.filter(is_approved=True):
+            if svc.image:
+                images_set.add(request.build_absolute_uri(svc.image.url))
+            for img in svc.craftsman.service_images.all():
+                images_set.add(request.build_absolute_uri(img.image.url))
+
+        return list(images_set)
+
+    def get_services(self, obj):
+        """
+        Return all approved services for the craftsman including their videos.
+        Deduplicate videos globally.
+        """
         request = self.context.get('request')
+        services_data = []
+        global_videos = set()
 
-        # Handle normal text fields
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        for s in obj.services.filter(is_approved=True):
+            svc_videos = []
 
-        # Handle file uploads
-        if request.FILES.get('profile'):
-            instance.profile = request.FILES['profile']
+            # ServiceVideo model videos
+            for vid in s.craftsman.service_videos.all():
+                url = request.build_absolute_uri(vid.video.url)
+                if url not in global_videos:
+                    svc_videos.append(url)
+                    global_videos.add(url)
 
-        if request.FILES.get('proof_document'):
-            instance.proof_document = request.FILES['proof_document']
+            services_data.append({
+                'id': s.id,
+                'service_name': s.service_name,
+                'custom_service_name': s.custom_service_name,
+                'videos': svc_videos,
+                'is_approved': s.is_approved
+            })
 
-        # ✅ Handle multiple service_images
-        service_images = request.FILES.getlist('service_images')
-        if service_images:
-            from .models import ServiceImage
-            for img in service_images:
-                ServiceImage.objects.create(craftsman=instance, image=img)
+        # Save global videos for gallery deduplication
+        self._global_videos = global_videos
+        return services_data
 
-        # ✅ Handle multiple service_videos (if any)
-        service_videos = request.FILES.getlist('service_videos')
-        if service_videos:
-            from .models import ServiceVideo
-            for vid in service_videos:
-                ServiceVideo.objects.create(craftsman=instance, video=vid)
+    def get_gallery_images(self, obj):
+        """
+        Return gallery images, deduplicated against all service images/videos
+        """
+        request = self.context.get('request')
+        global_images = set(self.get_service_images(obj))  # deduplicate against service images
+        gallery_list = []
 
-        instance.save()
-        return instance
+        for img in obj.gallery_images.all():
+            url = request.build_absolute_uri(img.image.url)
+            if url not in global_images:
+                gallery_list.append(url)
+                global_images.add(url)  # Ensure no duplicates
 
+        return gallery_list
 
 # ------------------------- Product -------------------------
 class ProductSerializer(serializers.ModelSerializer):
@@ -135,13 +146,11 @@ class ProductSerializer(serializers.ModelSerializer):
         validated_data['craftsman'] = self.context['request'].user.craftsman
         return super().create(validated_data)
 
-
 # ------------------------- Contact Message -------------------------
 class ContactMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContactMessage
         fields = '__all__'
-
 
 # ------------------------- Job Request -------------------------
 class JobRequestSerializer(serializers.ModelSerializer):

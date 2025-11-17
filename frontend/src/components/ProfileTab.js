@@ -14,10 +14,10 @@ function ProfileTab({
   skillOptions,
   serviceOptions,
   serviceImages,
+  serviceVideos,
   handleRemoveServiceImage,
   handleEditServiceImage,
   handleServiceImagesChange,
-  serviceVideos,
   handleRemoveServiceVideo,
   handleServiceVideosChange,
   saveProfile,
@@ -33,7 +33,7 @@ function ProfileTab({
       {/* Profile Image */}
       <div className="d-flex align-items-center mb-4">
         <img
-          src={profileImage || "https://via.placeholder.com/100"}
+          src={profileImage || craftsman.profile || "https://via.placeholder.com/100"}
           alt="Profile"
           className="rounded-circle border me-3"
           width="100"
@@ -63,7 +63,7 @@ function ProfileTab({
         className="form-control mb-3"
         rows="2"
         name="description"
-        placeholder="Add a short professional summary about your company or craftsmanship"
+        placeholder="Add a short professional summary"
         value={profileData.description}
         onChange={handleInputChange}
       />
@@ -118,8 +118,9 @@ function ProfileTab({
 
       {/* Service Images */}
       <div className="mb-3">
+        <label className="fw-bold mb-2">Service Images</label>
         <div className="d-flex flex-wrap gap-3">
-          {serviceImages.map((img, i) => (
+          {serviceImages.concat(craftsman.service_images || []).map((img, i) => (
             <div key={i} className="position-relative">
               <img src={img} className="img-thumbnail" width="120" height="100" alt="" />
               <button
@@ -149,13 +150,11 @@ function ProfileTab({
 
       {/* Service Videos */}
       <div className="mb-3">
-        <h6>
-          Service Videos <span className="text-muted small">(optional)</span>
-        </h6>
+        <label className="fw-bold mb-2">Service Videos</label>
         <div className="d-flex flex-wrap gap-3">
-          {serviceVideos.map((vid, i) => (
+          {serviceVideos.concat(craftsman.service_videos || []).map((vid, i) => (
             <div key={i} className="position-relative">
-              <video src={vid} width="180" height="120" controls></video>
+              <video src={vid} width="180" height="120" controls />
               <button
                 className="btn btn-sm btn-light position-absolute top-0 end-0 m-1"
                 onClick={() => handleRemoveServiceVideo(i)}
@@ -164,6 +163,7 @@ function ProfileTab({
               </button>
             </div>
           ))}
+
           <label
             htmlFor="serviceVideos"
             className="border rounded d-flex flex-column justify-content-center align-items-center"

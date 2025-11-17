@@ -112,10 +112,14 @@ class ServiceUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 
 # Public list
 class PublicCraftsmanListView(generics.ListAPIView):
-    queryset = Craftsman.objects.filter(is_approved=True)
+    """
+    Public view: show only approved craftsmen along with their approved services/images/videos
+    """
     serializer_class = CraftsmanSerializer
     permission_classes = [permissions.AllowAny]
 
+    def get_queryset(self):
+        return Craftsman.objects.filter(is_approved=True)
 # Public detail by slug
 class PublicCraftsmanDetailView(generics.RetrieveAPIView):
     queryset = Craftsman.objects.filter(is_approved=True)
