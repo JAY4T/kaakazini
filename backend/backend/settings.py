@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     "services",
     "django_extensions",
 
-    
     # Local apps
     "api",
     "accounts",
@@ -133,16 +132,29 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # ---------------------------
-# STATIC & MEDIA
+# STATIC
 # ---------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Media files stored locally to prevent data loss
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+# ---------------------------
+# DIGITALOCEAN SPACES CONFIG
+# ---------------------------
+DO_SPACES_KEY = config("DO_SPACES_KEY")
+DO_SPACES_SECRET = config("DO_SPACES_SECRET")
+DO_SPACES_REGION = config("DO_SPACES_REGION", default="fra1")  
+DO_SPACES_BUCKET_NAME = config("DO_SPACES_BUCKET_NAME", default="kaakazinibucket")
 
+# Use S3 storage backend
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+AWS_ACCESS_KEY_ID = DO_SPACES_KEY
+AWS_SECRET_ACCESS_KEY = DO_SPACES_SECRET
+AWS_STORAGE_BUCKET_NAME = DO_SPACES_BUCKET_NAME
+AWS_S3_ENDPOINT_URL = f"https://{DO_SPACES_REGION}.digitaloceanspaces.com"
+AWS_QUERYSTRING_AUTH = False  # makes files public without signed URLs
+AWS_DEFAULT_ACL = None  # recommended for S3/Spaces
+MEDIA_URL = f"https://{DO_SPACES_BUCKET_NAME}.{DO_SPACES_REGION}.digitaloceanspaces.com/"
 
 # ---------------------------
 # SECURITY
@@ -163,4 +175,4 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 BREVO_API_KEY = config("BREVO_API_KEY", default="")
-FRONTEND_URL = config("FRONTEND_URL", default="https://kaakazini.com")
+FRONTEND_URL = config("FRONTEND_URL", default="https://staging.kaakazini.com")
