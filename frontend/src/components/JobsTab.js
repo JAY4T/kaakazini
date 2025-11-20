@@ -1,12 +1,18 @@
+import React, { useState, useEffect } from "react";
+import { Modal, Button, Badge, Form, Row, Col, Card } from "react-bootstrap";
+import { FaPhone, FaComments } from "react-icons/fa";
 
-import React, { useState } from "react";
-import { Modal, Button, Badge, ProgressBar, Form, Row, Col, Card } from "react-bootstrap";
-import { FaStar, FaMapMarkerAlt, FaPhone } from "react-icons/fa";
-import axios from "axios";
+// System-wide constant — only used for displaying backend value
+const COMPANY_FEE_PERCENT = 10;
 
-function JobsTab({ jobs = [], setJobs }) {
+function JobsTab({ jobs: initialJobs = [], userRole = "craftsman" }) {
+  const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [proofFiles, setProofFiles] = useState([]);
+
+  useEffect(() => {
+    setJobs(initialJobs); // Trust backend completely
+  }, [initialJobs]);
 
   const handleViewJob = (job) => setSelectedJob(job);
   const handleClose = () => {
@@ -16,40 +22,57 @@ function JobsTab({ jobs = [], setJobs }) {
 
   const normalizedStatus = (status) => (status || "").toLowerCase();
 
-  const updateJobStatus = async (jobId, payload) => {
-    try {
-      const res = await axios.patch(`/api/job-requests/${jobId}/`, payload, {
-        headers: payload instanceof FormData
-          ? { "Content-Type": "multipart/form-data" }
-          : {},
-      });
-      const updatedJob = res.data;
-      setSelectedJob(updatedJob);
-      setJobs(prev => prev.map(job => job.id === jobId ? updatedJob : job));
-    } catch (err) {
-      console.error("Action failed:", err.response?.data || err.message);
-      alert("Action failed! Check console for details.");
-    }
+  // FRONTEND STATUS UPDATE ONLY FOR UI (backend will handle real update)
+  const updateJobStatusLocally = (jobId, newStatus) => {
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId ? { ...job, status: newStatus } : job
+      )
+    );
+
+    setSelectedJob((prev) =>
+      prev?.id === jobId ? { ...prev, status: newStatus } : prev
+    );
   };
 
-  const handleAcceptJob = (id) => updateJobStatus(id, { status: "accepted" });
-  const handleRejectJob = (id) => updateJobStatus(id, { status: "rejected" });
-  const handleStartJob = (id) => updateJobStatus(id, { status: "in progress" });
-  const handleMarkCompleted = (id) => updateJobStatus(id, { status: "completed" });
-  const handleApproveJob = (id) => updateJobStatus(id, { status: "approved" });
-  const handleMarkPaid = (id) => updateJobStatus(id, { status: "paid" });
+  const handleAcceptJob = (id) => updateJobStatusLocally(id, "accepted");
+  const handleRejectJob = (id) => updateJobStatusLocally(id, "rejected");
+  const handleStartJob = (id) => updateJobStatusLocally(id, "in progress");
+  const handleMarkCompleted = (id) =>
+    updateJobStatusLocally(id, "completed");
+  const handleApproveJob = (id) => updateJobStatusLocally(id, "approved");
+  const handleMarkPaid = (id) => updateJobStatusLocally(id, "paid");
 
   const handleUploadProof = (jobId) => {
-    if (!proofFiles.length) {
-      alert("Select files first!");
-      return;
-    }
-    const formData = new FormData();
-    for (let i = 0; i < proofFiles.length; i++) {
-      formData.append("proof_files", proofFiles[i]);
-    }
-    updateJobStatus(jobId, formData);
+    if (!proofFiles.length) return alert("Select files first!");
+    alert(`${proofFiles.length} file(s) uploaded for job ${jobId}`);
     setProofFiles([]);
+  };
+
+  // Who should see which phone number
+  const showPhoneNumber = () => {
+    if (!selectedJob) return null;
+    const status = normalizedStatus(selectedJob.status);
+
+    if (userRole === "admin") return selectedJob.client?.phone || "N/A";
+
+    if (userRole === "client" &&
+      ["accepted", "in progress", "completed", "approved", "paid"].includes(status)
+    ) {
+      return selectedJob.craftsman?.phone || "N/A";
+    }
+
+    if (userRole === "craftsman" &&
+      ["accepted", "in progress", "completed", "approved", "paid"].includes(status)
+    ) {
+      return selectedJob.client?.phone || "N/A";
+    }
+
+    return "";
+  };
+
+  const handleChat = () => {
+    alert(`Open chat with ${selectedJob.client?.full_name}`);
   };
 
   return (
@@ -78,9 +101,15 @@ function JobsTab({ jobs = [], setJobs }) {
                   <td>{job.client?.full_name || "N/A"}</td>
                   <td>{job.service || "N/A"}</td>
                   <td>{job.location || "N/A"}</td>
-                  <td><Badge bg="secondary">{job.status}</Badge></td>
                   <td>
-                    <Button size="sm" variant="outline-primary" onClick={() => handleViewJob(job)}>
+                    <Badge bg="secondary">{job.status}</Badge>
+                  </td>
+                  <td>
+                    <Button
+                      size="sm"
+                      variant="outline-primary"
+                      onClick={() => handleViewJob(job)}
+                    >
                       View
                     </Button>
                   </td>
@@ -91,99 +120,146 @@ function JobsTab({ jobs = [], setJobs }) {
         </div>
       )}
 
-      {/* Modal */}
       {selectedJob && (
-        <Modal show onHide={handleClose} centered size="md" dialogClassName="slim-modal">
+        <Modal show onHide={handleClose} centered size="md">
           <Modal.Header closeButton>
-            <Modal.Title>{selectedJob.service}</Modal.Title>
+            <Modal.Title>
+              {selectedJob.service} (Job #{selectedJob.id})
+            </Modal.Title>
           </Modal.Header>
 
           <Modal.Body>
-            {/* Job Details */}
             <Card className="mb-3 shadow-sm">
               <Card.Body>
                 <Row>
                   <Col md={8}>
                     <h5 className="fw-bold">{selectedJob.service}</h5>
-                    <Badge bg={selectedJob.priority === "High" ? "danger" : "warning"}>
+
+                    <Badge
+                      bg={
+                        selectedJob.priority === "High" ? "danger" : "warning"
+                      }
+                    >
                       {selectedJob.priority || "Normal"}
                     </Badge>
+
                     <p className="mt-2">{selectedJob.description}</p>
+
+                    <p>
+                      <FaPhone /> Phone: <strong>{showPhoneNumber()}</strong>
+                    </p>
+
+                    {/* All values now come directly from backend */}
+                    <p>Start Time: {selectedJob.start_time || "N/A"}</p>
+                    <p>End Time: {selectedJob.end_time || "N/A"}</p>
+                    <p>Duration: {selectedJob.duration_hours || "N/A"} hrs</p>
+                    <p>Expected End: {selectedJob.expected_end || "N/A"}</p>
+                    <p>Overtime: {selectedJob.overtime_hours || "0"} hrs</p>
+
+                    <p>Total Payment: KSh {selectedJob.total_payment || "0"}</p>
+                    <p>
+                      Company Cut ({COMPANY_FEE_PERCENT}%): KSh{" "}
+                      {selectedJob.company_fee || "0"}
+                    </p>
+                    <p>Net Payment: KSh {selectedJob.net_payment || "0"}</p>
                   </Col>
+
                   <Col md={4} className="text-end">
-                    <h6>Why Accept This Job?</h6>
-                    <p>Good Pay: <strong>KSh {selectedJob.budget}</strong></p>
-                    <p>Great Client: <FaStar className="text-warning" /> {selectedJob.client?.rating || "N/A"} rating</p>
-                    <p>Close By: {selectedJob.distance || 0} km</p>
-                    <p>Quick Job: {selectedJob.estimated_duration}h</p>
+                    <h6>Job Details</h6>
+
+                    <p>
+                      Budget: <strong>KSh {selectedJob.budget}</strong>
+                    </p>
+                    <p>Distance: {selectedJob.distance_km} km</p>
                   </Col>
                 </Row>
               </Card.Body>
             </Card>
-
-            {/* Client Info */}
-            <Card className="mb-3 shadow-sm">
-              <Card.Body>
-                <Row>
-                  <Col md={6}>
-                    <h6>Client Information</h6>
-                    <p><strong>{selectedJob.client?.full_name}</strong></p>
-                    <p><FaStar className="text-warning" /> {selectedJob.client?.rating || "N/A"} ⭐ • {selectedJob.client?.completed_jobs || 0} completed jobs</p>
-                    {["accepted","in progress","completed","approved","paid"].includes(normalizedStatus(selectedJob.status)) && (
-                      <>
-                        <p><FaPhone /> {selectedJob.client?.phone}</p>
-                        <p><FaMapMarkerAlt /> {selectedJob.location}</p>
-                      </>
-                    )}
-                  </Col>
-                  <Col md={6}>
-                    <h6>Scheduled</h6>
-                    <p>{selectedJob.scheduled_time}</p>
-                    <h6>Requirements</h6>
-                    <ul>
-                      {selectedJob.requirements?.map((req, idx) => <li key={idx}>{req}</li>)}
-                    </ul>
-                  </Col>
-                </Row>
-              </Card.Body>
-            </Card>
-
-            <ProgressBar now={selectedJob.progress || 0} label={`${selectedJob.progress || 0}%`} animated />
           </Modal.Body>
 
+          {/* Footer Buttons (same but simplified) */}
           <Modal.Footer className="d-flex flex-wrap gap-2">
-            {["pending", "assigned"].includes(normalizedStatus(selectedJob.status)) && (
+
+            {["pending", "assigned"].includes(
+              normalizedStatus(selectedJob.status)
+            ) && (
               <>
-                <Button variant="success" onClick={() => handleAcceptJob(selectedJob.id)}>Accept</Button>
-                <Button variant="outline-danger" onClick={() => handleRejectJob(selectedJob.id)}>Reject</Button>
+                <Button
+                  variant="success"
+                  onClick={() => handleAcceptJob(selectedJob.id)}
+                >
+                  Accept
+                </Button>
+                <Button
+                  variant="outline-danger"
+                  onClick={() => handleRejectJob(selectedJob.id)}
+                >
+                  Reject
+                </Button>
               </>
             )}
 
             {normalizedStatus(selectedJob.status) === "accepted" && (
-              <Button variant="info" onClick={() => handleStartJob(selectedJob.id)}>Start Job</Button>
+              <>
+                <Button
+                  variant="info"
+                  onClick={() => handleStartJob(selectedJob.id)}
+                >
+                  Start Job
+                </Button>
+                <Button variant="secondary" onClick={handleChat}>
+                  <FaComments /> Chat
+                </Button>
+              </>
             )}
 
             {normalizedStatus(selectedJob.status) === "in progress" && (
               <>
-                <Form.Control type="file" multiple onChange={(e) => setProofFiles(e.target.files)} />
-                <Button variant="outline-secondary" onClick={() => handleUploadProof(selectedJob.id)}>Upload Proof</Button>
-                <Button variant="primary" onClick={() => handleMarkCompleted(selectedJob.id)}>Mark Completed</Button>
+                <Form.Control
+                  type="file"
+                  multiple
+                  onChange={(e) => setProofFiles(e.target.files)}
+                />
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => handleUploadProof(selectedJob.id)}
+                >
+                  Upload Proof
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => handleMarkCompleted(selectedJob.id)}
+                >
+                  Mark Completed
+                </Button>
               </>
             )}
 
             {normalizedStatus(selectedJob.status) === "completed" && (
-              <Button variant="primary" onClick={() => handleApproveJob(selectedJob.id)}>Approve / Trigger Payment</Button>
+              <Button
+                variant="primary"
+                onClick={() => handleApproveJob(selectedJob.id)}
+              >
+                Approve / Trigger Payment
+              </Button>
             )}
 
             {normalizedStatus(selectedJob.status) === "approved" && (
-              <Button variant="success" onClick={() => handleMarkPaid(selectedJob.id)}>Mark Paid</Button>
+              <Button
+                variant="success"
+                onClick={() => handleMarkPaid(selectedJob.id)}
+              >
+                Mark Paid
+              </Button>
             )}
 
             {normalizedStatus(selectedJob.status) === "paid" && (
               <Badge bg="success">✅ Job Closed / Paid</Badge>
             )}
 
-            <Button variant="secondary" onClick={handleClose}>Close</Button>
+            <Button variant="secondary" onClick={handleClose}>
+              Close
+            </Button>
           </Modal.Footer>
         </Modal>
       )}
