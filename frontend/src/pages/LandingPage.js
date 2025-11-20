@@ -27,8 +27,12 @@ const [searchQuery, setSearchQuery] = useState('');
       try {
         const response = await axios.get(`${API_BASE_URL}/public-craftsman/`);
         const approved = response.data.filter(
-          item => item.status === 'approved' && item.primary_service
-        );
+  item => item.status === 'approved' && item.primary_service
+).map(item => ({
+  ...item,
+  images: item.images || [], // ensure images is always an array
+}));
+
         setApprovedServices(approved);
         setFilteredServices(approved);
       } catch (error) {
@@ -63,12 +67,11 @@ const [searchQuery, setSearchQuery] = useState('');
     if (e.key === 'Enter') handleSearch();
   };
 
-  const getImageUrl = path => {
-    if (!path) return 'https://via.placeholder.com/300';
-    if (path.startsWith('http')) return path;
-    if (path.startsWith('/')) return `${API_BASE_URL}${path}`;
-    return `${API_BASE_URL}/media/${path}`;
-  };
+  const getImageUrl = (path) => {
+  if (!path) return "https://via.placeholder.com/300"; // fallback
+  if (path.startsWith("http")) return path;
+  return `${process.env.REACT_APP_MEDIA_URL || "https://staging.kaakazini.com"}${path}`;
+};
 
   return (
     <>
@@ -147,97 +150,60 @@ const [searchQuery, setSearchQuery] = useState('');
       </section>
 
       {/* Services Section */}
-      <section className="py-5 bg-light" id="services">
-        <div className="container overflow-hidden">
-          <h2 className="text-center fw-bold text-success display-6" data-aos="fade-left">
-            Explore Our Services
-          </h2>
-          <p className="text-center fs-5 lh-lg" data-aos="fade-right">
-            Discover a wide variety of skilled services offered by experienced craftsmen.
-            From metalwork and carpentry to plumbing and textile design, we connect you with professionals who deliver quality you can trust.
-          </p>
+<section className="py-5 bg-light" id="services">
+  <div className="container overflow-hidden">
+    <h2 className="text-center fw-bold text-success display-6" data-aos="fade-left">
+      Explore Our Services
+    </h2>
+    <p className="text-center fs-5 lh-lg" data-aos="fade-right">
+      Discover skilled services offered by experienced craftsmen.
+    </p>
 
-          {filteredServices.length === 0 ? (
-            <p className="text-center">No services found.</p>
-          ) : (
-            <div
-  id="servicesCarousel"
-  className="carousel slide"
-  data-bs-ride="carousel"
-  data-bs-interval="3000"
->
-  <div className="carousel-inner">
-    {filteredServices.map((service, index) => (
-      <div
-        key={index}
-        className={`carousel-item ${index === 0 ? 'active' : ''}`}
-      >
-        <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2 justify-content-center">
-          <div className="col d-flex justify-content-center">
-            <div className="card border-0 shadow" style={{ width: '18rem' }}>
-              <div className="position-relative">
-                <img
-                  src={getImageUrl(service.service_image)}
-                  className="card-img-top"
-                  alt={service.service}
-                  style={{ height: '340px', objectFit: 'cover' }}
-                />
-                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center text-white bg-dark bg-opacity-75 overlay">
-                  <h5 className="fw-bold">{service.primary_service}</h5>
+    {filteredServices.length === 0 ? (
+      <p className="text-center">No services found.</p>
+    ) : (
+      <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+        {filteredServices.map((service, idx) => {
+          // Determine image to use: first from services array, fallback to service_image, then placeholder
+          const imageUrl = service.services?.[0]?.image || service.service_image || "https://via.placeholder.com/300";
+
+          return (
+            <div key={idx} className="col d-flex justify-content-center">
+              <div className="card border-0 shadow" style={{ width: '18rem' }}>
+                <div className="position-relative">
+                  <img
+                    src={getImageUrl(imageUrl)}
+                    alt={service.primary_service}
+                    className="card-img-top"
+                    style={{ height: '300px', objectFit: 'cover' }}
+                  />
+                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
+                    <h5 className="fw-bold">{service.primary_service}</h5>
+                  </div>
+                </div>
+                <div className="card-body text-center">
+                  <h5 className="card-title fw-bold mb-0">{service.service || service.primary_service}</h5>
+                  <p className="text-muted">{service.location}</p>
                 </div>
               </div>
-              <div className="card-body text-center">
-                <h5 className="card-title fw-bold mb-0">{service.service}</h5>
-              </div>
             </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
-    ))}
+    )}
+
+    <style>{`
+      .overlay {
+        opacity: 0;
+        transition: opacity 0.4s ease-in-out;
+      }
+      .position-relative:hover .overlay {
+        opacity: 1;
+      }
+    `}</style>
   </div>
+</section>
 
-  {/* Carousel Controls */}
-  <button
-    className="carousel-control-prev"
-    type="button"
-    data-bs-target="#servicesCarousel"
-    data-bs-slide="prev"
-  >
-    <span
-      className="carousel-control-prev-icon"
-      aria-hidden="true"
-      style={{ filter: 'invert(1)' }}
-    />
-    <span className="visually-hidden">Previous</span>
-  </button>
-  <button
-    className="carousel-control-next"
-    type="button"
-    data-bs-target="#servicesCarousel"
-    data-bs-slide="next"
-  >
-    <span
-      className="carousel-control-next-icon"
-      aria-hidden="true"
-      style={{ filter: 'invert(1)' }}
-    />
-    <span className="visually-hidden">Next</span>
-  </button>
-</div>
-
-          )}
-
-          <style>{`
-            .overlay {
-              opacity: 0;
-              transition: opacity 0.4s ease-in-out;
-            }
-            .position-relative:hover .overlay {
-              opacity: 1;
-            }
-          `}</style>
-        </div>
-      </section>
 
 
      {/* How It Works Section */}

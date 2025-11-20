@@ -1,5 +1,6 @@
 import React from "react";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import { Button } from "react-bootstrap";
 
 function ProfileTab({
   craftsman,
@@ -9,77 +10,98 @@ function ProfileTab({
   handleProfileImageChange,
   handleProofDocumentChange,
   proofDocument,
-  proofDocumentFile,
   professionOptions,
   skillOptions,
   serviceOptions,
-  serviceImages,
-  serviceVideos,
-  handleRemoveServiceImage,
-  handleEditServiceImage,
-  handleServiceImagesChange,
-  handleRemoveServiceVideo,
-  handleServiceVideosChange,
+  serviceImage,
+  handleServiceImageChange,
   saveProfile,
   validateProfile,
 }) {
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setProfileData((prev) => ({ ...prev, [name]: value }));
+    setProfileData((p) => ({ ...p, [e.target.name]: e.target.value }));
   };
+
+  // Disable editing if status is pending
+  const isEditable = craftsman?.status === "approved";
 
   return (
     <div className="card p-4 shadow-sm border-0">
+
+      {/* Welcome Message */}
+      {craftsman?.full_name && (
+        <h5 className="mb-3">Welcome, {craftsman.full_name}!</h5>
+      )}
+
       {/* Profile Image */}
-      <div className="d-flex align-items-center mb-4">
+      <div className="mb-4">
         <img
-          src={profileImage || craftsman.profile || "https://via.placeholder.com/100"}
+          src={profileImage || "https://via.placeholder.com/120"}
           alt="Profile"
-          className="rounded-circle border me-3"
-          width="100"
-          height="100"
+          width="120"
+          height="120"
+          className="rounded-circle border d-block mb-2"
         />
-        <label className="btn btn-outline-primary btn-sm">
-          Upload Photo
-          <input type="file" hidden accept="image/*" onChange={handleProfileImageChange} />
+        <label className={`btn btn-outline-primary btn-sm ${!isEditable ? "disabled" : ""}`}>
+          Change Profile Photo
+          <input
+            type="file"
+            hidden
+            accept="image/*"
+            onChange={handleProfileImageChange}
+            disabled={!isEditable}
+          />
         </label>
       </div>
 
       {/* Proof Document */}
       <div className="mb-3">
-        <label className="form-label fw-bold">
-          Craftsman Proof Document <span className="text-muted fw-normal">(optional)</span>
-        </label>
-        <input type="file" accept=".pdf,image/*" className="form-control" onChange={handleProofDocumentChange} />
-        {proofDocument && (
-          <small className="text-success">
-            Uploaded: {proofDocumentFile ? proofDocumentFile.name : proofDocument.split("/").pop()}
-          </small>
-        )}
+        <label className="form-label">Proof Document</label>
+        <input
+          type="file"
+          className="form-control"
+          accept=".pdf,image/*"
+          onChange={handleProofDocumentChange}
+          disabled={!isEditable}
+        />
+        {proofDocument && <small className="text-success">Uploaded: {proofDocument}</small>}
       </div>
 
       {/* Description */}
       <textarea
         className="form-control mb-3"
-        rows="2"
         name="description"
-        placeholder="Add a short professional summary"
+        rows="2"
+        placeholder="Describe your service"
         value={profileData.description}
         onChange={handleInputChange}
+        disabled={!isEditable}
       />
 
       {/* Profession / Skill */}
-      <div className="row">
-        <div className="col-md-6 mb-3">
-          <select name="profession" className="form-select" value={profileData.profession} onChange={handleInputChange}>
+      <div className="row mb-3">
+        <div className="col-md-6">
+          <select
+            className="form-select"
+            name="profession"
+            value={profileData.profession}
+            onChange={handleInputChange}
+            disabled={!isEditable}
+          >
             <option value="">Select Profession</option>
             {professionOptions.map((opt) => (
               <option key={opt}>{opt}</option>
             ))}
           </select>
         </div>
-        <div className="col-md-6 mb-3">
-          <select name="skills" className="form-select" value={profileData.skills} onChange={handleInputChange}>
+        <div className="col-md-6">
+          <select
+            className="form-select"
+            name="skills"
+            value={profileData.skills}
+            onChange={handleInputChange}
+            disabled={!isEditable}
+          >
             <option value="">Select Skill</option>
             {skillOptions.map((opt) => (
               <option key={opt}>{opt}</option>
@@ -88,104 +110,83 @@ function ProfileTab({
         </div>
       </div>
 
-      {/* Company / Location / Service */}
+      {/* Company Name */}
       <input
         className="form-control mb-3"
         name="company_name"
         placeholder="Company Name"
         value={profileData.company_name}
         onChange={handleInputChange}
+        disabled={!isEditable}
       />
 
-      <select name="location" className="form-select mb-3" value={profileData.location} onChange={handleInputChange}>
+      {/* Location */}
+      <select
+        className="form-select mb-3"
+        name="location"
+        value={profileData.location}
+        onChange={handleInputChange}
+        disabled={!isEditable}
+      >
         <option value="">Select Location</option>
         {["South B", "Westlands", "Karen", "Embakasi", "Nakuru", "Eldoret"].map((loc) => (
           <option key={loc}>{loc}</option>
         ))}
       </select>
 
+      {/* Primary Service */}
       <select
-        name="primary_service"
         className="form-select mb-3"
+        name="primary_service"
         value={profileData.primary_service}
         onChange={handleInputChange}
+        disabled={!isEditable}
       >
         <option value="">Select Service</option>
-        {serviceOptions.map((s) => (
-          <option key={s}>{s}</option>
+        {serviceOptions.map((opt) => (
+          <option key={opt}>{opt}</option>
         ))}
       </select>
 
-      {/* Service Images */}
-      <div className="mb-3">
-        <label className="fw-bold mb-2">Service Images</label>
-        <div className="d-flex flex-wrap gap-3">
-          {serviceImages.concat(craftsman.service_images || []).map((img, i) => (
-            <div key={i} className="position-relative">
-              <img src={img} className="img-thumbnail" width="120" height="100" alt="" />
-              <button
-                className="btn btn-sm btn-light position-absolute top-0 end-0 m-1"
-                onClick={() => handleRemoveServiceImage(i)}
-              >
-                <i className="bi bi-x-lg text-danger"></i>
-              </button>
-              <label htmlFor={`edit-${i}`} className="btn btn-sm btn-light position-absolute bottom-0 end-0 m-1">
-                <i className="bi bi-pencil-fill text-primary"></i>
-                <input id={`edit-${i}`} type="file" hidden accept="image/*" onChange={(e) => handleEditServiceImage(e, i)} />
-              </label>
-            </div>
-          ))}
-
-          <label
-            htmlFor="serviceImages"
-            className="border rounded d-flex flex-column justify-content-center align-items-center"
-            style={{ width: 150, height: 120, background: "#f8f9fa", cursor: "pointer" }}
-          >
-            <i className="bi bi-plus-lg fs-3 text-secondary"></i>
-            <span className="small text-muted">Upload service image</span>
-            <input id="serviceImages" type="file" hidden multiple accept="image/*" onChange={handleServiceImagesChange} />
-          </label>
-        </div>
+      {/* Service Image */}
+      <div className="mb-4">
+        <label className="form-label fw-bold">Service Image</label>
+        {serviceImage && (
+          <img
+            src={serviceImage}
+            alt="Service"
+            className="img-thumbnail mb-2"
+            width="200"
+            height="150"
+          />
+        )}
+        <input
+          type="file"
+          className="form-control"
+          accept="image/*"
+          onChange={handleServiceImageChange}
+          disabled={!isEditable}
+        />
       </div>
 
-      {/* Service Videos */}
-      <div className="mb-3">
-        <label className="fw-bold mb-2">Service Videos</label>
-        <div className="d-flex flex-wrap gap-3">
-          {serviceVideos.concat(craftsman.service_videos || []).map((vid, i) => (
-            <div key={i} className="position-relative">
-              <video src={vid} width="180" height="120" controls />
-              <button
-                className="btn btn-sm btn-light position-absolute top-0 end-0 m-1"
-                onClick={() => handleRemoveServiceVideo(i)}
-              >
-                <i className="bi bi-x-lg text-danger"></i>
-              </button>
-            </div>
-          ))}
-
-          <label
-            htmlFor="serviceVideos"
-            className="border rounded d-flex flex-column justify-content-center align-items-center"
-            style={{ width: 150, height: 120, background: "#f8f9fa", cursor: "pointer" }}
-          >
-            <i className="bi bi-plus-lg fs-3 text-secondary"></i>
-            <span className="small text-muted">Upload service video</span>
-            <input id="serviceVideos" type="file" hidden multiple accept="video/*" onChange={handleServiceVideosChange} />
-          </label>
-        </div>
-      </div>
-
-      <p className="text-muted">
-        <strong>Status:</strong>{" "}
-        <span className={`badge ${craftsman.status === "Approved" ? "bg-success" : "bg-warning text-dark"}`}>
-          {craftsman.status || "Pending Approval"}
-        </span>
-      </p>
-
-      <button className="btn btn-success mt-3" onClick={saveProfile} disabled={!!validateProfile()}>
-        Save Changes
+      {/* Save Button */}
+      <button
+        className="btn btn-success mb-2"
+        onClick={saveProfile}
+        disabled={!isEditable || !!validateProfile()}
+      >
+        Save Profile
       </button>
+
+      {/* Status Button (after save, small) */}
+      {craftsman?.status && (
+        <Button
+          size="sm"
+          variant={craftsman.status === "approved" ? "success" : "warning"}
+        >
+          {craftsman.status.charAt(0).toUpperCase() + craftsman.status.slice(1)}
+        </Button>
+      )}
     </div>
   );
 }

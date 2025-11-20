@@ -46,11 +46,10 @@ export default function CraftsmenTable({
             filtered.map(c => {
               const errors = checkCraftsmanApprovalCriteria(c);
 
-             const mainService = {
-  name: c.primary_service || (c.services?.[0]?.name),
-  image: c.service_images?.[0] || c.services?.[0]?.image || c.service_image || null
-};
-
+              const mainService = {
+                name: c.primary_service || c.services?.[0]?.service_name,
+                image: c.services?.[0]?.image || c.service_image
+              };
 
               const approved = isCraftsmanApproved(c);
 
@@ -96,7 +95,10 @@ export default function CraftsmenTable({
                       >
                         Approve
                       </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => openRejectModal(c)}>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => openRejectModal(c)}
+                      >
                         Reject
                       </button>
                     </td>

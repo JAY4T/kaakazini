@@ -131,7 +131,8 @@ function CraftsmenList() {
                               </a>
                             </p>
                           )}
-                          <Link to={`/craftsman/${craftsmanSlug}`} className="btn btn-primary">
+                          <Link to={`/craftsman/${craftsman.slug}`} className="btn btn-primary">
+
                             View Portfolio
                           </Link>
                         </div>
