@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import { Button } from "react-bootstrap";
 
@@ -16,14 +16,50 @@ function ProfileTab({
   serviceImage,
   handleServiceImageChange,
   saveProfile,
-  validateProfile,
 }) {
+  const [touched, setTouched] = useState({}); // Track touched fields
+  const [errors, setErrors] = useState({});   // Track validation errors
+
+  const requiredFields = [
+    "description",
+    "profession",
+    "skills",
+    "company_name",
+    "location",
+    "primary_service",
+    "serviceImage"
+  ];
+
+  // Real-time validation
+  useEffect(() => {
+    const newErrors = {};
+    requiredFields.forEach((field) => {
+      if ((field === "serviceImage" && !serviceImage) || (!profileData[field] && field !== "serviceImage")) {
+        newErrors[field] = "This field is required";
+      }
+    });
+    setErrors(newErrors);
+  }, [profileData, serviceImage]);
+
   const handleInputChange = (e) => {
-    setProfileData((p) => ({ ...p, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setProfileData((p) => ({ ...p, [name]: value }));
+    setTouched((t) => ({ ...t, [name]: true }));
   };
 
-  // Disable editing if status is pending
-  const isEditable = craftsman?.status === "approved";
+  const isInvalid = (field) => touched[field] && errors[field];
+
+  const handleSave = () => {
+    // Mark all fields as touched
+    const allTouched = {};
+    requiredFields.forEach((field) => allTouched[field] = true);
+    setTouched(allTouched);
+
+    // Save only if no errors
+    if (Object.keys(errors).length === 0) {
+      saveProfile();
+    }
+  };
 
   return (
     <div className="card p-4 shadow-sm border-0">
@@ -42,115 +78,133 @@ function ProfileTab({
           height="120"
           className="rounded-circle border d-block mb-2"
         />
-        <label className={`btn btn-outline-primary btn-sm ${!isEditable ? "disabled" : ""}`}>
+        <label className="btn btn-outline-primary btn-sm">
           Change Profile Photo
           <input
             type="file"
             hidden
             accept="image/*"
             onChange={handleProfileImageChange}
-            disabled={!isEditable}
           />
         </label>
       </div>
 
-      {/* Proof Document */}
+      {/* Proof Document (Optional) */}
       <div className="mb-3">
-        <label className="form-label">Proof Document</label>
+        <label className="form-label">Proof Document (Optional)</label>
         <input
           type="file"
           className="form-control"
           accept=".pdf,image/*"
           onChange={handleProofDocumentChange}
-          disabled={!isEditable}
         />
         {proofDocument && <small className="text-success">Uploaded: {proofDocument}</small>}
       </div>
 
       {/* Description */}
-      <textarea
-        className="form-control mb-3"
-        name="description"
-        rows="2"
-        placeholder="Describe your service"
-        value={profileData.description}
-        onChange={handleInputChange}
-        disabled={!isEditable}
-      />
+      <div className="mb-3">
+        <label className="form-label">Description *</label>
+        <textarea
+          className={`form-control ${isInvalid("description") ? "border-danger" : ""}`}
+          name="description"
+          rows="2"
+          placeholder="Describe your service"
+          value={profileData.description}
+          onChange={handleInputChange}
+          onBlur={() => setTouched((t) => ({ ...t, description: true }))}
+        />
+        {isInvalid("description") && <small className="text-danger">{errors.description}</small>}
+      </div>
 
       {/* Profession / Skill */}
       <div className="row mb-3">
         <div className="col-md-6">
+          <label className="form-label">Profession *</label>
           <select
-            className="form-select"
+            className={`form-select ${isInvalid("profession") ? "border-danger" : ""}`}
             name="profession"
             value={profileData.profession}
             onChange={handleInputChange}
-            disabled={!isEditable}
+            onBlur={() => setTouched((t) => ({ ...t, profession: true }))}
           >
             <option value="">Select Profession</option>
             {professionOptions.map((opt) => (
               <option key={opt}>{opt}</option>
             ))}
           </select>
+          {isInvalid("profession") && <small className="text-danger">{errors.profession}</small>}
         </div>
         <div className="col-md-6">
+          <label className="form-label">Skill *</label>
           <select
-            className="form-select"
+            className={`form-select ${isInvalid("skills") ? "border-danger" : ""}`}
             name="skills"
             value={profileData.skills}
             onChange={handleInputChange}
-            disabled={!isEditable}
+            onBlur={() => setTouched((t) => ({ ...t, skills: true }))}
           >
             <option value="">Select Skill</option>
             {skillOptions.map((opt) => (
               <option key={opt}>{opt}</option>
             ))}
           </select>
+          {isInvalid("skills") && <small className="text-danger">{errors.skills}</small>}
         </div>
       </div>
 
       {/* Company Name */}
-      <input
-        className="form-control mb-3"
-        name="company_name"
-        placeholder="Company Name"
-        value={profileData.company_name}
-        onChange={handleInputChange}
-        disabled={!isEditable}
-      />
+      <div className="mb-3">
+        <label className="form-label">Company Name *</label>
+        <input
+          className={`form-control ${isInvalid("company_name") ? "border-danger" : ""}`}
+          name="company_name"
+          placeholder="Company Name"
+          value={profileData.company_name}
+          onChange={handleInputChange}
+          onBlur={() => setTouched((t) => ({ ...t, company_name: true }))}
+        />
+        {isInvalid("company_name") && <small className="text-danger">{errors.company_name}</small>}
+      </div>
 
       {/* Location */}
-      <select
-        className="form-select mb-3"
-        name="location"
-        value={profileData.location}
-        onChange={handleInputChange}
-        disabled={!isEditable}
-      >
-        <option value="">Select Location</option>
-        {["South B", "Westlands", "Karen", "Embakasi", "Nakuru", "Eldoret"].map((loc) => (
-          <option key={loc}>{loc}</option>
-        ))}
-      </select>
+      <div className="mb-3">
+        <label className="form-label">Location *</label>
+        <select
+          className={`form-select ${isInvalid("location") ? "border-danger" : ""}`}
+          name="location"
+          value={profileData.location}
+          onChange={handleInputChange}
+          onBlur={() => setTouched((t) => ({ ...t, location: true }))}
+        >
+          <option value="">Select Location</option>
+          {["South B", "Westlands", "Karen", "Embakasi", "Nakuru", "Eldoret"].map((loc) => (
+            <option key={loc}>{loc}</option>
+          ))}
+        </select>
+        {isInvalid("location") && <small className="text-danger">{errors.location}</small>}
+      </div>
 
       {/* Primary Service */}
-      <select
-        className="form-select mb-3"
-        name="primary_service"
-        value={profileData.primary_service}
-        onChange={handleInputChange}
-        disabled={!isEditable}
-      >
-        <option value="">Select Service</option>
-        {serviceOptions.map((opt) => (
-          <option key={opt}>{opt}</option>
-        ))}
-      </select>
+      <div className="mb-3">
+        <label className="form-label">Primary Service *</label>
+        <select
+          className={`form-select ${isInvalid("primary_service") ? "border-danger" : ""}`}
+          name="primary_service"
+          value={profileData.primary_service}
+          onChange={handleInputChange}
+          onBlur={() => setTouched((t) => ({ ...t, primary_service: true }))}
+        >
+          <option value="">Select Service</option>
+          {serviceOptions.map((opt) => (
+            <option key={opt}>{opt}</option>
+          ))}
+        </select>
+        {isInvalid("primary_service") && <small className="text-danger">{errors.primary_service}</small>}
+      </div>
 
       {/* Service Image */}
       <div className="mb-4">
-        <label className="form-label fw-bold">Service Image</label>
+        <label className="form-label fw-bold">Service Image *</label>
         {serviceImage && (
           <img
             src={serviceImage}
@@ -162,23 +216,27 @@ function ProfileTab({
         )}
         <input
           type="file"
-          className="form-control"
+          className={`form-control ${isInvalid("serviceImage") ? "border-danger" : ""}`}
           accept="image/*"
-          onChange={handleServiceImageChange}
-          disabled={!isEditable}
+          onChange={(e) => {
+            handleServiceImageChange(e);
+            setTouched((t) => ({ ...t, serviceImage: true }));
+          }}
+          onBlur={() => setTouched((t) => ({ ...t, serviceImage: true }))}
         />
+        {isInvalid("serviceImage") && <small className="text-danger">{errors.serviceImage}</small>}
       </div>
 
       {/* Save Button */}
       <button
         className="btn btn-success mb-2"
-        onClick={saveProfile}
-        disabled={!isEditable || !!validateProfile()}
+        onClick={handleSave}
+        disabled={Object.keys(errors).length > 0}
       >
         Save Profile
       </button>
 
-      {/* Status Button (after save, small) */}
+      {/* Status Button */}
       {craftsman?.status && (
         <Button
           size="sm"
