@@ -10,28 +10,27 @@ function ProfileTab({
   handleProfileImageChange,
   handleProofDocumentChange,
   proofDocument,
-  professionOptions,
-  skillOptions,
-  serviceOptions,
+  professionOptions = [],
+  skillOptions = [],
+  serviceOptions = [],
   serviceImage,
   handleServiceImageChange,
   saveProfile,
   validateProfile,
 }) {
+  // Handle input changes
   const handleInputChange = (e) => {
-    setProfileData((p) => ({ ...p, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setProfileData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Disable editing if status is pending
-  const isEditable = craftsman?.status === "approved";
+  // EDITABLE: remove status check to allow editing
+  const isEditable = true; // change to craftsman?.status === "approved" if you want to keep restriction
 
   return (
     <div className="card p-4 shadow-sm border-0">
-
-      {/* Welcome Message */}
-      {craftsman?.full_name && (
-        <h5 className="mb-3">Welcome, {craftsman.full_name}!</h5>
-      )}
+      {/* Welcome */}
+      {craftsman?.full_name && <h5 className="mb-3">Welcome, {craftsman.full_name}!</h5>}
 
       {/* Profile Image */}
       <div className="mb-4">
@@ -73,24 +72,24 @@ function ProfileTab({
         name="description"
         rows="2"
         placeholder="Describe your service"
-        value={profileData.description}
+        value={profileData.description || ""}
         onChange={handleInputChange}
         disabled={!isEditable}
       />
 
-      {/* Profession / Skill */}
+      {/* Profession & Skills */}
       <div className="row mb-3">
         <div className="col-md-6">
           <select
             className="form-select"
             name="profession"
-            value={profileData.profession}
+            value={profileData.profession || ""}
             onChange={handleInputChange}
             disabled={!isEditable}
           >
             <option value="">Select Profession</option>
             {professionOptions.map((opt) => (
-              <option key={opt}>{opt}</option>
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
         </div>
@@ -98,13 +97,13 @@ function ProfileTab({
           <select
             className="form-select"
             name="skills"
-            value={profileData.skills}
+            value={profileData.skills || ""}
             onChange={handleInputChange}
             disabled={!isEditable}
           >
             <option value="">Select Skill</option>
             {skillOptions.map((opt) => (
-              <option key={opt}>{opt}</option>
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
         </div>
@@ -115,7 +114,7 @@ function ProfileTab({
         className="form-control mb-3"
         name="company_name"
         placeholder="Company Name"
-        value={profileData.company_name}
+        value={profileData.company_name || ""}
         onChange={handleInputChange}
         disabled={!isEditable}
       />
@@ -124,13 +123,13 @@ function ProfileTab({
       <select
         className="form-select mb-3"
         name="location"
-        value={profileData.location}
+        value={profileData.location || ""}
         onChange={handleInputChange}
         disabled={!isEditable}
       >
         <option value="">Select Location</option>
         {["South B", "Westlands", "Karen", "Embakasi", "Nakuru", "Eldoret"].map((loc) => (
-          <option key={loc}>{loc}</option>
+          <option key={loc} value={loc}>{loc}</option>
         ))}
       </select>
 
@@ -138,13 +137,13 @@ function ProfileTab({
       <select
         className="form-select mb-3"
         name="primary_service"
-        value={profileData.primary_service}
+        value={profileData.primary_service || ""}
         onChange={handleInputChange}
         disabled={!isEditable}
       >
         <option value="">Select Service</option>
         {serviceOptions.map((opt) => (
-          <option key={opt}>{opt}</option>
+          <option key={opt} value={opt}>{opt}</option>
         ))}
       </select>
 
@@ -173,12 +172,12 @@ function ProfileTab({
       <button
         className="btn btn-success mb-2"
         onClick={saveProfile}
-        disabled={!isEditable || !!validateProfile()}
+        disabled={!isEditable || !!validateProfile?.()}
       >
         Save Profile
       </button>
 
-      {/* Status Button (after save, small) */}
+      {/* Status */}
       {craftsman?.status && (
         <Button
           size="sm"
