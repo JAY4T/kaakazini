@@ -52,7 +52,10 @@ class CraftsmanSerializer(serializers.ModelSerializer):
     gallery_images = GalleryImageSerializer(many=True, read_only=True)
     reviews = ReviewSerializer(many=True, read_only=True)
     services = ServiceSerializer(many=True, read_only=True)
-    service_image = serializers.ImageField(required=False, allow_null=True)
+    service_image = serializers.ImageField(required=False, allow_null=True, use_url=True)
+    profile = serializers.ImageField(required=False, allow_null=True, use_url=True)
+
+
     service_videos = ServiceVideoSerializer(many=True, read_only=True)
 
     class Meta:
