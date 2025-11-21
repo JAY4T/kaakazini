@@ -403,13 +403,12 @@ Tell us about your project, and skilled craftsmen will start responding within 2
             <div className="card shadow-sm border-0 h-100">
               {/* ✅ Show company photo (fallback if not available) */}
               <img
-                src={getImageUrl(
-                  craftsman.company_photo || craftsman.profile
-                )}
-                alt={craftsman.name}
-                className="card-img-top"
-                style={{ height: "250px", objectFit: "cover" }}
-              />
+  src={getImageUrl(craftsman.company_photo || craftsman.profile)}
+  alt={craftsman.name}
+  className="card-img-top rounded-circle mx-auto d-block"
+  style={{ width: "250px", height: "250px", objectFit: "cover" }}
+/>
+
 
               <div className="card-body text-center">
                 <h5 className="fw-bold">{craftsman.name}</h5>
