@@ -35,6 +35,8 @@ class Craftsman(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     profile = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    full_name = models.CharField(max_length=255, blank=True, null=True)  
+
     profession = models.CharField(max_length=100, blank=True, null=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
     member_since = models.DateField(null=True, blank=True)
