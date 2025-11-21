@@ -35,14 +35,12 @@ INSTALLED_APPS = [
     "corsheaders",
     "djoser",
     "django_rest_passwordreset",
-    "storages", 
-    "services",
     "django_extensions",
 
-    
     # Local apps
     "api",
     "accounts",
+    "services",
 ]
 
 # ---------------------------
@@ -138,11 +136,10 @@ CSRF_TRUSTED_ORIGINS = [
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Media files stored locally to prevent data loss
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 
 # ---------------------------
 # SECURITY
@@ -163,4 +160,4 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 BREVO_API_KEY = config("BREVO_API_KEY", default="")
-FRONTEND_URL = config("FRONTEND_URL", default="https://kaakazini.com")
+FRONTEND_URL = config("FRONTEND_URL", default="https://staging.kaakazini.com")

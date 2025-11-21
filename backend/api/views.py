@@ -10,8 +10,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import (
     Craftsman, Product, Service, JobRequest,
-    ContactMessage, Review,
-    ServiceImage, ServiceVideo
+    ContactMessage, Review, ServiceVideo,
 )
 from .serializers import (
     CraftsmanSerializer, ProductSerializer,
@@ -38,52 +37,29 @@ class CraftsmanListView(generics.ListAPIView):
 
 
 class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
-    """
-    Allows a craftsman to view or update their profile,
-    including uploading profile picture, proof document,
-    service image, gallery images, and service videos.
-    """
     serializer_class = CraftsmanSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+    lookup_field = 'slug'
 
     def get_object(self):
-        # Get or create the craftsman profile
         craftsman, _ = Craftsman.objects.get_or_create(user=self.request.user)
         return craftsman
 
     def patch(self, request, *args, **kwargs):
         craftsman = self.get_object()
 
-        # Update regular fields
         serializer = self.get_serializer(craftsman, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # -------------------
-        # Handle main service image
-        # -------------------
         if 'service_image' in request.FILES:
             craftsman.service_image = request.FILES['service_image']
             craftsman.save()
 
-        # -------------------
-        # Handle multiple gallery/service images
-        # -------------------
-        # ✅ Handle multiple service images (correct key)
-        service_images = request.FILES.getlist('service_images')
-        for img in service_images:
-            ServiceImage.objects.create(craftsman=craftsman, image=img)
-
-        # -------------------
-        # Handle multiple service videos
-        # -------------------
-        service_videos = request.FILES.getlist('service_videos')
-        for vid in service_videos:
-            ServiceVideo.objects.create(craftsman=craftsman, video=vid)
-
-        # Return updated craftsman data
         return Response(self.get_serializer(craftsman).data, status=status.HTTP_200_OK)
+
+
 
 class ServiceCreateView(generics.CreateAPIView):
     """
@@ -122,15 +98,6 @@ class PublicCraftsmanDetailView(generics.RetrieveAPIView):
     serializer_class = CraftsmanSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field = 'slug'
-
-# Private detail/update for logged-in craftsman
-class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
-    serializer_class = CraftsmanSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self):
-        craftsman, _ = Craftsman.objects.get_or_create(user=self.request.user)
-        return craftsman
 
 
 class AdminCraftsmanListView(generics.ListAPIView):

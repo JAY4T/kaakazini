@@ -1,7 +1,7 @@
+// DashboardPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { authAxios } from "../api/axiosClient";
 import { getFullImageUrl } from "../utils/helpers";
 import DashboardSidebar from "../components/DashboardSidebar";
@@ -10,6 +10,7 @@ import JobsTab from "../components/JobsTab";
 
 function DashboardPage() {
   const navigate = useNavigate();
+
   const [craftsman, setCraftsman] = useState({});
   const [profileData, setProfileData] = useState({
     description: "",
@@ -22,13 +23,13 @@ function DashboardPage() {
 
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageFile, setProfileImageFile] = useState(null);
+
   const [proofDocument, setProofDocument] = useState(null);
   const [proofDocumentFile, setProofDocumentFile] = useState(null);
 
-  const [serviceImages, setServiceImages] = useState([]);
-  const [serviceVideos, setServiceVideos] = useState([]);
-  const [serviceImageFiles, setServiceImageFiles] = useState([]);
-  const [serviceVideoFiles, setServiceVideoFiles] = useState([]);
+  // ONE SERVICE IMAGE ONLY
+  const [serviceImage, setServiceImage] = useState(null);
+  const [serviceImageFile, setServiceImageFile] = useState(null);
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,12 +47,12 @@ function DashboardPage() {
     fetchAssignedJobs();
   }, []);
 
-  // === Fetch Craftsman Profile ===
   const fetchCraftsmanData = async () => {
     try {
       const res = await authAxios.get("/craftsman/");
       const data = res.data;
       setCraftsman(data);
+
       setProfileData({
         description: data.description || "",
         profession: data.profession || "",
@@ -60,9 +61,9 @@ function DashboardPage() {
         skills: data.skills || "",
         primary_service: data.primary_service || "",
       });
+
       setProfileImage(getFullImageUrl(data.profile));
-      setServiceImages(data.service_images?.map(getFullImageUrl) || []);
-      setServiceVideos(data.service_videos?.map(getFullImageUrl) || []);
+      setServiceImage(getFullImageUrl(data.service_image));
       setProofDocument(getFullImageUrl(data.proof_document));
     } catch (err) {
       console.error("Error fetching craftsman data", err);
@@ -71,36 +72,16 @@ function DashboardPage() {
     }
   };
 
-  // === Fetch Jobs & Normalize Status ===
   const fetchAssignedJobs = async () => {
     try {
       const res = await authAxios.get("/job-requests/");
-      let jobsData = Array.isArray(res.data) ? res.data : [];
-
-      // Normalize status so buttons work correctly
-      jobsData = jobsData.map((job) => {
-        const status = job.status?.toLowerCase() || "pending";
-        let normalized = status;
-
-        // Map common API status variations to expected ones
-        if (["pending", "new"].includes(status)) normalized = "pending";
-        if (["accepted", "accept"].includes(status)) normalized = "accepted";
-        if (["in_progress", "in progress", "started"].includes(status)) normalized = "in progress";
-        if (["completed", "done"].includes(status)) normalized = "completed";
-        if (["approved", "approved_by_client"].includes(status)) normalized = "approved";
-        if (["paid", "payment_done"].includes(status)) normalized = "paid";
-        if (["rejected", "declined"].includes(status)) normalized = "rejected";
-
-        return { ...job, status: normalized.charAt(0).toUpperCase() + normalized.slice(1) };
-      });
-
-      setJobs(jobsData);
+      setJobs(res.data || []);
     } catch (err) {
       console.error("Error fetching jobs", err);
     }
   };
 
-  // === Profile Handlers ===
+  // --- IMAGE HANDLERS ---
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -110,128 +91,64 @@ function DashboardPage() {
 
   const handleProofDocumentChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setProofDocumentFile(file);
-      setProofDocument(file.name);
-    }
+    if (!file) return;
+    setProofDocumentFile(file);
+    setProofDocument(file.name);
   };
 
-  const handleServiceImagesChange = (e) => {
-    const files = Array.from(e.target.files);
-    setServiceImageFiles((prev) => [...prev, ...files]);
-    setServiceImages((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
-  };
-
-  const handleServiceVideosChange = (e) => {
-    const files = Array.from(e.target.files);
-    setServiceVideoFiles((prev) => [...prev, ...files]);
-    setServiceVideos((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
-  };
-
-  const handleRemoveServiceImage = (i) => {
-    setServiceImages(serviceImages.filter((_, idx) => idx !== i));
-    setServiceImageFiles(serviceImageFiles.filter((_, idx) => idx !== i));
-  };
-
-  const handleRemoveServiceVideo = (i) => {
-    setServiceVideos(serviceVideos.filter((_, idx) => idx !== i));
-    setServiceVideoFiles(serviceVideoFiles.filter((_, idx) => idx !== i));
-  };
-
-  const handleEditServiceImage = (e, index) => {
+  // ONE SERVICE IMAGE
+  const handleServiceImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const updatedImages = [...serviceImages];
-    const updatedFiles = [...serviceImageFiles];
-    updatedImages[index] = URL.createObjectURL(file);
-    updatedFiles[index] = file;
-    setServiceImages(updatedImages);
-    setServiceImageFiles(updatedFiles);
+    setServiceImageFile(file);
+    setServiceImage(URL.createObjectURL(file));
   };
 
+  // VALIDATION
   const validateProfile = () => {
     const required = ["description", "profession", "location", "company_name", "skills", "primary_service"];
     for (let key of required) {
       if (!profileData[key].trim()) return `${key.replace("_", " ")} is required`;
     }
-    if (!profileImageFile && !profileImage) return "Profile photo is required";
-    if (serviceImages.length === 0) return "At least one service image is required";
+    if (!profileImage && !profileImageFile) return "Profile image is required";
+    if (!serviceImage && !serviceImageFile) return "Service image is required";
     return null;
   };
 
   const saveProfile = async () => {
     const error = validateProfile();
-    if (error) return alert(`⚠️ ${error}`);
+    if (error) return alert(error);
 
     try {
       const formData = new FormData();
+
       Object.entries(profileData).forEach(([k, v]) => formData.append(k, v));
+
       if (profileImageFile) formData.append("profile", profileImageFile);
       if (proofDocumentFile) formData.append("proof_document", proofDocumentFile);
-      serviceImageFiles.forEach((img) => formData.append("service_images", img));
-      serviceVideoFiles.forEach((vid) => formData.append("service_videos", vid));
+      if (serviceImageFile) formData.append("service_image", serviceImageFile);
 
       const res = await authAxios.patch("/craftsman/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
       setCraftsman(res.data);
-      alert("✅ Profile submitted successfully! Pending verification.");
+      setServiceImage(getFullImageUrl(res.data.service_image));
+
+      alert("Profile Saved Successfully! Pending Approval");
     } catch (err) {
       console.error(err);
-      alert("❌ Failed to save profile. Please try again.");
+      alert("Failed to save profile.");
     }
   };
 
-  // === Job Handlers ===
-  const handleAcceptJob = async (id) => {
-    await authAxios.patch(`/job-requests/${id}/`, { status: "Accepted" });
-    fetchAssignedJobs();
-  };
-
-  const handleRejectJob = async (id) => {
-    await authAxios.patch(`/job-requests/${id}/`, { status: "Rejected" });
-    fetchAssignedJobs();
-  };
-
-  const handleStartJob = async (id) => {
-    await authAxios.patch(`/job-requests/${id}/`, { status: "In Progress" });
-    fetchAssignedJobs();
-  };
-
-  const handleUploadProof = async (id, files) => {
-    if (!files || files.length === 0) return;
-    const formData = new FormData();
-    Array.from(files).forEach((file) => formData.append("proof_files", file));
-    await authAxios.patch(`/job-requests/${id}/upload-proof/`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    fetchAssignedJobs();
-    alert("✅ Proof uploaded successfully");
-  };
-
-  const handleMarkCompleted = async (id) => {
-    await authAxios.patch(`/job-requests/${id}/`, { status: "Completed" });
-    fetchAssignedJobs();
-  };
-
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate("/login");
-  };
-
   if (loading)
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "70vh" }}>
-        <div className="spinner-border text-primary" role="status"></div>
-      </div>
-    );
+    return <div className="d-flex justify-content-center p-5"><div className="spinner-border"></div></div>;
 
   return (
-    <div className="d-flex" style={{ minHeight: "100vh" }}>
-      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} handleLogout={handleLogout} />
-      <div className="flex-grow-1 p-4" style={{ background: "#f8f9fa" }}>
-        <h2 className="fw-bold mb-4">Welcome, {craftsman.full_name || "Craftsman"}</h2>
-
+    <div className="d-flex">
+      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className="flex-grow-1 p-4">
         {activeTab === "Profile" && (
           <ProfileTab
             craftsman={craftsman}
@@ -241,31 +158,18 @@ function DashboardPage() {
             handleProfileImageChange={handleProfileImageChange}
             handleProofDocumentChange={handleProofDocumentChange}
             proofDocument={proofDocument}
-            proofDocumentFile={proofDocumentFile}
             professionOptions={professionOptions}
             skillOptions={skillOptions}
             serviceOptions={serviceOptions}
-            serviceImages={serviceImages}
-            handleRemoveServiceImage={handleRemoveServiceImage}
-            handleEditServiceImage={handleEditServiceImage}
-            handleServiceImagesChange={handleServiceImagesChange}
-            serviceVideos={serviceVideos}
-            handleRemoveServiceVideo={handleRemoveServiceVideo}
-            handleServiceVideosChange={handleServiceVideosChange}
+            serviceImage={serviceImage}
+            handleServiceImageChange={handleServiceImageChange}
             saveProfile={saveProfile}
             validateProfile={validateProfile}
           />
         )}
 
         {activeTab === "Jobs" && (
-          <JobsTab
-            jobs={jobs}
-            handleAcceptJob={handleAcceptJob}
-            handleRejectJob={handleRejectJob}
-            handleStartJob={handleStartJob}
-            handleUploadProof={handleUploadProof}
-            handleMarkCompleted={handleMarkCompleted}
-          />
+          <JobsTab jobs={jobs} />
         )}
       </div>
     </div>

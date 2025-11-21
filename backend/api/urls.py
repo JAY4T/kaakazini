@@ -42,7 +42,8 @@ urlpatterns = [
 
     # Public craftsman
     path('public-craftsman/', PublicCraftsmanListView.as_view(),name= 'public-craftsman-list'),
-    path("public-craftsman/<slug:slug>/", PublicCraftsmanDetailView.as_view(), name="public-craftsman-detail"),
+    path('public-craftsman/<slug:slug>/', PublicCraftsmanDetailView.as_view(), name='public-craftsman-detail'),
+
 
 
     # services
