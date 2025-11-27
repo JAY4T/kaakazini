@@ -1,10 +1,10 @@
 from django.urls import path
 from .views import (
-    CraftsmanDetailView, ProductListCreateView, ProductDetailView,
+    AdminApproveJobView, CancelJobView, CompleteJobView, CraftsmanAcceptJobView, CraftsmanDetailView, MarkJobPaidView, ProductListCreateView, ProductDetailView,
     AdminCraftsmanListView, AdminCraftsmanApproveView, AdminCraftsmanRejectView,
     AdminProductListView, AdminProductApproveView, AdminProductRejectView,  PublicCraftsmanListView,PublicCraftsmanDetailView, ServiceListCreateView, ServiceDetailView,
    ApproveCraftsmanView,ContactMessageCreateView,JobRequestListCreateView, JobRequestDetailView,
-    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView
+    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView
 
 
 )
@@ -58,8 +58,12 @@ urlpatterns = [
     path('job-requests/<int:pk>/assign/', AssignCraftsmanView.as_view(), name='assign-craftsman'),
 
 
-    
-    
+    path("job-requests/<int:pk>/accept/", CraftsmanAcceptJobView.as_view(), name="job-accept"),
+    path("job-requests/<int:pk>/start/", StartJobView.as_view(), name="job-start"),
+    path("job-requests/<int:pk>/complete/", CompleteJobView.as_view(), name="job-complete"),
+    path("job-requests/<int:pk>/approve/", AdminApproveJobView.as_view(), name="job-approve"),
+    path("job-requests/<int:pk>/paid/", MarkJobPaidView.as_view(), name="job-paid"),
+    path("job-requests/<int:pk>/cancel/", CancelJobView.as_view(), name="job-cancel"),
     # contact us
 
     path('contact/', ContactMessageCreateView.as_view(), name='submit-contact'),
@@ -68,6 +72,9 @@ urlpatterns = [
     path('reviews/', ReviewListCreateView.as_view(), name='review-list-create'),
     path('craftsman/<int:craftsman_id>/reviews/', CraftsmanReviewListView.as_view(), name='craftsman-reviews'),
 
+    
+    # payment
+    path('job-requests/<int:pk>/pay/', InitiatePaymentView.as_view(), name='initiate_payment'),
 
 
 

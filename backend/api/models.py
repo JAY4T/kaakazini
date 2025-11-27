@@ -1,6 +1,10 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from accounts.models import CustomUser
+from decimal import Decimal
+from datetime import timedelta
+import requests
+
 from django.utils.text import slugify
 
 
@@ -35,6 +39,8 @@ class Craftsman(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     profile = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    full_name = models.CharField(max_length=255, blank=True, null=True)  
+
     profession = models.CharField(max_length=100, blank=True, null=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
     member_since = models.DateField(null=True, blank=True)
@@ -127,14 +133,32 @@ class Review(models.Model):
 
 
 class JobRequest(models.Model):
-    STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Completed', 'Completed'),
-        ('Cancelled', 'Cancelled'),
-    ]
-    client = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    craftsman = models.ForeignKey('Craftsman', on_delete=models.SET_NULL, null=True, blank=True)
 
+    STATUS_PENDING = 'Pending'
+    STATUS_ASSIGNED = 'Assigned'
+    STATUS_ACCEPTED = 'Accepted'
+    STATUS_IN_PROGRESS = 'In Progress'
+    STATUS_COMPLETED = 'Completed'
+    STATUS_APPROVED = 'Approved'
+    STATUS_PAID = 'Paid'
+    STATUS_CANCELLED = 'Cancelled'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ASSIGNED, 'Assigned'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_IN_PROGRESS, 'In Progress'),
+        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_APPROVED, 'Approved'),
+        (STATUS_PAID, 'Paid'),
+        (STATUS_CANCELLED, 'Cancelled'),
+    ]
+
+    # --- Foreign Keys ---
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='jobs')
+    craftsman = models.ForeignKey(Craftsman, on_delete=models.SET_NULL, null=True, blank=True, related_name='jobs')
+
+    # --- Job Details ---
     name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
     service = models.CharField(max_length=50, choices=PRIMARY_SERVICE_CHOICES)
@@ -144,14 +168,71 @@ class JobRequest(models.Model):
     location = models.CharField(max_length=100)
     isUrgent = models.BooleanField(default=False)
     description = models.TextField(default="No description provided")
-
-
     media = models.FileField(upload_to='uploads/', blank=True, null=True)
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
-    review = models.TextField(blank=True, null=True)
+    # --- System Fields ---
+    budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    distance_km = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    duration_hours = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    expected_end = models.DateTimeField(null=True, blank=True)
+    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.0'))
+    total_payment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.0'))
+    company_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.0'))
+    net_payment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.0'))
 
+    # --- Status & Tracking ---
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    review = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # --- Configurations ---
+    GOOGLE_MAPS_API_KEY = 'AIzaSyAyK27SEcCyyAGSZOkg7M-zKoMfWnpLJnY'
+    DEFAULT_JOB_DURATION_HOURS = 2
+    COMPANY_FEE_PERCENT = Decimal('10.0')
+
+    def calculate_distance(self):
+        if not self.location or not self.address:
+            return None
+        try:
+            url = (
+                f"https://maps.googleapis.com/maps/api/distancematrix/json"
+                f"?origins={self.address}&destinations={self.location}&key={self.GOOGLE_MAPS_API_KEY}"
+            )
+            response = requests.get(url).json()
+            distance_m = response['rows'][0]['elements'][0]['distance']['value']
+            return Decimal(distance_m / 1000).quantize(Decimal('0.01'))
+        except Exception:
+            return None
+
+    def save(self, *args, **kwargs):
+        # Set expected end if missing
+        if not self.expected_end and self.schedule:
+            self.expected_end = self.schedule + timedelta(hours=self.DEFAULT_JOB_DURATION_HOURS)
+
+        # Calculate distance
+        new_distance = self.calculate_distance()
+        if new_distance:
+            self.distance_km = new_distance
+
+        # Duration and overtime
+        if self.start_time and self.end_time:
+            diff_hours = (self.end_time - self.start_time).total_seconds() / 3600
+            self.duration_hours = Decimal(diff_hours).quantize(Decimal('0.01'))
+            if self.expected_end:
+                overtime = max((self.end_time - self.expected_end).total_seconds() / 3600, 0)
+                self.overtime_hours = Decimal(overtime).quantize(Decimal('0.01'))
+            else:
+                self.overtime_hours = Decimal('0.0')
+
+        # Payment calculations
+        if self.budget is not None:
+            self.total_payment = (self.budget + self.overtime_hours).quantize(Decimal('0.01'))
+            self.company_fee = (self.total_payment * self.COMPANY_FEE_PERCENT / 100).quantize(Decimal('0.01'))
+            self.net_payment = (self.total_payment - self.company_fee).quantize(Decimal('0.01'))
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         label = dict(PRIMARY_SERVICE_CHOICES).get(self.service, self.service)

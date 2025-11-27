@@ -8,10 +8,10 @@ const BASE_URL =
 
 const HireCraftsmanPage = () => {
   const [activeTab, setActiveTab] = useState("makeRequest");
-  const [showModal, setShowModal] = useState(false);
   const [client, setClient] = useState(null);
   const [jobs, setJobs] = useState([]);
-  const [reviews, setReviews] = useState({}); 
+  const [reviews, setReviews] = useState({});
+  const [payments, setPayments] = useState([]); // <-- New payments state
 
   const [individualForm, setIndividualForm] = useState({
     name: "",
@@ -23,6 +23,7 @@ const HireCraftsmanPage = () => {
     description: "",
     isUrgent: false,
     media: null,
+    budget: "", // Budget in KSh
   });
 
   useEffect(() => {
@@ -30,51 +31,57 @@ const HireCraftsmanPage = () => {
     const token = sessionStorage.getItem("access_token");
 
     if (storedClient && token) {
-      try {
-        const parsedClient = JSON.parse(storedClient);
-        setClient(parsedClient);
-        setIndividualForm((prev) => ({
-          ...prev,
-          name: parsedClient.full_name || "",
-          phone: parsedClient.phone || parsedClient.phone_number || "",
-        }));
+      const parsedClient = JSON.parse(storedClient);
+      setClient(parsedClient);
+      setIndividualForm((prev) => ({
+        ...prev,
+        name: parsedClient.full_name || "",
+        phone: parsedClient.phone || parsedClient.phone_number || "",
+      }));
 
-        fetchJobs(parsedClient.id, token);
-      } catch (e) {
-        console.error("Error parsing stored client:", e);
-        setClient(null);
-      }
+      fetchJobs(parsedClient.id, token);
+      fetchPayments(parsedClient.id, token); // fetch payment data
     } else {
-      console.warn("Missing client info or token");
       setClient(null);
     }
   }, []);
 
   const fetchJobs = async (clientId, token) => {
-  try {
-    const { data } = await axios.get(`${BASE_URL}/job-requests/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      const { data } = await axios.get(`${BASE_URL}/job-requests/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const clientJobs = data.filter(
-      (j) => j.client === clientId || j.client?.id === clientId
-    );
+      const clientJobs = data.filter(
+        (j) => j.client === clientId || j.client?.id === clientId
+      );
+      setJobs(clientJobs);
 
-    setJobs(clientJobs);
+      const initialReviews = {};
+      clientJobs.forEach((job) => {
+        initialReviews[job.id] = { rating: job.rating || 0, review: job.review || "" };
+      });
+      setReviews(initialReviews);
+    } catch (err) {
+      console.error("Error fetching jobs:", err);
+    }
+  };
 
-    const initialReviews = {};
-    clientJobs.forEach((job) => {
-      initialReviews[job.id] = {
-        rating: job.rating || 0,
-        review: job.review || "",
-      };
-    });
-    setReviews(initialReviews);
-  } catch (err) {
-    console.error("Error fetching jobs:", err);
-  }
-};
+  const fetchPayments = async (clientId, token) => {
+    try {
+      const { data } = await axios.get(`${BASE_URL}/payments/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
+      // Filter payments by client
+      const clientPayments = data.filter(
+        (p) => p.client === clientId || p.client?.id === clientId
+      );
+      setPayments(clientPayments);
+    } catch (err) {
+      console.error("Error fetching payments:", err);
+    }
+  };
 
   const handleIndividualChange = (e) => {
     const { id, value, type, checked, files } = e.target;
@@ -87,76 +94,48 @@ const HireCraftsmanPage = () => {
     }
   };
 
-const handleIndividualSubmit = async (e) => {
-  e.preventDefault();
+  const handleIndividualSubmit = async (e) => {
+    e.preventDefault();
+    if (!client || !client.id) return alert("Client ID missing.");
 
-  if (!client || !client.id) return alert("Client ID missing.");
+    const formData = new FormData();
+    formData.append("client", client.id);
+    Object.entries(individualForm).forEach(([key, val]) => {
+      if (val !== null && val !== "") {
+        formData.append(key, key === "schedule" ? new Date(val).toISOString() : val);
+      }
+    });
 
-  const formData = new FormData();
-  formData.append("client", client.id);
+    try {
+      const token = sessionStorage.getItem("access_token");
+      await axios.post(`${BASE_URL}/job-requests/`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-  Object.entries(individualForm).forEach(([key, val]) => {
-    if (val !== null && val !== "") {
-      formData.append(
-        key,
-        key === "schedule" ? new Date(val).toISOString() : val
-      );
+      alert("✅ Request submitted!");
+      fetchJobs(client.id, token);
+      setIndividualForm({
+        name: client.full_name || "",
+        phone: client.phone || client.phone_number || "",
+        service: "",
+        schedule: "",
+        address: "",
+        location: "",
+        description: "",
+        isUrgent: false,
+        media: null,
+        budget: "",
+      });
+
+      setActiveTab("myRequests");
+    } catch (err) {
+      console.error("Submission error:", err.response?.data || err.message);
+      alert("❌ Failed to submit request.");
     }
-  });
-
-  try {
-    const token = sessionStorage.getItem("access_token");
-
-    // Submit the request
-    await axios.post(`${BASE_URL}/job-requests/`, formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    alert("✅ Request submitted!");
-
-    // Fetch updated jobs for this client
-    const { data } = await axios.get(`${BASE_URL}/job-requests/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    // Filter jobs for the current client
-    const clientJobs = data.filter(
-      (j) => j.client?.id === client.id || j.client === client.id
-    );
-
-    setJobs(clientJobs);
-
-    // Reset review states
-    const initialReviews = {};
-    clientJobs.forEach((job) => {
-      initialReviews[job.id] = { rating: job.rating || 0, review: job.review || "" };
-    });
-    setReviews(initialReviews);
-
-    // Reset the form
-    setIndividualForm({
-      name: client.full_name || "",
-      phone: client.phone || client.phone_number || "",
-      service: "",
-      schedule: "",
-      address: "",
-      location: "",
-      description: "",
-      isUrgent: false,
-      media: null,
-    });
-
-    // Switch to "My Requests" tab automatically
-    setActiveTab("myRequests");
-
-  } catch (err) {
-    console.error("Submission error:", err.response?.data || err.message);
-    alert("❌ Failed to submit request.");
-  }
-};
+  };
 
   const updateJob = async (jobId, update) => {
     try {
@@ -170,46 +149,53 @@ const handleIndividualSubmit = async (e) => {
     }
   };
 
- const submitReview = async (jobId, craftsmanId) => {
-  const token = sessionStorage.getItem("access_token");
-  const reviewData = reviews[jobId] || {}; // safe fallback
+  const submitReview = async (jobId, craftsmanId) => {
+    const token = sessionStorage.getItem("access_token");
+    const reviewData = reviews[jobId] || {};
+    const rating = parseInt(reviewData.rating) || 0;
+    const reviewText = reviewData.review?.trim() || "";
 
-  const rating = parseInt(reviewData.rating) || 0;
-  const reviewText = reviewData.review?.trim() || "";
+    if (!rating || reviewText === "") {
+      return alert("Please add both rating and review before submitting.");
+    }
+    if (!craftsmanId) return alert("Craftsman ID missing for this job.");
 
-  if (!rating || reviewText === "") {
-    alert("Please add both rating and review before submitting.");
-    return;
-  }
+    try {
+      await axios.post(
+        `${BASE_URL}/reviews/`,
+        {
+          job: jobId,
+          craftsman: craftsmanId,
+          reviewer: client.full_name || client.username,
+          rating,
+          comment: reviewText,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-  if (!craftsmanId) {
-    alert("Craftsman ID missing for this job.");
-    return;
-  }
+      alert("✅ Review submitted successfully!");
+      setReviews((prev) => ({ ...prev, [jobId]: { rating: 0, review: "" } }));
+    } catch (err) {
+      console.error("Review submission error:", err.response?.data || err.message);
+      alert("❌ Failed to submit review.");
+    }
+  };
 
-  try {
-    await axios.post(
-      `${BASE_URL}/reviews/`,
-      {
-        job: jobId || null,        // allow null if your backend auto-assigns
-        craftsman: craftsmanId,
-        reviewer: client.full_name || client.username,
-        rating,
-        comment: reviewText,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    alert("✅ Review submitted successfully!");
-    // Reset review state for this job
-    setReviews((prev) => ({ ...prev, [jobId]: { rating: 0, review: "" } }));
-  } catch (err) {
-    console.error("Review submission error:", err.response?.data || err.message);
-    alert("❌ Failed to submit review.");
-  }
-};
+  const handlePayment = async (jobId, amount) => {
+    const token = sessionStorage.getItem("access_token");
+    try {
+      await axios.post(
+        `${BASE_URL}/payments/`,
+        { client: client.id, job: jobId, amount },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✅ Payment successful!");
+      fetchPayments(client.id, token);
+    } catch (err) {
+      console.error("Payment error:", err.response?.data || err.message);
+      alert("❌ Payment failed.");
+    }
+  };
 
   if (!client)
     return (
@@ -228,7 +214,7 @@ const handleIndividualSubmit = async (e) => {
             Hi, <strong>{client.full_name}</strong> 👋
           </p>
           <ul className="nav flex-column mt-4">
-            {["profile", "makeRequest", "myRequests", "reviews"].map((tab) => (
+            {["profile", "makeRequest", "myRequests", "reviews", "payments"].map((tab) => (
               <li className="nav-item mb-2" key={tab}>
                 <button
                   className={`btn w-100 ${
@@ -242,7 +228,9 @@ const handleIndividualSubmit = async (e) => {
                     ? "Make Request"
                     : tab === "myRequests"
                     ? "My Requests"
-                    : "My Reviews"}
+                    : tab === "reviews"
+                    ? "My Reviews"
+                    : "Payments"}
                 </button>
               </li>
             ))}
@@ -258,7 +246,9 @@ const handleIndividualSubmit = async (e) => {
               ? "New Request"
               : activeTab === "myRequests"
               ? "Your Requests"
-              : "My Reviews"}
+              : activeTab === "reviews"
+              ? "My Reviews"
+              : "Payments"}
           </h2>
 
           {/* Profile */}
@@ -322,6 +312,19 @@ const handleIndividualSubmit = async (e) => {
                     <option value="Tiling">Tiling</option>
                     <option value="Roofing">Roofing</option>
                   </select>
+                </div>
+
+                <div className="mb-3">
+                  <input
+                    type="number"
+                    id="budget"
+                    value={individualForm.budget}
+                    onChange={handleIndividualChange}
+                    className="form-control"
+                    placeholder="Budget (KSh)"
+                    min="0"
+                    required
+                  />
                 </div>
 
                 <div className="row mb-3">
@@ -419,6 +422,7 @@ const handleIndividualSubmit = async (e) => {
                   <thead>
                     <tr>
                       <th>Service</th>
+                      <th>Budget (KSh)</th>
                       <th>Schedule</th>
                       <th>Status</th>
                       <th>Actions</th>
@@ -428,6 +432,7 @@ const handleIndividualSubmit = async (e) => {
                     {jobs.map((job) => (
                       <tr key={job.id}>
                         <td>{job.service}</td>
+                        <td>{job.budget ? `KSh ${job.budget}` : "—"}</td>
                         <td>{new Date(job.schedule).toLocaleString()}</td>
                         <td>
                           <span
@@ -464,7 +469,7 @@ const handleIndividualSubmit = async (e) => {
             </div>
           )}
 
-          {/* ✅ Reviews Section */}
+          {/* Reviews */}
           {activeTab === "reviews" && (
             <div className="card p-4">
               <h4>Completed Jobs — Leave a Review</h4>
@@ -481,25 +486,22 @@ const handleIndividualSubmit = async (e) => {
                       <p>
                         <strong>Description:</strong> {job.description}
                       </p>
-
-                      {/* ⭐ Rating Input */}
+                      <p>
+                        <strong>Budget:</strong> {job.budget ? `KSh ${job.budget}` : "—"}
+                      </p>
                       <div className="mb-2">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <span
                             key={star}
                             style={{
                               cursor: "pointer",
-                              color:
-                                reviews[job.id]?.rating >= star ? "gold" : "lightgray",
+                              color: reviews[job.id]?.rating >= star ? "gold" : "lightgray",
                               fontSize: "1.8rem",
                             }}
                             onClick={() =>
                               setReviews((prev) => ({
                                 ...prev,
-                                [job.id]: {
-                                  ...prev[job.id],
-                                  rating: star,
-                                },
+                                [job.id]: { ...prev[job.id], rating: star },
                               }))
                             }
                           >
@@ -507,8 +509,6 @@ const handleIndividualSubmit = async (e) => {
                           </span>
                         ))}
                       </div>
-
-                      {/* 📝 Review Input */}
                       <textarea
                         rows="2"
                         className="form-control mb-2"
@@ -517,30 +517,73 @@ const handleIndividualSubmit = async (e) => {
                         onChange={(e) =>
                           setReviews((prev) => ({
                             ...prev,
-                            [job.id]: {
-                              ...prev[job.id],
-                              review: e.target.value,
-                            },
+                            [job.id]: { ...prev[job.id], review: e.target.value },
                           }))
                         }
                       />
-
-                     <button
-  className="btn btn-success btn-sm"
-  onClick={() => {
-    if (!job.craftsman || !job.craftsman.id) {
-      alert("⚠️ This job has no assigned craftsman yet.");
-      return;
-    }
-    submitReview(job.id, job.craftsman.id);
-  }}
->
-  Submit Review
-</button>
-
-
+                      <button
+                        className="btn btn-success btn-sm"
+                        onClick={() => submitReview(job.id, job.craftsman?.id)}
+                      >
+                        Submit Review
+                      </button>
                     </div>
                   ))
+              )}
+            </div>
+          )}
+
+          {/* Payments Tab */}
+          {activeTab === "payments" && (
+            <div className="card p-4">
+              <h4>Payments</h4>
+              {jobs.length === 0 ? (
+                <p className="text-muted">No service requests to pay for yet.</p>
+              ) : (
+                <table className="table table-striped table-hover mt-3">
+                  <thead>
+                    <tr>
+                      <th>Service</th>
+                      <th>Total Paid (KSh)</th>
+                      <th>Company Fee</th>
+                      <th>Net to Craftsman</th>
+                      <th>Craftsman Confirmation</th>
+                      <th>Pay Now</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jobs.map((job) => {
+                      const companyFee = job.budget ? Math.round(job.budget * 0.1) : 0; // 10% fee
+                      const net = job.budget ? job.budget - companyFee : 0;
+                      const paymentDone = payments.find((p) => p.job === job.id);
+                      return (
+                        <tr key={job.id}>
+                          <td>{job.service}</td>
+                          <td>{job.budget ? `KSh ${job.budget}` : "—"}</td>
+                          <td>{`KSh ${companyFee}`}</td>
+                          <td>{`KSh ${net}`}</td>
+                          <td>
+                            {paymentDone
+                              ? paymentDone.confirmed
+                                ? "Confirmed"
+                                : "Pending"
+                              : "Not Paid"}
+                          </td>
+                          <td>
+                            {!paymentDone && job.status !== "Cancelled" && (
+                              <button
+                                className="btn btn-sm btn-primary"
+                                onClick={() => handlePayment(job.id, job.budget)}
+                              >
+                                Pay Now
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
             </div>
           )}

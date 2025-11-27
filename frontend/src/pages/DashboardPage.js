@@ -1,4 +1,3 @@
-// DashboardPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -10,7 +9,6 @@ import JobsTab from "../components/JobsTab";
 
 function DashboardPage() {
   const navigate = useNavigate();
-
   const [craftsman, setCraftsman] = useState({});
   const [profileData, setProfileData] = useState({
     description: "",
@@ -23,11 +21,8 @@ function DashboardPage() {
 
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageFile, setProfileImageFile] = useState(null);
-
   const [proofDocument, setProofDocument] = useState(null);
   const [proofDocumentFile, setProofDocumentFile] = useState(null);
-
-  // ONE SERVICE IMAGE ONLY
   const [serviceImage, setServiceImage] = useState(null);
   const [serviceImageFile, setServiceImageFile] = useState(null);
 
@@ -52,7 +47,6 @@ function DashboardPage() {
       const res = await authAxios.get("/craftsman/");
       const data = res.data;
       setCraftsman(data);
-
       setProfileData({
         description: data.description || "",
         profession: data.profession || "",
@@ -61,7 +55,6 @@ function DashboardPage() {
         skills: data.skills || "",
         primary_service: data.primary_service || "",
       });
-
       setProfileImage(getFullImageUrl(data.profile));
       setServiceImage(getFullImageUrl(data.service_image));
       setProofDocument(getFullImageUrl(data.proof_document));
@@ -81,7 +74,6 @@ function DashboardPage() {
     }
   };
 
-  // --- IMAGE HANDLERS ---
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -96,7 +88,6 @@ function DashboardPage() {
     setProofDocument(file.name);
   };
 
-  // ONE SERVICE IMAGE
   const handleServiceImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -104,7 +95,6 @@ function DashboardPage() {
     setServiceImage(URL.createObjectURL(file));
   };
 
-  // VALIDATION
   const validateProfile = () => {
     const required = ["description", "profession", "location", "company_name", "skills", "primary_service"];
     for (let key of required) {
@@ -121,9 +111,7 @@ function DashboardPage() {
 
     try {
       const formData = new FormData();
-
       Object.entries(profileData).forEach(([k, v]) => formData.append(k, v));
-
       if (profileImageFile) formData.append("profile", profileImageFile);
       if (proofDocumentFile) formData.append("proof_document", proofDocumentFile);
       if (serviceImageFile) formData.append("service_image", serviceImageFile);
@@ -134,7 +122,6 @@ function DashboardPage() {
 
       setCraftsman(res.data);
       setServiceImage(getFullImageUrl(res.data.service_image));
-
       alert("Profile Saved Successfully! Pending Approval");
     } catch (err) {
       console.error(err);
@@ -142,8 +129,7 @@ function DashboardPage() {
     }
   };
 
-  if (loading)
-    return <div className="d-flex justify-content-center p-5"><div className="spinner-border"></div></div>;
+  if (loading) return <div className="d-flex justify-content-center p-5"><div className="spinner-border"></div></div>;
 
   return (
     <div className="d-flex">
@@ -167,9 +153,8 @@ function DashboardPage() {
             validateProfile={validateProfile}
           />
         )}
-
         {activeTab === "Jobs" && (
-          <JobsTab jobs={jobs} />
+          <JobsTab jobs={jobs} setJobs={setJobs} userRole="craftsman" />
         )}
       </div>
     </div>
