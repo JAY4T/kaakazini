@@ -10,9 +10,9 @@ function ProfileTab({
   handleProfileImageChange,
   handleProofDocumentChange,
   proofDocument,
-  professionOptions,
-  skillOptions,
-  serviceOptions,
+  professionOptions = [],
+  skillOptions = [],
+  serviceOptions = [],
   serviceImage,
   handleServiceImageChange,
   saveProfile,
@@ -63,11 +63,8 @@ function ProfileTab({
 
   return (
     <div className="card p-4 shadow-sm border-0">
-
-      {/* Welcome Message */}
-      {craftsman?.full_name && (
-        <h5 className="mb-3">Welcome, {craftsman.full_name}!</h5>
-      )}
+      {/* Welcome */}
+      {craftsman?.full_name && <h5 className="mb-3">Welcome, {craftsman.full_name}!</h5>}
 
       {/* Profile Image */}
       <div className="mb-4">
@@ -116,20 +113,20 @@ function ProfileTab({
         {isInvalid("description") && <small className="text-danger">{errors.description}</small>}
       </div>
 
-      {/* Profession / Skill */}
+      {/* Profession & Skills */}
       <div className="row mb-3">
         <div className="col-md-6">
           <label className="form-label">Profession *</label>
           <select
             className={`form-select ${isInvalid("profession") ? "border-danger" : ""}`}
             name="profession"
-            value={profileData.profession}
+            value={profileData.profession || ""}
             onChange={handleInputChange}
             onBlur={() => setTouched((t) => ({ ...t, profession: true }))}
           >
             <option value="">Select Profession</option>
             {professionOptions.map((opt) => (
-              <option key={opt}>{opt}</option>
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
           {isInvalid("profession") && <small className="text-danger">{errors.profession}</small>}
@@ -139,13 +136,13 @@ function ProfileTab({
           <select
             className={`form-select ${isInvalid("skills") ? "border-danger" : ""}`}
             name="skills"
-            value={profileData.skills}
+            value={profileData.skills || ""}
             onChange={handleInputChange}
             onBlur={() => setTouched((t) => ({ ...t, skills: true }))}
           >
             <option value="">Select Skill</option>
             {skillOptions.map((opt) => (
-              <option key={opt}>{opt}</option>
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
           {isInvalid("skills") && <small className="text-danger">{errors.skills}</small>}
