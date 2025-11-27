@@ -4,7 +4,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 import CraftsmenTable from '../components/CraftsmenTable';
 import JobRequests from '../components/JobRequests';
+import PaymentDashboard from '../components/AdminPaymentDashboard';
 import RejectModal from '../components/RejectModal';
+
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
 const authAxios = axios.create({ baseURL: API_BASE_URL });
@@ -46,7 +48,6 @@ export default function AdminDashboard() {
 
     const hasServiceImage = c.services?.[0]?.image || c.service_images?.[0] || c.service_image;
     if (!hasServiceImage) errs.push('Service image missing.');
-
     return errs;
   };
 
@@ -100,22 +101,43 @@ export default function AdminDashboard() {
 
   const fetchAllJobs = async () => {
     setJobsLoading(true);
-    try { const { data } = await authAxios.get(`/job-requests/`); setJobs(data); }
-    catch (err) { console.error('Error fetching jobs:', err); }
+    try {
+      const { data } = await authAxios.get(`/job-requests/`);
+      setJobs(data);
+    } catch (err) { console.error('Error fetching jobs:', err); }
     finally { setJobsLoading(false); }
   };
 
   const assignCraftsman = async jobId => {
     const craftsmanId = selectedCraftsmen[jobId];
     if (!craftsmanId) { alert('Please select a craftsman first.'); return; }
-    try { await authAxios.patch(`/job-requests/${jobId}/assign/`, { craftsman_id: craftsmanId }); alert('✅ Craftsman assigned successfully!'); fetchAllJobs(); }
-    catch (err) { console.error('Error assigning craftsman:', err); alert('❌ Failed to assign craftsman'); }
+    try {
+      await authAxios.patch(`/job-requests/${jobId}/assign/`, { craftsman_id: craftsmanId });
+      alert('✅ Craftsman assigned successfully!');
+      fetchAllJobs();
+    } catch (err) { console.error('Error assigning craftsman:', err); alert('❌ Failed to assign craftsman'); }
   };
 
-  useEffect(() => { if (activeSection === 'jobs') fetchAllJobs(); }, [activeSection]);
+  useEffect(() => { if (activeSection === 'jobs' || activeSection === 'payments') fetchAllJobs(); }, [activeSection]);
+
+  // --- FIXED: Jobs ready for payment filter ---
+  const jobsReadyForPayment = jobs.filter(j => j.status === 'Completed'); // or 'Client Approved' if your backend sets it
+
+  const processPayment = async jobId => {
+    try {
+      await authAxios.post(`/job-requests/${jobId}/pay/`);
+
+      alert('✅ Payment initiated via MPesa. Status updated to "Paid — Awaiting Confirmation".');
+      fetchAllJobs();
+    } catch (err) {
+      console.error('Payment error:', err);
+      alert('❌ Failed to process payment');
+    }
+  };
 
   return (
     <div className="d-flex min-vh-100">
+      {/* Sidebar */}
       <div className="bg-dark text-white p-3" style={{ width: '250px' }}>
         <h4 className="mb-4">Admin Panel</h4>
         <ul className="nav flex-column">
@@ -128,9 +150,15 @@ export default function AdminDashboard() {
           <li className="nav-item mb-2">
             <button className={`btn w-100 text-start ${activeSection === 'jobs' ? 'btn-primary' : 'btn-outline-light'}`} onClick={() => setActiveSection('jobs')}>Job Requests</button>
           </li>
+          <li className="nav-item mb-2">
+            <button className={`btn w-100 text-start ${activeSection === 'payments' ? 'btn-primary' : 'btn-outline-light'}`} onClick={() => setActiveSection('payments')}>
+              Payments {jobsReadyForPayment.length > 0 && <span className="badge bg-danger ms-2">{jobsReadyForPayment.length}</span>}
+            </button>
+          </li>
         </ul>
       </div>
 
+      {/* Main Content */}
       <div className="flex-grow-1 p-4 bg-light">
         {loading && <div>Loading...</div>}
         {error && <div className="text-danger">{error}</div>}
@@ -168,6 +196,7 @@ export default function AdminDashboard() {
               setSelectedCraftsmen={setSelectedCraftsmen}
               assignCraftsman={assignCraftsman}
             />}
+            {activeSection === 'payments' && <PaymentDashboard jobsReadyForPayment={jobsReadyForPayment} processPayment={processPayment} />}
           </>
         )}
       </div>

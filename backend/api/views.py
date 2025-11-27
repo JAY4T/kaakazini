@@ -1,3 +1,4 @@
+from datetime import timezone
 import logging
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -21,6 +22,9 @@ from .permissions import IsOwner
 from api.utils import send_craftsman_approval_email
 from .serializers import JobRequestSerializer
 from .models import JobRequest
+from django.utils import timezone
+from .payments import send_stk_push  
+
 
 
 logger = logging.getLogger(__name__)
@@ -326,3 +330,158 @@ class ContactMessageCreateView(generics.CreateAPIView):
     queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
     permission_classes = [AllowAny]
+
+
+
+
+class CraftsmanAcceptJobView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            job = JobRequest.objects.get(pk=pk)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found"}, status=404)
+
+        if not hasattr(request.user, 'craftsman'):
+            return Response({"error": "Not a craftsman"}, status=403)
+
+        if job.craftsman != request.user.craftsman:
+            return Response({"error": "Job not assigned to you"}, status=403)
+
+        job.status = JobRequest.STATUS_ACCEPTED
+        job.save()
+
+        # Serialize the full job
+        serializer = JobRequestSerializer(job)
+        return Response(serializer.data)
+
+
+class StartJobView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            job = JobRequest.objects.get(pk=pk)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found"}, status=404)
+
+        if job.craftsman != request.user.craftsman:
+            return Response({"error": "This is not your job"}, status=403)
+
+        job.status = JobRequest.STATUS_IN_PROGRESS
+        job.start_time = timezone.now()
+        job.save()
+
+        serializer = JobRequestSerializer(job)  
+        return Response(serializer.data)       
+    
+class CompleteJobView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            job = JobRequest.objects.get(pk=pk)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found"}, status=404)
+
+        if job.craftsman != request.user.craftsman:
+            return Response({"error": "This is not your job"}, status=403)
+
+        job.end_time = timezone.now()
+        job.status = JobRequest.STATUS_COMPLETED
+        job.save()
+
+        serializer = JobRequestSerializer(job)
+        return Response(serializer.data)  # ✅ return full job object
+
+class AdminApproveJobView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, pk):
+        try:
+            job = JobRequest.objects.get(pk=pk)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found"}, status=404)
+
+        job.status = JobRequest.STATUS_APPROVED
+        job.save()
+
+        serializer = JobRequestSerializer(job)
+        return Response(serializer.data)
+
+class MarkJobPaidView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, pk):
+        try:
+            job = JobRequest.objects.get(pk=pk)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found"}, status=404)
+
+        job.status = JobRequest.STATUS_PAID
+        job.save()
+
+        serializer = JobRequestSerializer(job)
+        return Response(serializer.data)
+
+class CancelJobView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            job = JobRequest.objects.get(pk=pk)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found"}, status=404)
+
+        if request.user != job.client and not request.user.is_staff:
+            return Response({"error": "Not authorized"}, status=403)
+
+        job.status = JobRequest.STATUS_CANCELLED
+        job.save()
+
+        serializer = JobRequestSerializer(job)
+        return Response(serializer.data)
+    
+
+
+
+# Payment
+
+class InitiatePaymentView(APIView):
+    permission_classes = [IsAdminUser]  # Only admin can trigger payments
+
+    def post(self, request, pk, format=None):
+        """
+        Initiates payment to the craftsman via STK push.
+        """
+        try:
+            job = JobRequest.objects.get(pk=pk)
+
+            if not job.craftsman or not job.craftsman.phone_number:
+                return Response(
+                    {'detail': 'Craftsman phone number not found.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            amount = job.budget or 0
+            phone_number = job.craftsman.phone_number
+
+            # Trigger the STK Push via your payment library / Interswitch API
+            success, response = send_stk_push(phone_number, amount, job.id)
+
+            if success:
+                job.status = 'Paid — Awaiting Confirmation'
+                job.save()
+                return Response({
+                    'detail': 'Payment initiated via STK Push.',
+                    'response': response
+                })
+            else:
+                return Response({
+                    'detail': 'Payment failed.',
+                    'response': response
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except JobRequest.DoesNotExist:
+            return Response({'detail': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)

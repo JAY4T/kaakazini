@@ -14,26 +14,40 @@ function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [apiError, setApiError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false); // ✅ New
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const isPasswordStrong = (pw) => pw.length >= 8;
+
+  // ✅ Validate Kenyan phone number
+  const isPhoneNumberValid = (number) => {
+    const regex = /^2547\d{8}$/; // Kenya mobile numbers starting with 2547
+    return regex.test(number);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Password checks
     if (password !== confirmPassword) {
       setPasswordError('Passwords do not match');
       return;
     }
-
     if (!isPasswordStrong(password)) {
       setPasswordError('Password should be at least 8 characters long');
       return;
     }
-
     setPasswordError('');
+
+    // Phone number check
+    if (!isPhoneNumberValid(phoneNumber)) {
+      setPhoneError('Enter a valid Kenyan phone number (e.g., 2547XXXXXXXX)');
+      return;
+    }
+    setPhoneError('');
+
     setApiError(null);
 
     const userData = {
@@ -52,16 +66,15 @@ function Signup() {
         throw new Error(res.data.detail || 'Signup failed');
       }
 
-      setShowSuccessModal(true); // ✅ Show modal
+      setShowSuccessModal(true);
 
-      // Wait 2 seconds, then navigate
+      // Navigate to login after 3 seconds
       setTimeout(() => {
         setShowSuccessModal(false);
         navigate('/login');
       }, 3000);
     } catch (error) {
-      const message =
-        error.response?.data?.detail || error.message || 'Signup failed';
+      const message = error.response?.data?.detail || error.message || 'Signup failed';
       setApiError(message);
     } finally {
       setLoading(false);
@@ -132,7 +145,7 @@ function Signup() {
               <div className="card shadow-lg border-0">
                 <div className="card-body p-5">
                   <h2 className="text-center mb-4 fw-bold" style={{ color: '#0d6efd' }}>
-                     Group Craftsman Signup
+                    Group Craftsman Signup
                   </h2>
 
                   {apiError && <div className="alert alert-danger">{apiError}</div>}
@@ -201,6 +214,7 @@ function Signup() {
                         autoComplete="tel"
                         placeholder="2547XXXXXXXX"
                       />
+                      {phoneError && <div className="text-danger mt-1">{phoneError}</div>}
                     </div>
 
                     <button className="btn btn-primary w-100 py-2" disabled={loading}>
@@ -223,81 +237,77 @@ function Signup() {
         </div>
       </div>
 
-      {/* ✅ Success Modal */}
-{showSuccessModal && (
-  <div
-    className="modal show d-block"
-    tabIndex="-1"
-    role="dialog"
-    style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-  >
-    <div className="modal-dialog modal-dialog-centered" role="document">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h5 className="modal-title">Welcome! A confirmation email has been sent to your inbox.</h5>
-        </div>
-        
-        <div className="modal-footer">
-          <button
-            className="btn btn-success"
-            onClick={() => setShowSuccessModal(false)}
-          >
-            Close
-          </button>
-
-        </div>
-      </div>
-      
-    </div>
-  </div>
-  
-)}
-{/* Footer - always visible */}
-    <footer className="bg-white text-dark pt-5 pb-4 mt-5">
-      <div className="container">
-        <div className="row">
-          <div className="col-md-3 mb-4">
-            <h5 className="text-uppercase fw-bold">Quick Links</h5>
-            <ul className="list-unstyled">
-              <li><Link to="/" className="text-dark text-decoration-none">Home</Link></li>
-              <li><Link to="/signup" className="text-dark text-decoration-none">Join as a Craftsman</Link></li>
-              <li><Link to="/HireSignUp" className="text-dark text-decoration-none">Hire a Craftsman</Link></li>
-              <li><a href="#services" className="text-dark text-decoration-none">Services</a></li>
-              <li><a href="#how-it-works" className="text-dark text-decoration-none">How It Works</a></li>
-            </ul>
-          </div>
-          <div className="col-md-4 mb-4">
-            <h5 className="text-uppercase fw-bold">Contact Us</h5>
-            <p><i className="fas fa-map-marker-alt me-2 text-primary"></i> Kisumu, Kenya</p>
-            <p><i className="fas fa-envelope me-2 text-primary"></i>support@kaakazini.com</p>
-          </div>
-          <div className="col-md-5 mb-4">
-            <h5 className="text-uppercase fw-bold">Find Us</h5>
-            <div style={{ width: '100%', height: '350px', borderRadius: '10px', overflow: 'hidden' }}>
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
-                width="100%"
-                height="400"
-                style={{ border: 0 }}
-                allowFullScreen=""
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Kisumu Location Map"
-              />
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          role="dialog"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <div className="modal-dialog modal-dialog-centered" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  Welcome! A confirmation email has been sent to your inbox.
+                </h5>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-success"
+                  onClick={() => setShowSuccessModal(false)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        <hr className="border-secondary" />
-        <div className="d-flex justify-content-between align-items-center">
-          <p className="mb-0">&copy; {new Date().getFullYear()} <strong>KaaKazini</strong> - Empowering Craftsmen Everywhere.</p>
+      )}
+
+      {/* Footer */}
+      <footer className="bg-white text-dark pt-5 pb-4 mt-5">
+        <div className="container">
+          <div className="row">
+            <div className="col-md-3 mb-4">
+              <h5 className="text-uppercase fw-bold">Quick Links</h5>
+              <ul className="list-unstyled">
+                <li><Link to="/" className="text-dark text-decoration-none">Home</Link></li>
+                <li><Link to="/signup" className="text-dark text-decoration-none">Join as a Craftsman</Link></li>
+                <li><Link to="/HireSignUp" className="text-dark text-decoration-none">Hire a Craftsman</Link></li>
+                <li><a href="#services" className="text-dark text-decoration-none">Services</a></li>
+                <li><a href="#how-it-works" className="text-dark text-decoration-none">How It Works</a></li>
+              </ul>
+            </div>
+            <div className="col-md-4 mb-4">
+              <h5 className="text-uppercase fw-bold">Contact Us</h5>
+              <p><i className="fas fa-map-marker-alt me-2 text-primary"></i> Kisumu, Kenya</p>
+              <p><i className="fas fa-envelope me-2 text-primary"></i>support@kaakazini.com</p>
+            </div>
+            <div className="col-md-5 mb-4">
+              <h5 className="text-uppercase fw-bold">Find Us</h5>
+              <div style={{ width: '100%', height: '350px', borderRadius: '10px', overflow: 'hidden' }}>
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
+                  width="100%"
+                  height="400"
+                  style={{ border: 0 }}
+                  allowFullScreen=""
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Kisumu Location Map"
+                />
+              </div>
+            </div>
+          </div>
+          <hr className="border-secondary" />
+          <div className="d-flex justify-content-between align-items-center">
+            <p className="mb-0">&copy; {new Date().getFullYear()} <strong>KaaKazini</strong> - Empowering Craftsmen Everywhere.</p>
+          </div>
         </div>
-      </div>
-    </footer>
-  </>
-);
-        
-      
-   
+      </footer>
+    </>
+  );
 }
 
 export default Signup;

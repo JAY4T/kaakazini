@@ -103,7 +103,8 @@ class ContactMessageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# ------------------------- Job Request -------------------------
+
+
 class JobRequestSerializer(serializers.ModelSerializer):
     craftsman = serializers.SerializerMethodField(read_only=True)
     craftsman_name = serializers.CharField(source='craftsman.user.full_name', read_only=True)
@@ -113,29 +114,34 @@ class JobRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = JobRequest
         fields = [
-            'id', 'service', 'description', 'status', 'craftsman', 'craftsman_id', 'craftsman_name',
-            'schedule', 'address', 'location', 'name', 'phone', 'custom_service',
-            'isUrgent', 'media', 'review', 'created_at', 'client'
+            'id', 'client', 'craftsman', 'craftsman_id', 'craftsman_name',
+            'service', 'custom_service', 'description', 'schedule',
+            'address', 'location', 'name', 'phone', 'isUrgent', 'media',
+            'status', 'review', 'created_at',
+            'budget', 'distance_km', 'start_time', 'end_time',
+            'duration_hours', 'expected_end', 'overtime_hours',
+            'total_payment', 'company_fee', 'net_payment',
+        ]
+        read_only_fields = [
+            'distance_km', 'duration_hours', 'expected_end', 'overtime_hours',
+            'total_payment', 'company_fee', 'net_payment',
+            'status', 'created_at'
         ]
 
     def get_craftsman(self, obj):
-        if obj.craftsman:
-            return {
-                'id': obj.craftsman.id,
-                'full_name': obj.craftsman.user.full_name,
-                'profession': obj.craftsman.profession,
-            }
-        return None
+        if not obj.craftsman:
+            return None
+        return {
+            'id': obj.craftsman.id,
+            'full_name': obj.craftsman.user.full_name,
+            'profession': obj.craftsman.profession,
+        }
 
     def get_client(self, obj):
-        if obj.client:
-            return {
-                'id': obj.client.id,
-                'full_name': obj.client.full_name,
-                'phone': obj.client.phone_number
-            }
-        return None
-
-
-
-
+        if not obj.client:
+            return None
+        return {
+            'id': obj.client.id,
+            'full_name': obj.client.full_name,
+            'phone': obj.client.phone_number
+        }

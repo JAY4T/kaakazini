@@ -18,6 +18,7 @@ export default function JobRequests({
           <tr>
             <th>Client</th>
             <th>Service</th>
+            <th>Budget (KSh)</th>
             <th>Schedule</th>
             <th>Status</th>
             <th>Assign Craftsman</th>
@@ -30,6 +31,7 @@ export default function JobRequests({
               <tr key={job.id}>
                 <td>{job.name}</td>
                 <td>{job.service}</td>
+                <td>{job.budget ? `KSh ${job.budget}` : "—"}</td>
                 <td>{new Date(job.schedule).toLocaleString()}</td>
                 <td>
                   <span
