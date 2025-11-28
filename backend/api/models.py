@@ -54,6 +54,8 @@ class Craftsman(models.Model):
         max_length=255, choices=PRIMARY_SERVICE_CHOICES, blank=True, null=True
     )
     video = models.URLField(blank=True, null=True)
+    service_image = models.ImageField(upload_to='services/', blank=True, null=True)
+
 
 
     description = models.TextField(default="No description provided")  
