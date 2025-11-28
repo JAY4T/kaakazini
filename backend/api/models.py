@@ -57,6 +57,7 @@ class Craftsman(models.Model):
     service_image = models.ImageField(upload_to='services/', blank=True, null=True)
 
 
+
     description = models.TextField(default="No description provided")  
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
