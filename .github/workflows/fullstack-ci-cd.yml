@@ -99,6 +99,12 @@ jobs:
           REMOTE_HOST_STAGING: ${{ secrets.REMOTE_HOST_STAGING }}
           BACKEND_PATH_PROD: ${{ secrets.BACKEND_PATH_PROD }}
           BACKEND_PATH_STAGING: ${{ secrets.BACKEND_PATH_STAGING }}
+          STAGING_DB_NAME: ${{ secrets.STAGING_DB_NAME }}
+          STAGING_DB_USER: ${{ secrets.STAGING_DB_USER }}
+          STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
@@ -110,10 +116,16 @@ jobs:
             REMOTE_HOST=$REMOTE_HOST_PROD
             BACKEND_PATH=$BACKEND_PATH_PROD
             SERVICE_NAME=kaakazini.service
+            export DB_NAME=$DB_NAME
+            export DB_USER=$DB_USER
+            export DB_PASSWORD=$DB_PASSWORD
           else
             REMOTE_HOST=$REMOTE_HOST_STAGING
             BACKEND_PATH=$BACKEND_PATH_STAGING
             SERVICE_NAME=gunicorn-kaakazini-dev.service
+            export DB_NAME=$STAGING_DB_NAME
+            export DB_USER=$STAGING_DB_USER
+            export DB_PASSWORD=$STAGING_DB_PASSWORD
           fi
 
           # Sync code but preserve server .env
