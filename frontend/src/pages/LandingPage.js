@@ -105,7 +105,7 @@ const [searchQuery, setSearchQuery] = useState('');
     to="/login"
     className="btn btn-green-transparent btn-lg fw-bold"
   >
-    Join as a Craftsman
+    Become A Craftsman
   </Link>
   <Link
     to="/Hirelogin"
@@ -149,7 +149,7 @@ const [searchQuery, setSearchQuery] = useState('');
         </div>
       </section>
 
-      {/* Services Section */}
+{/* Services Section */}
 <section className="py-5 bg-light" id="services">
   <div className="container overflow-hidden">
     <h2 className="text-center fw-bold text-success display-6" data-aos="fade-left">
@@ -162,34 +162,46 @@ const [searchQuery, setSearchQuery] = useState('');
     {filteredServices.length === 0 ? (
       <p className="text-center">No services found.</p>
     ) : (
-      <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
-        {filteredServices.map((service, idx) => {
-          // Determine image to use: first from services array, fallback to service_image, then placeholder
-          const imageUrl = service.services?.[0]?.image || service.service_image || "https://via.placeholder.com/300";
+      <>
+        <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+          {filteredServices.map((service, idx) => {
+            const imageUrl = service.services?.[0]?.image || service.service_image || "https://via.placeholder.com/300";
 
-          return (
-            <div key={idx} className="col d-flex justify-content-center">
-              <div className="card border-0 shadow" style={{ width: '18rem' }}>
-                <div className="position-relative">
-                  <img
-                    src={getImageUrl(imageUrl)}
-                    alt={service.primary_service}
-                    className="card-img-top"
-                    style={{ height: '300px', objectFit: 'cover' }}
-                  />
-                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
-                    <h5 className="fw-bold">{service.primary_service}</h5>
+            return (
+              <div key={idx} className="col d-flex justify-content-center">
+                <div className="card border-0 shadow" style={{ width: '18rem' }}>
+                  <div className="position-relative">
+                    <img
+                      src={getImageUrl(imageUrl)}
+                      alt={service.primary_service}
+                      className="card-img-top"
+                      style={{ height: '300px', objectFit: 'cover' }}
+                    />
+                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
+                      <h5 className="fw-bold">{service.primary_service}</h5>
+                    </div>
+                  </div>
+                  <div className="card-body text-center">
+                    <h5 className="card-title fw-bold mb-0">{service.service || service.primary_service}</h5>
+                    <p className="text-muted">{service.location}</p>
                   </div>
                 </div>
-                <div className="card-body text-center">
-                  <h5 className="card-title fw-bold mb-0">{service.service || service.primary_service}</h5>
-                  <p className="text-muted">{service.location}</p>
-                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+
+        {/* Button below the services grid */}
+        <div className="text-center mt-4">
+          <a
+            href="/services"
+            className="btn btn-success btn-lg fw-bold"
+            style={{ backgroundColor: '#198754', borderColor: '#198754' }}
+          >
+            View Our Services
+          </a>
+        </div>
+      </>
     )}
 
     <style>{`
@@ -203,7 +215,6 @@ const [searchQuery, setSearchQuery] = useState('');
     `}</style>
   </div>
 </section>
-
 
 
      {/* How It Works Section */}
@@ -384,74 +395,59 @@ Tell us about your project, and skilled craftsmen will start responding within 2
   `}</style>
 </section>
 
-<section className="py-5 bg-light" id="top-craftsmen">
+<section className="py-5 bg-light">
   <div className="container">
-<h2 className="text-center fw-bold text-success display-6 mb-4">
-  Top Rated Craftsmen
-</h2>
-
-    <div className="row">
-      {approvedServices
-        .sort(
-          (a, b) =>
-            (b.rating || 0) - (a.rating || 0) ||
-            (b.completed_jobs || 0) - (a.completed_jobs || 0)
-        )
-        .slice(0, 3)
-        .map((craftsman, index) => (
-          <div className="col-md-4 mb-4" key={index}>
-            <div className="card shadow-sm border-0 h-100">
-              {/* ✅ Show company photo (fallback if not available) */}
-              <img
-  src={getImageUrl(craftsman.company_photo || craftsman.profile)}
-  alt={craftsman.name}
-  className="card-img-top rounded-circle mx-auto d-block"
-  style={{ width: "250px", height: "250px", objectFit: "cover" }}
-/>
+{/* Hero/About Section */}
+<div className="row align-items-center mb-5">
+  {/* Text */}
+  <div className="col-md-6">
+  <h2 className="fw-bold display-6" style={{ color: '#198754' }}>
+    Hire Skilled Craftsmen & Artisans Effortlessly
+  </h2>
+  <p className="text-muted fs-5 lh-lg">
+    We connect you with verified, skilled artisans across plumbing, electrical work, carpentry, painting, tiling, and more. Browse portfolios, check certifications, and hire the right professional for your project — fast, reliable, and hassle-free.
+  </p>
+  <a
+    href="/craftsmen"
+    className="btn btn-lg fw-bold mt-3"
+    style={{ backgroundColor: '#198754', borderColor: '#198754', color: '#fff' }}
+  >
+    Find & Hire Craftsmen
+  </a>
+</div>
 
 
-              <div className="card-body text-center">
-                <h5 className="fw-bold">{craftsman.name}</h5>
-                <p className="text-muted">{craftsman.full_name}</p>
-                {/* <p>
-                  ⭐ {craftsman.rating || "0"} | Jobs Completed:{" "}
-                  {craftsman.completed_jobs || "0"}
-                </p> */}
+  {/* Images */}
+  <div className="col-md-6 position-relative">
+    {/* Main Image */}
+    <img
+      src="https://couplingz.com/wp-content/uploads/2025/01/Couplingz-Plumbers-12.jpg"
+      className="img-fluid rounded shadow-sm"
+      alt="Skilled plumber at work"
+    />
 
-                <div className="d-flex justify-content-center gap-2 flex-wrap">
-                <Link
-  to="/HireSignUp"
-  className="btn btn-green-solid btn-sm text-white fw-bold"
->
-  Hire Now
-</Link>
- 
+    {/* Top-right offset image */}
+    <img
+      src="https://www.wilsonmclain.com/wp-content/uploads/2013/03/2-resized.png"
+      className="img-fluid rounded shadow-sm position-absolute"
+      style={{ top: '-20px', right: '0', width: '45%', zIndex: 2 }}
+      alt="Tools and equipment"
+    />
 
-                  {/* Shop button (redirects if no shop) */}
-                  {craftsman.shop ? (
-                    <Link
-                      to={`/shop/${craftsman.shop.id}`}
-                      className="btn btn-success btn-sm"
-                    >
-                      View Shop
-                    </Link>
-                  ) : (
-                    <Link
-                      to="/no-shop"
-                      className="btn btn-outline-secondary btn-sm"
-                    >
-                      View Shop
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-    </div>
+    {/* Bottom-left offset image */}
+    <img
+      src="https://www.shutterstock.com/image-photo/man-worker-building-wooden-frame-600nw-2215979483.jpg"
+      className="img-fluid rounded shadow-sm position-absolute"
+      style={{ bottom: '-20px', left: '0', width: '45%', zIndex: 1 }}
+      alt="Carpentry project"
+    />
+  </div>
+</div>
+
+    
   </div>
 </section>
- 
+
  
 
 
@@ -470,30 +466,22 @@ Tell us about your project, and skilled craftsmen will start responding within 2
             "The carpenter I hired was extremely professional. Highly recommend!",
           stars: 4,
           name: "Sarah M.",
-          img: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=600", // Kenyan woman smiling
         },
         {
           quote: "The metalworker exceeded my expectations. Great job!",
           stars: 5,
           name: "James K.",
-          img: "https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=600", // African man smiling
         },
         {
           quote:
             "The textile artist made a beautiful custom outfit. Loved it!",
           stars: 3.5,
           name: "Linda O.",
-          img: "https://images.pexels.com/photos/2775323/pexels-photo-2775323.jpeg?auto=compress&cs=tinysrgb&w=600", // African woman in colorful dress
         },
       ].map((testi, idx) => (
         <div className="col-md-4 mb-4" key={idx}>
           <div className="card h-100 border-0 testimonial-card-glow text-center shadow-lg flip-right-infinite">
             <div className="card-body d-flex flex-column align-items-center p-4">
-              <img
-                src={testi.img}
-                className="rounded-circle testimonial-img-circle mb-3 bg-white p-2"
-                alt={testi.name}
-              />
               <i className="bi bi-quote display-4 text-muted mb-2"></i>
               <p className="card-text fst-italic flex-grow-1 mb-3">
                 "{testi.quote}"
@@ -530,14 +518,6 @@ Tell us about your project, and skilled craftsmen will start responding within 2
                   0 0.25rem 1rem rgba(0,0,0,0.1) !important;
     }
 
-    .testimonial-img-circle {
-      width: 90px;
-      height: 90px;
-      object-fit: cover;
-      border: 3px solid #29a745;
-      box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.1);
-    }
-
     .testimonial-card-glow .card-body p {
       font-size: 1.15rem;
       color: #495057;
@@ -562,7 +542,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
     }
   `}</style>
 </section>
-   
+
      {/* Impact / Statistics */}
 <section className="py-5 bg-light text-center" id="impact">
   <div className="container">
@@ -711,7 +691,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
         <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Quick Links</h5>
         <ul className="list-unstyled" data-aos="fade-right">
           <li className="mb-2"><Link to="/" className="text-light text-decoration-none">Home</Link></li>
-          <li className="mb-2"><Link to="/signup" className="text-light text-decoration-none">Join as a Craftsman</Link></li>
+          <li className="mb-2"><Link to="/signup" className="text-light text-decoration-none">Become A Craftsman</Link></li>
           <li className="mb-2"><Link to="/HireSignUp" className="text-light text-decoration-none">Hire a Craftsman</Link></li>
           <li className="mb-2"><a href="#services" className="text-light text-decoration-none">Services</a></li>
           <li className="mb-2"><a href="#how-it-works" className="text-light text-decoration-none">How It Works</a></li>

@@ -18,14 +18,12 @@ function DashboardPage() {
     skills: "",
     primary_service: "",
   });
-
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageFile, setProfileImageFile] = useState(null);
   const [proofDocument, setProofDocument] = useState(null);
   const [proofDocumentFile, setProofDocumentFile] = useState(null);
   const [serviceImage, setServiceImage] = useState(null);
   const [serviceImageFile, setServiceImageFile] = useState(null);
-
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Profile");
@@ -156,6 +154,7 @@ function DashboardPage() {
         {activeTab === "Jobs" && (
           <JobsTab jobs={jobs} setJobs={setJobs} userRole="craftsman" />
         )}
+        {activeTab === "Settings" && <div>Settings Coming Soon...</div>}
       </div>
     </div>
   );

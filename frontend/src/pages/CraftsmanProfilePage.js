@@ -12,14 +12,6 @@ function CraftsmanProfile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showCallModal, setShowCallModal] = useState(false);
-
-  const [currentStep, setCurrentStep] = useState(1);
-  const [sending, setSending] = useState(false);
-  const [sendSuccess, setSendSuccess] = useState(false);
-
-  const nextStep = () => setCurrentStep((prev) => prev + 1);
-  const prevStep = () => setCurrentStep((prev) => Math.max(1, prev - 1));
 
   useEffect(() => {
     if (!slug || slug === 'undefined' || slug === 'null') {
@@ -98,18 +90,11 @@ function CraftsmanProfile() {
     navigator.clipboard.writeText(profileUrl).then(() => alert('Profile link copied to clipboard!'));
   };
 
-  const handleEmailShare = () => {
-    const subject = encodeURIComponent(`Check out ${craftsman.name}'s profile`);
-    const body = encodeURIComponent(
-      `Hi,\n\nTake a look at this craftsman profile:\n${window.location.origin}/craftsman/${slug}`
-    );
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-  };
-
   return (
     <>
       <div className="container py-4">
         <div className="card shadow-lg p-4">
+
           {/* Profile Header */}
           <div className="text-center mb-4">
             <img
@@ -121,12 +106,21 @@ function CraftsmanProfile() {
             <h2 className="fw-bold d-block">{craftsman.name}</h2>
             <p className="text-muted mb-2">{craftsman.company_name || 'Independent Craftsman'}</p>
 
-            <button className="btn btn-sm btn-outline-secondary mb-2" onClick={handleCopyLink}>
+            {/* Share & Hire Buttons */}
+            <button
+              className="btn btn-sm btn-outline-secondary mb-2 me-2"
+              onClick={handleCopyLink}
+            >
               <i className="fas fa-share-alt me-1"></i> Share profile
             </button>
 
+            <Link to="/HireLogin" className="btn btn-sm btn-success mb-2">
+              <i className="fas fa-handshake me-1"></i> Hire Now
+            </Link>
+
+            {/* Rating */}
             {avgRating && (
-              <p className="fw-bold text-warning">
+              <p className="fw-bold text-warning mt-2">
                 ⭐ {avgRating}/10 ({craftsman.reviews.length} reviews)
               </p>
             )}
