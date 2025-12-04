@@ -56,95 +56,103 @@ function CraftsmenList() {
   return (
     <>
       <div className="container-fluid crafts-list">
-        <h2 className="text-center my-4">Craftsmen</h2>
-        <p className="text-center mb-3 text-muted">Explore our registered craftsmen</p>
+  <h2 className="text-center my-4" style={{ color: '#198754' }}>
+    Find & Hire Skilled Craftsmen
+  </h2>
+  <p className="text-center mb-4 text-muted fs-5">
+    Browse through our verified artisans and craftsmen. View their portfolios, check their skills and reviews, and hire the right professional for your project. Your next project deserves the best hands!
+  </p>
 
-        <div className="row">
-          {/* Sidebar Filter */}
-          <div className="col-md-3 mb-4">
-            <div className="card p-3 shadow-sm">
-              <h5 className="mb-3">Search</h5>
-              <div className="form-group">
-                <label htmlFor="search">Search by Name</label>
-                <div className="input-group">
-                  <input
-                    type="text"
-                    id="search"
-                    className="form-control"
-                    placeholder="Enter name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  <button
-                    className="btn btn-primary"
-                    onClick={fetchCraftsmen}
-                  >
-                    Search
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Craftsmen Display */}
-          <div className="col-md-9">
-            {loading ? (
-              <p className="text-center">Loading craftsmen...</p>
-            ) : error ? (
-              <p className="text-center text-danger">{error}</p>
-            ) : filteredCraftsmen.length === 0 ? (
-              <p className="text-center">No craftsmen found.</p>
-            ) : (
-              <div className="row">
-                {filteredCraftsmen.map((craftsman) => {
-                  const craftsmanSlug = craftsman.slug || craftsman.id; // fallback if slug is missing
-                  return (
-                    <div className="col-md-4" key={craftsman.id}>
-                      <div className="card shadow-sm mb-4">
-                        <div className="card-body text-center">
-                          <img
-                            src={
-                              craftsman.profile?.trim()
-                                ? craftsman.profile
-                                : 'https://via.placeholder.com/150'
-                            }
-                            alt={craftsman.full_name}
-                            className="mb-3 rounded-circle"
-                            style={{ width: '150px', height: '150px', objectFit: 'cover' }}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = 'https://via.placeholder.com/150';
-                            }}
-                          />
-                          <h5 className="card-title">{craftsman.full_name}</h5>
-                          <p className="card-text">{craftsman.profession}</p>
-                          {craftsman.location && (
-                            <p className="card-text">
-                              <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(craftsman.location)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary"
-                              >
-                                <i className="fas fa-map-marker-alt me-1"></i>
-                                {craftsman.location}
-                              </a>
-                            </p>
-                          )}
-                          <Link to={`/craftsman/${craftsman.slug}`} className="btn btn-primary">
-
-                            View Portfolio
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+  <div className="row">
+    {/* Sidebar Filter */}
+    <div className="col-md-3 mb-4">
+      <div className="card p-3 shadow-sm">
+        <h5 className="mb-3">Search Craftsmen</h5>
+        <div className="form-group">
+          <label htmlFor="search">Search by Name</label>
+          <div className="input-group">
+            <input
+              type="text"
+              id="search"
+              className="form-control"
+              placeholder="Enter name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button className="btn btn-success" onClick={fetchCraftsmen}>
+              Search
+            </button>
           </div>
         </div>
       </div>
+    </div>
+
+    {/* Craftsmen Display */}
+    <div className="col-md-9">
+      {loading ? (
+        <p className="text-center">Loading craftsmen...</p>
+      ) : error ? (
+        <p className="text-center text-danger">{error}</p>
+      ) : filteredCraftsmen.length === 0 ? (
+        <p className="text-center">No craftsmen found.</p>
+      ) : (
+        <div className="row">
+          {filteredCraftsmen.map((craftsman) => {
+            const craftsmanSlug = craftsman.slug || craftsman.id;
+            return (
+              <div className="col-md-4" key={craftsman.id}>
+                <div className="card shadow-sm mb-4 hover-shadow" style={{ transition: '0.3s' }}>
+                  <div className="card-body text-center">
+                    <img
+                      src={craftsman.profile?.trim() || 'https://via.placeholder.com/150'}
+                      alt={craftsman.full_name}
+                      className="mb-3 rounded-circle"
+                      style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://via.placeholder.com/150';
+                      }}
+                    />
+                    <h5 className="card-title fw-bold">{craftsman.full_name}</h5>
+                    <p className="text-success fw-semibold">{craftsman.profession}</p>
+                    {craftsman.location && (
+  <p className="card-text">
+    <a
+      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(craftsman.location)}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary"
+      style={{ textDecoration: 'none' }}
+    >
+      <i className="fas fa-map-marker-alt me-1"></i>
+      {craftsman.location}
+    </a>
+  </p>
+)}
+
+                    {craftsman.services && craftsman.services.length > 0 && (
+                      <p className="text-muted small mb-2">
+                        Specializes in: {craftsman.services.slice(0, 2).map(s => s.name).join(', ')}
+                        {craftsman.services.length > 2 ? '...' : ''}
+                      </p>
+                    )}
+                    <Link
+                      to={`/craftsman/${craftsmanSlug}`}
+                      className="btn btn-success mt-2"
+                    >
+                      View Portfolio & Hire
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+
 
       {/* Footer */}
       <footer className="bg-white text-dark pt-5 pb-4 mt-5">
