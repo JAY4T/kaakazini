@@ -181,10 +181,23 @@ const [searchQuery, setSearchQuery] = useState('');
                       <h5 className="fw-bold">{service.primary_service}</h5>
                     </div>
                   </div>
-                  <div className="card-body text-center">
-                    <h5 className="card-title fw-bold mb-0">{service.service || service.primary_service}</h5>
-                    <p className="text-muted">{service.location}</p>
-                  </div>
+                 <div className="card-body text-center">
+  <h5 className="card-title fw-bold mb-1">{service.service || service.primary_service}</h5>
+  {service.location && (
+    <p className="mb-0">
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.location)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-success fw-bold text-decoration-none"
+      >
+        <i className="fas fa-map-marker-alt me-1"></i> {service.location} 
+      </a>
+    </p>
+  )}
+</div>
+
+
                 </div>
               </div>
             );
