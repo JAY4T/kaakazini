@@ -30,6 +30,7 @@ import ClientProfilePage from "./pages/ClientProfilePage";
 
 
 
+
 function App() {
   const [cart, setCart] = useState({});
 
@@ -88,6 +89,7 @@ function App() {
         <Route path="/terms" element={<TermsConditionPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
         <Route path="/services" element={<ServicesPage />} />
+
         <Route path="/no-shop" element={<NoShopPage />} />
         <Route path="/orders" element={<OrderTrackingPage />} />
         <Route path="/profile" element={<ClientProfilePage />} /> 
