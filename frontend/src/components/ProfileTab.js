@@ -1,9 +1,141 @@
 import React, { useState, useEffect } from "react";
-import CreatableSelect from "react-select/creatable";
-import "bootstrap-icons/font/bootstrap-icons.css";
-import { Button, Badge, Row, Col, Card } from "react-bootstrap";
-import axios from "axios";
+import { Button, Card, Row, Col, Badge, Form, Collapse } from "react-bootstrap";
 
+// ----------------- Reusable Inputs -----------------
+export const TextInputWithDatalist = ({ label, name, value, onChange, options = [], required, isArray = false }) => {
+  const [inputValue, setInputValue] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (required && (!value || (isArray && value.length === 0))) setError("This field is required");
+    else setError("");
+  }, [value, required, isArray]);
+
+  const handleAddItem = () => {
+    if (!inputValue.trim()) return;
+    if (isArray) {
+      if (!value.includes(inputValue.trim())) onChange({ target: { name, value: [...value, inputValue.trim()] } });
+    } else {
+      onChange({ target: { name, value: inputValue } });
+    }
+    setInputValue("");
+  };
+
+  const handleRemoveItem = (item) => {
+    if (isArray) {
+      onChange({ target: { name, value: value.filter((v) => v !== item) } });
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddItem();
+    }
+  };
+
+  return (
+    <Card className="mb-4 p-3 shadow-sm border-0">
+      <label className="form-label">{label} {required && "*"}</label>
+      {isArray ? (
+        <>
+          <div className="d-flex mb-2">
+            <input
+              list={options.length ? `${name}-options` : undefined}
+              className={`form-control me-2 ${error ? "border-danger" : ""}`}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={`Add ${label.toLowerCase()}`}
+            />
+            <Button variant="secondary" onClick={handleAddItem}>Add</Button>
+          </div>
+          <div>
+            {value.map((item) => (
+              <Badge
+                key={item}
+                bg="primary"
+                className="me-1 mb-1"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleRemoveItem(item)}
+              >
+                {item} ×
+              </Badge>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <input
+            list={options.length ? `${name}-options` : undefined}
+            className={`form-control ${error ? "border-danger" : ""}`}
+            name={name}
+            value={value || ""}
+            onChange={(e) => onChange(e)}
+            placeholder={`Select or type ${label.toLowerCase()}`}
+          />
+        </>
+      )}
+      {options.length > 0 && (
+        <datalist id={`${name}-options`}>
+          {options.map((opt) => <option key={opt} value={opt} />)}
+        </datalist>
+      )}
+      {error && <small className="text-danger">{error}</small>}
+    </Card>
+  );
+};
+
+export const FileInput = ({ label, file, onChange, accept = "image/*", required }) => {
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (required && !file) setError("This field is required");
+    else setError("");
+  }, [file, required]);
+
+  return (
+    <Card className="mb-4 p-3 shadow-sm border-0 text-center">
+      <label className="form-label fw-bold">{label} {required && "*"}</label>
+      {file && (accept.includes("image") && <img src={file} alt={label} className="img-thumbnail mb-2" style={{ maxWidth: "200px", maxHeight: "150px" }} />)}
+      <input
+        type="file"
+        className={`form-control ${error ? "border-danger" : ""}`}
+        accept={accept}
+        onChange={(e) => onChange(e)}
+      />
+      {error && <small className="text-danger">{error}</small>}
+    </Card>
+  );
+};
+
+export const RadioGroup = ({ label, name, options = [], value, onChange, required }) => {
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (required && !value) setError("This field is required");
+    else setError("");
+  }, [value, required]);
+
+  return (
+    <Card className="mb-4 p-3 shadow-sm border-0">
+      <label className="form-label d-block">{label} {required && "*"}</label>
+      {options.map((opt) => (
+        <Form.Check
+          inline
+          key={opt}
+          label={opt}
+          name={name}
+          type="radio"
+          value={opt}
+          checked={value === opt}
+          onChange={(e) => onChange(e)}
+        />
+      ))}
+      {error && <small className="text-danger d-block">{error}</small>}
+    </Card>
+  );
+};
+
+// ----------------- Main ProfileTab -----------------
 function ProfileTab({
   craftsman,
   profileData,
@@ -18,76 +150,26 @@ function ProfileTab({
   serviceImage,
   handleServiceImageChange,
   saveProfile,
-  locationOptions = ["South B", "Westlands", "Karen", "Embakasi", "Nakuru", "Eldoret"],
-  backendUrl = "http://localhost:5000",
 }) {
-  const [touched, setTouched] = useState({});
-  const [errors, setErrors] = useState({});
-  const [newStaff, setNewStaff] = useState("");
-  const [staffList, setStaffList] = useState(Array.isArray(profileData.staff) ? profileData.staff : []);
+  const locations = ["South B", "Westlands", "Karen", "Embakasi", "Nakuru", "Eldoret", "Kisumu"];
 
-  const [localProfessionOptions, setLocalProfessionOptions] = useState(professionOptions);
-  const [localSkillOptions, setLocalSkillOptions] = useState(skillOptions);
-  const [localServiceOptions, setLocalServiceOptions] = useState(serviceOptions);
-  const [localLocationOptions, setLocalLocationOptions] = useState(locationOptions);
-
-  useEffect(() => {
-    if (!profileData.accountType) setProfileData({ ...profileData, accountType: "individual" });
-  }, []);
-
-  useEffect(() => {
-    const newErrors = {};
-    const requiredFields = ["description", "profession", "skills", "location", "primary_service"];
-    if (profileData.accountType === "company") requiredFields.push("company_name");
-    requiredFields.forEach((field) => {
-      const value = profileData[field];
-      if (value === undefined || value === null || (Array.isArray(value) && value.length === 0) || (typeof value === "string" && value.trim() === "")) {
-        newErrors[field] = "This field is required";
-      }
-    });
-    if (!serviceImage) newErrors.serviceImage = "This field is required";
-    setErrors(newErrors);
-  }, [profileData, serviceImage]);
-
-  const handleInputChange = (field, value) => {
-    setProfileData((p) => ({ ...p, [field]: value }));
-    setTouched((t) => ({ ...t, [field]: true }));
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfileData((prev) => ({ ...prev, [name]: value }));
   };
-
-  const isInvalid = (field) => touched[field] && errors[field];
 
   const handleSave = () => {
-    const allTouched = {};
-    Object.keys(errors).forEach((field) => (allTouched[field] = true));
-    setTouched(allTouched);
-    if (Object.keys(errors).length === 0) saveProfile({ ...profileData, staff: staffList });
+    const requiredFields = ["description", "profession", "skills", "location", "primary_service"];
+    if (profileData.account_type === "Company") requiredFields.push("company_name");
+
+    const missingFields = requiredFields.filter(
+      (field) => !profileData[field] || (Array.isArray(profileData[field]) && profileData[field].length === 0)
+    );
+
+    if (missingFields.length === 0) saveProfile();
+    else alert(`Please fill in all required fields: ${missingFields.join(", ")}`);
   };
 
-  const inviteStaff = () => {
-    const trimmed = newStaff.trim();
-    if (trimmed && !staffList.includes(trimmed)) {
-      setStaffList([...staffList, trimmed]);
-      setNewStaff("");
-    }
-  };
-
-  const formatOptions = (arr) => arr.map((opt) => ({ value: opt, label: opt }));
-  const safeProfession = profileData.profession ? { value: profileData.profession, label: profileData.profession } : null;
-  const safePrimaryService = profileData.primary_service ? { value: profileData.primary_service, label: profileData.primary_service } : null;
-  const safeLocation = profileData.location ? { value: profileData.location, label: profileData.location } : null;
-  const safeSkills = Array.isArray(profileData.skills) ? profileData.skills.map((skill) => ({ value: skill, label: skill })) : [];
-
-  const syncNewOption = async (type, value, setLocal, localOptions) => {
-    if (!value || localOptions.includes(value)) return;
-    try {
-      await axios.post(`${backendUrl}/api/options`, { type, value });
-      setLocal([...localOptions, value]);
-    } catch (err) {
-      console.error(`Error saving ${type}:`, err);
-    }
-  };
-
-  // Gradient header style
   const cardHeaderStyle = {
     background: "linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)",
     color: "#fff",
@@ -98,237 +180,122 @@ function ProfileTab({
     fontSize: "1.1rem",
   };
 
-  const cardHoverStyle = {
-    transition: "all 0.3s ease",
-    cursor: "pointer",
-  };
-
-  const cardHoverEffect = {
-    boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-    transform: "translateY(-3px)",
-  };
-
   return (
     <Card className="p-4 shadow-sm border-0" style={{ backgroundColor: "#f9fafd" }}>
-      {craftsman?.full_name && (
-        <div style={cardHeaderStyle}>Welcome, {craftsman.full_name}!</div>
-      )}
+      {craftsman?.full_name && <div style={cardHeaderStyle}>Welcome, {craftsman.full_name}!</div>}
 
-      {/* Account Type */}
-      <Card
-        className="mb-4 p-3 shadow-sm border-0"
-        style={cardHoverStyle}
-        onMouseEnter={(e) => Object.assign(e.currentTarget.style, cardHoverEffect)}
-        onMouseLeave={(e) => Object.assign(e.currentTarget.style, { boxShadow: "0 .125rem .25rem rgba(0,0,0,.075)", transform: "none" })}
-      >
-        <label className="form-label fw-bold">Account Type *</label>
-        <div className="d-flex gap-4">
-          {["individual", "company"].map((type) => (
-            <label key={type} className="form-check form-check-inline">
-              <input
-                type="radio"
-                name="accountType"
-                value={type}
-                checked={profileData.accountType === type}
-                onChange={(e) => handleInputChange("accountType", e.target.value)}
-                className="form-check-input"
-              />
-              <span className="form-check-label text-capitalize">{type}</span>
-            </label>
-          ))}
-        </div>
-      </Card>
+      <RadioGroup
+        label="Account Type"
+        name="account_type"
+        options={["Individual", "Company"]}
+        value={profileData.account_type}
+        onChange={handleInputChange}
+        required
+      />
 
-      {/* Profile & Proof */}
       <Row className="mb-4">
         <Col md={4} className="text-center">
-          <Card
-            className="p-3 shadow-sm border-0"
-            style={cardHoverStyle}
-            onMouseEnter={(e) => Object.assign(e.currentTarget.style, cardHoverEffect)}
-            onMouseLeave={(e) => Object.assign(e.currentTarget.style, { boxShadow: "0 .125rem .25rem rgba(0,0,0,.075)", transform: "none" })}
-          >
-            <img
-              src={profileImage || "https://via.placeholder.com/120"}
-              alt="Profile"
-              className="rounded-circle mb-3 border"
-              width="120"
-              height="120"
-            />
-            <label className="btn btn-outline-primary btn-sm">
-              Change Profile Photo
-              <input type="file" hidden accept="image/*" onChange={handleProfileImageChange} />
-            </label>
-          </Card>
+          <FileInput
+            label="Profile Image"
+            file={profileImage}
+            onChange={handleProfileImageChange}
+            accept="image/*"
+            required
+          />
         </Col>
+
         <Col md={8}>
-          <Card
-            className="p-3 shadow-sm border-0"
-            style={cardHoverStyle}
-            onMouseEnter={(e) => Object.assign(e.currentTarget.style, cardHoverEffect)}
-            onMouseLeave={(e) => Object.assign(e.currentTarget.style, { boxShadow: "0 .125rem .25rem rgba(0,0,0,.075)", transform: "none" })}
-          >
+          <Card className="p-3 shadow-sm border-0">
             <label className="form-label">Proof Document (Optional)</label>
-            <input type="file" className="form-control mb-2" accept=".pdf,image/*" onChange={handleProofDocumentChange} />
+            <input
+              type="file"
+              className="form-control mb-2"
+              accept=".pdf,image/*"
+              onChange={handleProofDocumentChange}
+            />
             {proofDocument && <Badge bg="success">Uploaded: {proofDocument}</Badge>}
           </Card>
         </Col>
       </Row>
 
-      {/* Description */}
-      <Card className="mb-4 p-3 shadow-sm border-0" style={cardHoverStyle}>
-        <label className="form-label">Description *</label>
-        <textarea
-          className={`form-control ${isInvalid("description") ? "border-danger" : ""}`}
-          rows="3"
-          placeholder="Describe your service"
-          value={profileData.description || ""}
-          onChange={(e) => handleInputChange("description", e.target.value)}
-          onBlur={() => setTouched((t) => ({ ...t, description: true }))}
-        />
-        {isInvalid("description") && <small className="text-danger">{errors.description}</small>}
-      </Card>
-
-      {/* Profession & Skills */}
-      <Row className="mb-4">
+      <TextInputWithDatalist
+        label="Description"
+        name="description"
+        value={profileData.description}
+        onChange={handleInputChange}
+        required
+      />
+      <Row>
         <Col md={6}>
-          <Card className="p-3 shadow-sm border-0 mb-3 mb-md-0" style={cardHoverStyle}>
-            <label className="form-label">Profession *</label>
-            <CreatableSelect
-              options={formatOptions(localProfessionOptions)}
-              value={safeProfession}
-              onChange={(option) => {
-                handleInputChange("profession", option?.value);
-                syncNewOption("profession", option?.value, setLocalProfessionOptions, localProfessionOptions);
-              }}
-              placeholder="Select or type your profession"
-              isClearable
-            />
-            {isInvalid("profession") && <small className="text-danger">{errors.profession}</small>}
-          </Card>
-        </Col>
-        <Col md={6}>
-          <Card className="p-3 shadow-sm border-0" style={cardHoverStyle}>
-            <label className="form-label">Skills *</label>
-            <CreatableSelect
-              options={formatOptions(localSkillOptions)}
-              value={safeSkills}
-              onChange={(options) => {
-                const values = options ? options.map((opt) => opt.value) : [];
-                handleInputChange("skills", values);
-                options?.forEach((opt) => syncNewOption("skill", opt.value, setLocalSkillOptions, localSkillOptions));
-              }}
-              placeholder="Select or type your skills"
-              isMulti
-              isClearable
-            />
-            {isInvalid("skills") && <small className="text-danger">{errors.skills}</small>}
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Company Name */}
-      {profileData.accountType === "company" && (
-        <Card className="mb-4 p-3 shadow-sm border-0" style={cardHoverStyle}>
-          <label className="form-label">Company Name *</label>
-          <input
-            className={`form-control ${isInvalid("company_name") ? "border-danger" : ""}`}
-            placeholder="Company Name"
-            value={profileData.company_name || ""}
-            onChange={(e) => handleInputChange("company_name", e.target.value)}
+          <TextInputWithDatalist
+            label="Profession"
+            name="profession"
+            value={profileData.profession}
+            onChange={handleInputChange}
+            options={professionOptions}
+            required
           />
-          {isInvalid("company_name") && <small className="text-danger">{errors.company_name}</small>}
-        </Card>
-      )}
-
-      {/* Location & Primary Service */}
-      <Row className="mb-4">
-        <Col md={6}>
-          <Card className="p-3 shadow-sm border-0 mb-3 mb-md-0" style={cardHoverStyle}>
-            <label className="form-label">Location *</label>
-            <CreatableSelect
-              options={formatOptions(localLocationOptions)}
-              value={safeLocation}
-              onChange={(option) => {
-                handleInputChange("location", option?.value);
-                syncNewOption("location", option?.value, setLocalLocationOptions, localLocationOptions);
-              }}
-              placeholder="Select or type your location"
-              isClearable
-            />
-            {isInvalid("location") && <small className="text-danger">{errors.location}</small>}
-          </Card>
         </Col>
         <Col md={6}>
-          <Card className="p-3 shadow-sm border-0" style={cardHoverStyle}>
-            <label className="form-label">Primary Service *</label>
-            <CreatableSelect
-              options={formatOptions(localServiceOptions)}
-              value={safePrimaryService}
-              onChange={(option) => {
-                handleInputChange("primary_service", option?.value);
-                syncNewOption("service", option?.value, setLocalServiceOptions, localServiceOptions);
-              }}
-              placeholder="Select or type your service"
-              isClearable
-            />
-            {isInvalid("primary_service") && <small className="text-danger">{errors.primary_service}</small>}
-          </Card>
+          <TextInputWithDatalist
+            label="Skills"
+            name="skills"
+            value={profileData.skills}
+            onChange={handleInputChange}
+            options={skillOptions}
+            required
+            isArray
+          />
         </Col>
       </Row>
 
-      {/* Service Image */}
-      <Card className="mb-4 p-3 shadow-sm border-0 text-center" style={cardHoverStyle}>
-        <label className="form-label fw-bold">Service Image *</label>
-        {serviceImage && (
-          <img src={serviceImage} alt="Service" className="img-thumbnail mb-2" width="200" height="150" />
-        )}
-        <input
-          type="file"
-          className={`form-control ${isInvalid("serviceImage") ? "border-danger" : ""}`}
-          accept="image/*"
-          onChange={(e) => {
-            handleServiceImageChange(e);
-            setTouched((t) => ({ ...t, serviceImage: true }));
-          }}
-        />
-        {isInvalid("serviceImage") && <small className="text-danger">{errors.serviceImage}</small>}
-      </Card>
+      <Collapse in={profileData.account_type === "Company"}>
+        <div>
+          <TextInputWithDatalist
+            label="Company Name"
+            name="company_name"
+            value={profileData.company_name}
+            onChange={handleInputChange}
+            required={profileData.account_type === "Company"}
+          />
+        </div>
+      </Collapse>
 
-      {/* Invite Staff */}
-      {profileData.accountType === "company" && (
-        <Card className="mb-4 p-3 shadow-sm border-0" style={cardHoverStyle}>
-          <label className="form-label">Invite Staff</label>
-          <div className="d-flex mb-2 gap-2">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Staff Name or Email"
-              value={newStaff}
-              onChange={(e) => setNewStaff(e.target.value)}
-            />
-            <Button variant="primary" onClick={inviteStaff}>
-              Invite
-            </Button>
-          </div>
-          {staffList.length > 0 && (
-            <ul className="list-group">
-              {staffList.map((staff, idx) => (
-                <li key={idx} className="list-group-item d-flex justify-content-between align-items-center" style={{ transition: "0.3s", cursor: "pointer" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor="#f1f7ff"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor="#fff"}>
-                  {staff}
-                  <Badge bg="secondary">Staff</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      )}
+      <Row>
+        <Col md={6}>
+          <TextInputWithDatalist
+            label="Location"
+            name="location"
+            value={profileData.location}
+            onChange={handleInputChange}
+            options={locations}
+            required
+          />
+        </Col>
+        <Col md={6}>
+          <TextInputWithDatalist
+            label="Primary Service"
+            name="primary_service"
+            value={profileData.primary_service}
+            onChange={handleInputChange}
+            options={serviceOptions}
+            required
+          />
+        </Col>
+      </Row>
 
-      {/* Save & Status */}
+      <FileInput
+        label="Service Image"
+        file={serviceImage}
+        onChange={handleServiceImageChange}
+        accept="image/*"
+        required
+      />
+
       <div className="d-flex align-items-center gap-3 mb-4">
         <Button variant="success" onClick={handleSave}>Save Profile</Button>
         {craftsman?.status && (
-          <Badge bg={craftsman.status === "approved" ? "success" : "warning"}>
+          <Badge bg={craftsman.status === "approved" ? "success" : "warning"} className="py-2 px-3">
             {craftsman.status.charAt(0).toUpperCase() + craftsman.status.slice(1)}
           </Badge>
         )}
