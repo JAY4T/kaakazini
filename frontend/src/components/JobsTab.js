@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { Modal, Button, Badge, Form, Row, Col, Card } from "react-bootstrap";
 import { FaPhone, FaComments } from "react-icons/fa";
 import { authAxios } from "../api/axiosClient";
+import jsPDF from "jspdf";
 
 const COMPANY_FEE_PERCENT = 10;
 
@@ -10,9 +11,20 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
   const [jobs, setLocalJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [proofFiles, setProofFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+
+  const [quoteDetails, setQuoteDetails] = useState({
+    item: "",
+    workType: "",
+    duration: "",
+    quantity: "",
+    price: "",
+    notes: "",
+  });
+
+  const [quoteJobId, setQuoteJobId] = useState(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -20,38 +32,36 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
   }, [initialJobs]);
 
   useEffect(() => {
-    if (!selectedJob) {
-      clearTimer();
-      return;
-    }
+    if (!selectedJob) return clearTimer();
+
     const status = normalizedStatus(selectedJob.status);
-    if (status === "in progress" || status === "in_progress" || status === "inprogress") {
+
+    if (["in progress", "inprogress", "in_progress"].includes(status)) {
       startTimerFrom(selectedJob.start_time);
     } else {
       clearTimer();
     }
+
     return () => clearTimer();
   }, [selectedJob]);
 
   const clearTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
     setElapsed(0);
   };
 
   const startTimerFrom = (startISO) => {
     clearTimer();
-    let start = startISO ? new Date(startISO) : new Date();
-    const update = () => {
-      const now = new Date();
-      const diffMs = Math.max(0, now - start);
-      setElapsed(Math.floor(diffMs / 1000));
-    };
+    const start = startISO ? new Date(startISO) : new Date();
+    const update = () =>
+      setElapsed(Math.floor(Math.max(0, new Date() - start) / 1000));
     update();
     timerRef.current = setInterval(update, 1000);
   };
+
+  const normalizedStatus = (status) =>
+    (status || "").toString().toLowerCase().replace(/[_]/g, " ");
 
   const handleViewJob = (job) => {
     setSelectedJob(job);
@@ -61,73 +71,106 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
   const handleClose = () => {
     setSelectedJob(null);
     setProofFiles([]);
-    setUploading(false);
     setActionLoading(false);
     clearTimer();
   };
 
-  const normalizedStatus = (status) =>
-    (status || "").toString().toLowerCase().replace(/[_]/g, " ");
+  const handleOpenQuoteModal = (jobId) => {
+    setQuoteJobId(jobId);
+    setQuoteDetails({
+      item: "",
+      workType: "",
+      duration: "",
+      quantity: "",
+      price: "",
+      notes: "",
+    });
+    setQuoteModalOpen(true);
+  };
 
-  const updateJobStatus = async (jobId, action, files = null) => {
+  const handleCloseQuoteModal = () => {
+    setQuoteModalOpen(false);
+    setQuoteJobId(null);
+  };
+
+  const updateJobStatus = async (jobId, action, payload = null) => {
     try {
       setActionLoading(true);
       const url = `/job-requests/${jobId}/${action}/`;
 
-      if (files && files.length) {
+      let res;
+      if (payload) {
         const formData = new FormData();
-        Array.from(files).forEach((f) => formData.append("proof_files", f));
-        const res = await authAxios.post(url, formData, {
+
+        if (payload.files) {
+          Array.from(payload.files).forEach((f) =>
+            formData.append("proof_files", f)
+          );
+        }
+
+        if (payload.quote) {
+          formData.append("quote_details", JSON.stringify(payload.quote));
+        }
+
+        res = await authAxios.post(url, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-        applyUpdatedJob(res.data);
       } else {
-        const res = await authAxios.post(url, {});
-        applyUpdatedJob(res.data);
+        res = await authAxios.post(url, {});
       }
+
+      applyUpdatedJob(res.data);
     } catch (err) {
       console.error("updateJobStatus error:", err);
-      alert("Failed to update job. Please try again.");
+      alert("Failed to update job.");
     } finally {
       setActionLoading(false);
     }
   };
 
   const applyUpdatedJob = (updatedJob) => {
-    if (typeof setJobs === "function") {
-      setJobs((prev) =>
-        Array.isArray(prev)
-          ? prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
-          : prev
-      );
-    }
+    setJobs?.((prev) =>
+      Array.isArray(prev)
+        ? prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
+        : prev
+    );
+
     setLocalJobs((prev) =>
       Array.isArray(prev)
         ? prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
         : prev
     );
+
     setSelectedJob(updatedJob);
   };
 
   const handleAcceptJob = (id) => updateJobStatus(id, "accept");
 
   const handleRejectJob = (id) => {
-    if (!window.confirm("Are you sure you want to reject this job?")) return;
+    if (!window.confirm("Reject this job?")) return;
     updateJobStatus(id, "reject");
   };
 
   const handleStartJob = (id) => updateJobStatus(id, "start");
 
-  const handleCompleteJob = (id) => {
+  const handleCompleteJob = () => {
     if (!proofFiles || proofFiles.length === 0)
-      return alert("Please upload proof files before completing the job.");
-    updateJobStatus(id, "complete", proofFiles);
+      return alert("Upload proof files.");
+    updateJobStatus(selectedJob.id, "complete", { files: proofFiles });
     setProofFiles([]);
   };
 
   const handleConfirmReceived = (id) => {
-    if (!window.confirm("Confirm that you have received the payment?")) return;
+    if (!window.confirm("Confirm you've received payment?")) return;
     updateJobStatus(id, "confirm-received");
+  };
+
+  const handleSubmitQuoteModal = () => {
+    if (!quoteDetails.quantity || !quoteDetails.price)
+      return alert("Quantity & Price required");
+
+    updateJobStatus(quoteJobId, "submit-quote", { quote: quoteDetails });
+    handleCloseQuoteModal();
   };
 
   const computePaymentBreakdown = (job) => {
@@ -146,33 +189,159 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
       "completed",
       "paid pending confirmation",
       "paid",
-      "paid-awaiting confirmation",
-      "paid awaiting confirmation",
     ];
-    if (visibleStatuses.includes(status))
-      return selectedJob.client?.phone || "N/A";
-    return "";
+    return visibleStatuses.includes(status)
+      ? selectedJob.client?.phone || "N/A"
+      : "";
   };
 
   const handleChat = () => {
     if (!selectedJob) return;
-    alert(`Open chat with ${selectedJob.client?.full_name || "client"}`);
+    alert(`Open chat with ${selectedJob.client?.full_name}`);
   };
 
   const formatElapsed = (sec) => {
     if (!sec && sec !== 0) return "N/A";
-    const hours = Math.floor(sec / 3600);
-    const minutes = Math.floor((sec % 3600) / 60);
-    const seconds = sec % 60;
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  const handleDownloadQuotePDF = () => {
+    const doc = new jsPDF();
+
+    doc.setFontSize(14);
+    doc.text("QUOTATION SUMMARY", 10, 10);
+
+    const y = 20;
+
+    doc.text(`Item/Service: ${quoteDetails.item || "N/A"}`, 10, y);
+    doc.text(`Type of Work: ${quoteDetails.workType || "N/A"}`, 10, y + 10);
+    doc.text(`Estimated Duration: ${quoteDetails.duration || "N/A"}`, 10, y + 20);
+    doc.text(`Quantity: ${quoteDetails.quantity}`, 10, y + 30);
+    doc.text(
+      `Unit Price: KSh ${Number(quoteDetails.price).toLocaleString()}`,
+      10,
+      y + 40
+    );
+
+    const subtotal =
+      Number(quoteDetails.quantity) * Number(quoteDetails.price);
+    const companyFee = Math.round(subtotal * 0.1);
+    const total = subtotal + companyFee;
+
+    doc.text(`Subtotal: KSh ${subtotal.toLocaleString()}`, 10, y + 60);
+    doc.text(`Company Fee (10%): KSh ${companyFee.toLocaleString()}`, 10, y + 70);
+    doc.text(`Total Payable: KSh ${total.toLocaleString()}`, 10, y + 80);
+
+    doc.text(`Notes: ${quoteDetails.notes || "None"}`, 10, y + 100);
+
+    doc.save("quotation.pdf");
+  };
+
+  const renderFooterButtons = () => {
+    if (!selectedJob) return null;
+    const status = normalizedStatus(selectedJob.status);
+
+    if (["pending", "assigned"].includes(status)) {
+      return (
+        <>
+          <Button
+            variant="success"
+            disabled={actionLoading}
+            onClick={() => handleAcceptJob(selectedJob.id)}
+          >
+            Accept
+          </Button>
+          <Button
+            variant="outline-danger"
+            disabled={actionLoading}
+            onClick={() => handleRejectJob(selectedJob.id)}
+          >
+            Reject
+          </Button>
+        </>
+      );
+    }
+
+    if (status === "accepted") {
+      return (
+        <>
+          <Button
+            variant="info"
+            disabled={actionLoading}
+            onClick={() => handleStartJob(selectedJob.id)}
+          >
+            Start Job
+          </Button>
+          <Button variant="secondary" onClick={handleChat}>
+            <FaComments /> Chat
+          </Button>
+        </>
+      );
+    }
+
+    if (
+      ["in progress", "inprogress", "in_progress"].includes(status)
+    ) {
+      return (
+        <>
+          <div style={{ minWidth: 240 }}>
+            <Form.Group className="mb-2">
+              <Form.Label className="small">Upload proof</Form.Label>
+              <Form.Control
+                type="file"
+                multiple
+                onChange={(e) => setProofFiles(e.target.files)}
+                disabled={actionLoading}
+              />
+            </Form.Group>
+          </div>
+          <Button
+            variant="outline-secondary"
+            disabled={!proofFiles || proofFiles.length === 0}
+            onClick={handleCompleteJob}
+          >
+            Upload & Complete
+          </Button>
+        </>
+      );
+    }
+
+    if (status === "completed") {
+      return (
+        <>
+          <Badge bg="primary">
+            Completed — Pending Admin Payment
+          </Badge>
+          <Button variant="secondary" onClick={handleChat}>
+            <FaComments /> Chat
+          </Button>
+        </>
+      );
+    }
+
+    if (status.includes("paid")) {
+      return (
+        <Button
+          variant="success"
+          onClick={() => handleConfirmReceived(selectedJob.id)}
+        >
+          Confirm Payment Received
+        </Button>
+      );
+    }
+
+    return null;
   };
 
   return (
     <div className="card p-4 shadow-sm border-0">
       <h4 className="mb-3 fw-bold">Assigned Jobs (Craftsman)</h4>
 
-      {(!jobs || jobs.length === 0) ? (
-        <p className="text-muted">No assigned jobs yet.</p>
+      {!jobs || jobs.length === 0 ? (
+        <p className="text-muted">No jobs assigned.</p>
       ) : (
         <div className="table-responsive">
           <table className="table align-middle">
@@ -219,6 +388,13 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
                       onClick={() => handleViewJob(job)}
                     >
                       View
+                    </Button>{" "}
+                    <Button
+                      size="sm"
+                      variant="outline-success"
+                      onClick={() => handleOpenQuoteModal(job.id)}
+                    >
+                      Submit Quote
                     </Button>
                   </td>
                 </tr>
@@ -228,6 +404,184 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
         </div>
       )}
 
+      {/* ——— QUOTE MODAL ——— */}
+      <Modal
+        show={quoteModalOpen}
+        onHide={handleCloseQuoteModal}
+        centered
+        size="md"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Submit Quote</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+          <Form>
+            <Form.Group>
+              <Form.Label>Item / Service</Form.Label>
+              <Form.Control
+                value={quoteDetails.item}
+                onChange={(e) =>
+                  setQuoteDetails({ ...quoteDetails, item: e.target.value })
+                }
+                placeholder="Painting 2BR House"
+              />
+            </Form.Group>
+
+            <Form.Group className="mt-2">
+              <Form.Label>Type of Work</Form.Label>
+              <Form.Select
+                value={quoteDetails.workType}
+                onChange={(e) =>
+                  setQuoteDetails({
+                    ...quoteDetails,
+                    workType: e.target.value,
+                  })
+                }
+              >
+                <option value="">Select</option>
+                <option value="Labour Only">Labour Only</option>
+                <option value="Labour + Materials">
+                  Labour + Materials
+                </option>
+                <option value="Materials Only">Materials Only</option>
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mt-2">
+              <Form.Label>Estimated Duration</Form.Label>
+              <Form.Control
+                value={quoteDetails.duration}
+                onChange={(e) =>
+                  setQuoteDetails({
+                    ...quoteDetails,
+                    duration: e.target.value,
+                  })
+                }
+                placeholder="2 days"
+              />
+            </Form.Group>
+
+            <Form.Group className="mt-2">
+              <Form.Label>Quantity</Form.Label>
+              <Form.Control
+                type="number"
+                min="1"
+                value={quoteDetails.quantity}
+                onChange={(e) =>
+                  setQuoteDetails({
+                    ...quoteDetails,
+                    quantity: e.target.value,
+                  })
+                }
+              />
+            </Form.Group>
+
+            <Form.Group className="mt-2">
+              <Form.Label>Unit Price (KSh)</Form.Label>
+              <Form.Control
+                type="number"
+                min="1"
+                value={quoteDetails.price}
+                onChange={(e) =>
+                  setQuoteDetails({
+                    ...quoteDetails,
+                    price: e.target.value,
+                  })
+                }
+              />
+            </Form.Group>
+
+            <Form.Group className="mt-2">
+              <Form.Label>Notes</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={quoteDetails.notes}
+                onChange={(e) =>
+                  setQuoteDetails({
+                    ...quoteDetails,
+                    notes: e.target.value,
+                  })
+                }
+              />
+            </Form.Group>
+
+            {/* ——— QUOTE SUMMARY ——— */}
+            {quoteDetails.quantity && quoteDetails.price && (
+              <div className="border rounded p-3 mt-3">
+                <h6 className="fw-bold">QUOTATION SUMMARY</h6>
+                <hr />
+
+                <p>
+                  <strong>Item:</strong> {quoteDetails.item || "N/A"}
+                </p>
+                <p>
+                  <strong>Work Type:</strong>{" "}
+                  {quoteDetails.workType || "N/A"}
+                </p>
+                <p>
+                  <strong>Duration:</strong>{" "}
+                  {quoteDetails.duration || "N/A"}
+                </p>
+                <p>
+                  <strong>Quantity:</strong> {quoteDetails.quantity}
+                </p>
+                <p>
+                  <strong>Unit Price:</strong> KSh{" "}
+                  {Number(quoteDetails.price).toLocaleString()}
+                </p>
+
+                <p>
+                  <strong>Notes:</strong>{" "}
+                  {quoteDetails.notes || "None"}
+                </p>
+
+                {(() => {
+                  const subtotal =
+                    Number(quoteDetails.quantity) *
+                    Number(quoteDetails.price);
+                  const companyFee = Math.round(subtotal * 0.1);
+                  const totalPayable = subtotal + companyFee;
+
+                  return (
+                    <>
+                      <p>
+                        <strong>Subtotal:</strong> KSh{" "}
+                        {subtotal.toLocaleString()}
+                      </p>
+                      <p>
+                        <strong>Company Fee:</strong> KSh{" "}
+                        {companyFee.toLocaleString()}
+                      </p>
+                      <p className="fw-bold">
+                        <strong>Total Payable:</strong> KSh{" "}
+                        {totalPayable.toLocaleString()}
+                      </p>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            <div className="d-flex justify-content-between mt-3">
+              <Button variant="secondary" onClick={handleDownloadQuotePDF}>
+                Download PDF
+              </Button>
+
+              <Button
+                variant="primary"
+                onClick={handleSubmitQuoteModal}
+                disabled={!quoteDetails.quantity || !quoteDetails.price}
+              >
+                Submit Quote
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* ——— SINGLE JOB VIEW MODAL (unchanged) ——— */}
       {selectedJob && (
         <Modal show onHide={handleClose} centered size="md">
           <Modal.Header closeButton>
@@ -242,205 +596,41 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
                 <Row>
                   <Col md={8}>
                     <h5 className="fw-bold">{selectedJob.service}</h5>
-
                     <Badge
                       bg={
-                        selectedJob.priority === "High" ? "danger" : "warning"
+                        selectedJob.priority === "High"
+                          ? "danger"
+                          : "warning"
                       }
-                      className="mb-2"
                     >
-                      {selectedJob.priority || "Normal"}
+                      {selectedJob.priority}
                     </Badge>
 
-                    <p className="mt-2">
-                      {selectedJob.description || "No description provided."}
-                    </p>
+                    <p>{selectedJob.description}</p>
 
                     <p>
                       <FaPhone /> Phone:{" "}
-                      <strong>{showPhoneNumber() || "Hidden until accepted"}</strong>
+                      <strong>
+                        {showPhoneNumber() || "Hidden"}
+                      </strong>
                     </p>
-
-                    <p>Location: {selectedJob.location || "N/A"}</p>
-                    <p>Start: {selectedJob.start_time || "N/A"}</p>
-                    <p>End: {selectedJob.end_time || "N/A"}</p>
-
-                    {["in progress", "inprogress", "in_progress"].includes(
-                      normalizedStatus(selectedJob.status)
-                    ) && <p>Duration (live): {formatElapsed(elapsed)}</p>}
-
-                    {normalizedStatus(selectedJob.status) === "completed" && (
-                      <p>Duration: {selectedJob.duration_hours ?? "N/A"} hrs</p>
-                    )}
-
-                    <p>Expected End: {selectedJob.expected_end || "N/A"}</p>
-                    <p>Overtime: {selectedJob.overtime_hours ?? "0"} hrs</p>
-
-                    {(normalizedStatus(selectedJob.status) === "completed" ||
-                      normalizedStatus(selectedJob.status).includes("paid")) && (
-                      (() => {
-                        const { total, companyCut, net } =
-                          computePaymentBreakdown(selectedJob);
-                        return (
-                          <>
-                            <p className="mt-2 fw-bold">Payment Summary</p>
-                            <p>Total Payment: KSh {total.toLocaleString()}</p>
-                            <p>
-                              Company Cut ({COMPANY_FEE_PERCENT}%): KSh{" "}
-                              {companyCut.toLocaleString()}
-                            </p>
-                            <p>Net Payment: KSh {net.toLocaleString()}</p>
-                            <p>
-                              Payment Status:{" "}
-                              {selectedJob.payment_status ||
-                                "Pending Admin Payment"}
-                            </p>
-                          </>
-                        );
-                      })()
-                    )}
                   </Col>
 
-                  <Col md={4} className="text-end">
+                  <Col md={4}>
                     <h6>Job Details</h6>
-                    <p>
-                      Budget:{" "}
-                      <strong>KSh {selectedJob.budget ?? "N/A"}</strong>
-                    </p>
-                    <p>Distance: {selectedJob.distance_km ?? "N/A"} km</p>
-
-                    {selectedJob.proof_files &&
-                      selectedJob.proof_files.length > 0 && (
-                        <>
-                          <p className="mt-3 mb-1">Proof</p>
-                          {selectedJob.proof_files
-                            .slice(0, 3)
-                            .map((pf, idx) => (
-                              <a
-                                key={idx}
-                                href={pf.url || pf}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="d-block text-truncate"
-                              >
-                                {pf.name || pf.url || `proof-${idx + 1}`}
-                              </a>
-                            ))}
-                        </>
-                      )}
+                    <p>Budget: KSh {selectedJob.budget}</p>
                   </Col>
                 </Row>
               </Card.Body>
             </Card>
+
+            <Modal.Footer>
+              {renderFooterButtons()}
+              <Button variant="secondary" onClick={handleClose}>
+                Close
+              </Button>
+            </Modal.Footer>
           </Modal.Body>
-
-          <Modal.Footer className="d-flex flex-wrap gap-2">
-            {["pending", "awaiting craftsman assignment"].includes(
-              normalizedStatus(selectedJob.status)
-            ) && (
-              <>
-                <Button
-                  variant="success"
-                  disabled={actionLoading}
-                  onClick={() => handleAcceptJob(selectedJob.id)}
-                >
-                  Accept
-                </Button>
-                <Button
-                  variant="outline-danger"
-                  disabled={actionLoading}
-                  onClick={() => handleRejectJob(selectedJob.id)}
-                >
-                  Reject
-                </Button>
-              </>
-            )}
-
-            {normalizedStatus(selectedJob.status) === "accepted" && (
-              <>
-                <Button
-                  variant="info"
-                  disabled={actionLoading}
-                  onClick={() => handleStartJob(selectedJob.id)}
-                >
-                  Start Job
-                </Button>
-                <Button variant="secondary" onClick={handleChat}>
-                  <FaComments /> Chat
-                </Button>
-              </>
-            )}
-
-            {["in progress", "inprogress", "in_progress"].includes(
-              normalizedStatus(selectedJob.status)
-            ) && (
-              <>
-                <div style={{ minWidth: 240 }}>
-                  <Form.Group controlId="proofFiles" className="mb-2">
-                    <Form.Label className="small">
-                      Upload proof (photos/videos)
-                    </Form.Label>
-                    <Form.Control
-                      type="file"
-                      multiple
-                      onChange={(e) => setProofFiles(e.target.files)}
-                      disabled={uploading || actionLoading}
-                    />
-                  </Form.Group>
-                </div>
-                <Button
-                  variant="outline-secondary"
-                  disabled={
-                    actionLoading || !proofFiles || proofFiles.length === 0
-                  }
-                  onClick={() => {
-                    setUploading(true);
-                    handleCompleteJob(selectedJob.id);
-                    setUploading(false);
-                  }}
-                >
-                  Upload & Complete
-                </Button>
-              </>
-            )}
-
-            {normalizedStatus(selectedJob.status) === "completed" && (
-              <>
-                <Badge bg="primary">Completed — Pending Admin Payment</Badge>
-                <Button variant="secondary" onClick={handleChat}>
-                  <FaComments /> Chat
-                </Button>
-              </>
-            )}
-
-            {[
-              "paid pending confirmation",
-              "paid awaiting confirmation",
-              "paid_pending_confirmation",
-            ].includes(normalizedStatus(selectedJob.status)) && (
-              <>
-                <Button
-                  variant="success"
-                  onClick={() => handleConfirmReceived(selectedJob.id)}
-                >
-                  Confirm Payment Received
-                </Button>
-              </>
-            )}
-
-            {[
-              "paid",
-              "paid confirmed",
-              "confirmed",
-              "closed",
-            ].includes(normalizedStatus(selectedJob.status)) && (
-              <Badge bg="success">✅ Job Closed / Payment Confirmed</Badge>
-            )}
-
-            <Button variant="secondary" onClick={handleClose}>
-              Close
-            </Button>
-          </Modal.Footer>
         </Modal>
       )}
     </div>

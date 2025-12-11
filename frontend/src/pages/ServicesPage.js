@@ -6,31 +6,34 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaak
 
 const ServicesPage = () => {
   const [approvedServices, setApprovedServices] = useState([]);
+  const [filteredServices, setFilteredServices] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
 
-  const getImageUrl = (filename) => {
-    return filename.startsWith('http')
-      ? filename
-      : `${API_BASE_URL}${filename}`;
-  };
+  const serviceCategories = ['All', 'Carpentry', 'Electrical', 'Plumbing', 'Masonry', 'Painting', 'Interior'];
+
+  const getImageUrl = (filename) => filename.startsWith('http') ? filename : `${API_BASE_URL}${filename}`;
 
   useEffect(() => {
     const fetchApprovedServices = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/public-craftsman/`);
-        const filteredServices = response.data.filter(service => service.service_image && service.service_image.trim() !== '');
-        setApprovedServices(filteredServices);
-      } catch (error) {
-        console.error('Error fetching approved services:', error);
+        const filtered = response.data.filter(s => s.service_image && s.service_image.trim() !== '');
+        setApprovedServices(filtered);
+        setFilteredServices(filtered);
+      } catch (err) {
+        console.error('Error fetching approved services:', err);
       }
     };
-
     fetchApprovedServices();
   }, []);
 
-  const handleContactChange = (e) => {
-    setContactForm({ ...contactForm, [e.target.name]: e.target.value });
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category);
+    setFilteredServices(category === 'All' ? approvedServices : approvedServices.filter(s => s.primary_service === category));
   };
+
+  const handleContactChange = (e) => setContactForm({ ...contactForm, [e.target.name]: e.target.value });
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
@@ -54,30 +57,51 @@ const ServicesPage = () => {
           backgroundImage: 'url("https://jay4t.org/wp-content/uploads/2025/04/pexels-kindelmedia-8487371-1536x1152.webp")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
         }}
       >
         <div className="container text-center">
-          <h1 className="fw-bold display-4">Our Services</h1>
-          <p className="fs-5 fst-italic">Skilled. Trusted. Certified Craftsmen.</p>
+          <h1 className="fw-bold display-4 text-white">Our Services</h1>
+          <p className="fs-5 fst-italic text-white">Skilled. Trusted. Certified Craftsmen.</p>
         </div>
       </section>
 
-      {/* Services Section */}
-      <section className="py-5 bg-light" id="services">
-        <div className="container">
-          <h2 className="text-center mb-3 fw-bold text-primary">What We offer</h2>
-          <p className="text-center fs-6 text-secondary mb-4">
+      {/* Categories Filter */}
+      <section className="py-4" style={{ backgroundColor: '#f8f9fa' }}>
+        <div className="container text-center">
+          {serviceCategories.map((cat) => (
+            <button
+              key={cat}
+              className={`btn me-2 mb-2 ${selectedCategory === cat ? 'btn-success' : 'btn-outline-success'}`}
+              onClick={() => handleCategorySelect(cat)}
+              style={{ borderRadius: '50px', padding: '0.5rem 1.5rem' }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* What We Offer Section */}
+      <section className="py-5" style={{ backgroundColor: '#ffffff' }}>
+        <div className="container text-center">
+          <h2 className="fw-bold mb-4 text-success">What We Offer</h2>
+          <p className="fs-5 mx-auto" style={{ maxWidth: '800px', color: '#6c757d' }}>
             We offer a diverse range of high-quality, personalized services—from carpentry, masonry, and electrical work to plumbing, interior finishes, and custom designs.
           </p>
+        </div>
+      </section>
 
-          {approvedServices.length === 0 ? (
-            <p className="text-center">No approved services available yet.</p>
+      {/* Services Grid */}
+      <section className="py-5" style={{ backgroundColor: '#f8f9fa' }}>
+        <div className="container">
+          <h2 className="text-center fw-bold mb-4 text-success">Available Services</h2>
+          {filteredServices.length === 0 ? (
+            <p className="text-center" style={{ color: '#6c757d' }}>No services available in this category.</p>
           ) : (
             <div className="row g-4">
-              {approvedServices.map((service, index) => (
-                <div className="col-sm-6 col-md-4 col-lg-3" key={index}>
-                  <div className="card h-100 border-0 shadow-sm">
+              {filteredServices.map((service, idx) => (
+                <div className="col-sm-6 col-md-4 col-lg-3" key={idx}>
+                  <div className="card h-100 shadow-sm border-0">
                     <div className="position-relative">
                       <img
                         src={getImageUrl(service.service_image)}
@@ -86,14 +110,17 @@ const ServicesPage = () => {
                         style={{ height: '220px', objectFit: 'cover' }}
                       />
                       <span
-                        className="position-absolute bottom-0 start-0 m-2 badge bg-primary"
+                        className="position-absolute bottom-0 start-0 m-2 badge bg-success"
                         style={{ fontSize: '0.8rem' }}
                       >
                         {service.primary_service}
                       </span>
                     </div>
                     <div className="card-body text-center">
-                      <h5 className="card-title fw-bold mb-0">{service.service}</h5>
+                      <h5 className="card-title fw-bold" style={{ color: '#6c757d' }}>{service.service}</h5>
+                      <Link to={`/services/${service.id}`} className="btn btn-outline-success mt-2">
+                        View Details
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -103,10 +130,22 @@ const ServicesPage = () => {
         </div>
       </section>
 
-      {/* Contact Us Section */}
-      <section className="py-5 bg-white" id="contact">
+      {/* Call-to-Action with Payment Info */}
+      <section className="py-5 text-white text-center" style={{ backgroundColor: '#198754' }}>
         <div className="container">
-          <h2 className="text-center mb-4 fw-bold text-primary">Contact Us</h2>
+          <h3 className="fw-bold mb-3" style={{ color: '#ffffff' }}>Ready to Hire a Craftsman?</h3>
+          <p className="mb-4" style={{ maxWidth: '700px', margin: '0 auto', color: '#ffffff' }}>
+            Join thousands of satisfied clients who trust KaaKazini. Payments to craftsmen are handled securely through our platform. 
+            You can pay per project or hourly, depending on the agreement, and be assured of transparency and timely service.
+          </p>
+          <Link to="/hire" className="btn btn-light btn-lg">Get Started</Link>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="py-5" style={{ backgroundColor: '#ffffff' }} id="contact">
+        <div className="container">
+          <h2 className="text-center mb-4 fw-bold text-success">Contact Us</h2>
           <div className="row justify-content-center">
             <div className="col-md-8">
               <form onSubmit={handleContactSubmit}>
@@ -144,7 +183,7 @@ const ServicesPage = () => {
                   />
                 </div>
                 <div className="text-end">
-                  <button type="submit" className="btn btn-primary fw-bold">Send Message</button>
+                  <button type="submit" className="btn btn-success">Send Message</button>
                 </div>
               </form>
             </div>
@@ -153,26 +192,25 @@ const ServicesPage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-white text-dark pt-5 pb-4 mt-5">
+      <footer className="pt-5 pb-4 mt-5" style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>
         <div className="container">
           <div className="row">
             <div className="col-md-3 mb-4">
-              <h5 className="text-uppercase fw-bold">Quick Links</h5>
+              <h5 className="text-uppercase fw-bold" style={{ color: '#6c757d' }}>Quick Links</h5>
               <ul className="list-unstyled">
-                <li><Link to="/" className="text-dark text-decoration-none">Home</Link></li>
-                <li><Link to="/signup" className="text-dark text-decoration-none">Join as a Craftsman</Link></li>
-                <li><Link to="/HireSignUp" className="text-dark text-decoration-none">Hire a Craftsman</Link></li>
-                <li><a href="#services" className="text-dark text-decoration-none">Services</a></li>
-                <li><a href="#how-it-works" className="text-dark text-decoration-none">How It Works</a></li>
+                <li><Link to="/" className="text-decoration-none" style={{ color: '#6c757d' }}>Home</Link></li>
+                <li><Link to="/signup" className="text-decoration-none" style={{ color: '#6c757d' }}>Join as a Craftsman</Link></li>
+                <li><Link to="/HireSignUp" className="text-decoration-none" style={{ color: '#6c757d' }}>Hire a Craftsman</Link></li>
+                <li><a href="#services" className="text-decoration-none" style={{ color: '#6c757d' }}>Services</a></li>
               </ul>
             </div>
             <div className="col-md-4 mb-4">
-              <h5 className="text-uppercase fw-bold">Contact Us</h5>
-              <p><i className="fas fa-map-marker-alt me-2 text-primary"></i> Kisumu, Kenya</p>
-              <p><i className="fas fa-envelope me-2 text-primary"></i> kaakazini.jay4t@gmail.com</p>
+              <h5 className="text-uppercase fw-bold" style={{ color: '#6c757d' }}>Contact Us</h5>
+              <p><i className="fas fa-map-marker-alt me-2"></i> <span style={{ color: '#6c757d' }}>Kisumu, Kenya</span></p>
+              <p><i className="fas fa-envelope me-2"></i> <span style={{ color: '#6c757d' }}>kaakazini.jay4t@gmail.com</span></p>
             </div>
             <div className="col-md-5 mb-4">
-              <h5 className="text-uppercase fw-bold">Find Us</h5>
+              <h5 className="text-uppercase fw-bold" style={{ color: '#6c757d' }}>Find Us</h5>
               <div style={{ width: '100%', height: '350px', borderRadius: '10px', overflow: 'hidden' }}>
                 <iframe
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
@@ -187,9 +225,9 @@ const ServicesPage = () => {
               </div>
             </div>
           </div>
-          <hr className="border-secondary" />
+          <hr style={{ borderColor: '#6c757d' }} />
           <div className="d-flex justify-content-between align-items-center">
-            <p className="mb-0">&copy; {new Date().getFullYear()} <strong>KaaKazini</strong> - Empowering Craftsmen Everywhere.</p>
+            <p className="mb-0" style={{ color: '#6c757d' }}>&copy; {new Date().getFullYear()} <strong>KaaKazini</strong> - Empowering Craftsmen Everywhere.</p>
           </div>
         </div>
       </footer>

@@ -15,8 +15,9 @@ function DashboardPage() {
     profession: "",
     location: "",
     company_name: "",
-    skills: "",
+    skills: [],
     primary_service: "",
+    account_type: "Individual",
   });
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageFile, setProfileImageFile] = useState(null);
@@ -30,10 +31,7 @@ function DashboardPage() {
 
   const professionOptions = ["Electrician", "Plumber", "Carpenter", "Welder", "Painter", "Mechanic", "WoodMaker"];
   const skillOptions = ["Wiring", "Pipe Fitting", "Roofing", "Furniture Making", "Auto Repair"];
-  const serviceOptions = [
-    "Plumbing", "Electrical", "Carpentry", "Painting", "Roofing", "Welding",
-    "Tiling", "Interior Design", "Landscaping", "Masonry", "AC Repair", "Woodwork", "Auto Repair",
-  ];
+  const serviceOptions = ["Plumbing", "Electrical", "Carpentry", "Painting", "Roofing", "Welding", "Tiling", "Interior Design", "Landscaping", "Masonry", "AC Repair", "Woodwork", "Auto Repair"];
 
   useEffect(() => {
     fetchCraftsmanData();
@@ -50,8 +48,9 @@ function DashboardPage() {
         profession: data.profession || "",
         location: data.location || "",
         company_name: data.company_name || "",
-        skills: data.skills || "",
+        skills: Array.isArray(data.skills) ? data.skills : [],
         primary_service: data.primary_service || "",
+        account_type: data.account_type || "Individual",
       });
       setProfileImage(getFullImageUrl(data.profile));
       setServiceImage(getFullImageUrl(data.service_image));
@@ -93,23 +92,14 @@ function DashboardPage() {
     setServiceImage(URL.createObjectURL(file));
   };
 
-  const validateProfile = () => {
-    const required = ["description", "profession", "location", "company_name", "skills", "primary_service"];
-    for (let key of required) {
-      if (!profileData[key].trim()) return `${key.replace("_", " ")} is required`;
-    }
-    if (!profileImage && !profileImageFile) return "Profile image is required";
-    if (!serviceImage && !serviceImageFile) return "Service image is required";
-    return null;
-  };
-
   const saveProfile = async () => {
-    const error = validateProfile();
-    if (error) return alert(error);
-
     try {
       const formData = new FormData();
-      Object.entries(profileData).forEach(([k, v]) => formData.append(k, v));
+      Object.entries(profileData).forEach(([k, v]) => {
+        if (Array.isArray(v)) v.forEach((item) => formData.append(`${k}[]`, item));
+        else formData.append(k, v);
+      });
+
       if (profileImageFile) formData.append("profile", profileImageFile);
       if (proofDocumentFile) formData.append("proof_document", proofDocumentFile);
       if (serviceImageFile) formData.append("service_image", serviceImageFile);
@@ -148,7 +138,6 @@ function DashboardPage() {
             serviceImage={serviceImage}
             handleServiceImageChange={handleServiceImageChange}
             saveProfile={saveProfile}
-            validateProfile={validateProfile}
           />
         )}
         {activeTab === "Jobs" && (
