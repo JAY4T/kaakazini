@@ -485,3 +485,33 @@ class InitiatePaymentView(APIView):
 
         except JobRequest.DoesNotExist:
             return Response({'detail': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+class SubmitQuoteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            job = JobRequest.objects.get(pk=pk)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not hasattr(request.user, 'craftsman'):
+            return Response({"error": "Not a craftsman"}, status=status.HTTP_403_FORBIDDEN)
+
+        if job.craftsman != request.user.craftsman:
+            return Response({"error": "Job not assigned to you"}, status=status.HTTP_403_FORBIDDEN)
+
+        quote_data = request.data.get("quote_details")
+        if not quote_data:
+            return Response({"error": "Quote details required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save the quote
+        job.quote_details = quote_data
+        job.status = "Quote Submitted"
+        job.save()
+
+        serializer = JobRequestSerializer(job)
+        return Response(serializer.data, status=status.HTTP_200_OK)

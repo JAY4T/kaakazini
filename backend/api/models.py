@@ -182,6 +182,7 @@ class JobRequest(models.Model):
     total_payment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.0'))
     company_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.0'))
     net_payment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.0'))
+    quote_details = models.JSONField(blank=True, null=True)
 
     # --- Status & Tracking ---
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)

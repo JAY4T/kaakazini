@@ -1,3 +1,4 @@
+// JobsTab.js
 import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { Modal, Button, Badge, Form, Row, Col, Card } from "react-bootstrap";
@@ -13,8 +14,6 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
   const [proofFiles, setProofFiles] = useState([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
-
   const [quoteDetails, setQuoteDetails] = useState({
     item: "",
     workType: "",
@@ -22,9 +21,12 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
     quantity: "",
     price: "",
     notes: "",
+    plumberName: "", // Craftsman / company name
+    user: null, // Logged-in craftsman
+    client: null,
+    items: [],
   });
 
-  const [quoteJobId, setQuoteJobId] = useState(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -33,17 +35,17 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
 
   useEffect(() => {
     if (!selectedJob) return clearTimer();
-
     const status = normalizedStatus(selectedJob.status);
-
     if (["in progress", "inprogress", "in_progress"].includes(status)) {
       startTimerFrom(selectedJob.start_time);
     } else {
       clearTimer();
     }
-
     return () => clearTimer();
   }, [selectedJob]);
+
+  const normalizedStatus = (status) =>
+    (status || "").toString().toLowerCase().replace(/[_]/g, " ");
 
   const clearTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -60,12 +62,23 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
     timerRef.current = setInterval(update, 1000);
   };
 
-  const normalizedStatus = (status) =>
-    (status || "").toString().toLowerCase().replace(/[_]/g, " ");
-
   const handleViewJob = (job) => {
     setSelectedJob(job);
     setProofFiles([]);
+    setQuoteDetails({
+      item: "",
+      workType: "",
+      duration: "",
+      quantity: "",
+      price: "",
+      notes: "",
+      plumberName: "",
+      user: job.craftsman || null,
+      client: job.client || null,
+      items: [],
+      quoteNumber: job.quoteNumber || `QTN-${job.id}`,
+      date: job.date || new Date().toLocaleDateString(),
+    });
   };
 
   const handleClose = () => {
@@ -75,28 +88,10 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
     clearTimer();
   };
 
-  const handleOpenQuoteModal = (jobId) => {
-    setQuoteJobId(jobId);
-    setQuoteDetails({
-      item: "",
-      workType: "",
-      duration: "",
-      quantity: "",
-      price: "",
-      notes: "",
-    });
-    setQuoteModalOpen(true);
-  };
-
-  const handleCloseQuoteModal = () => {
-    setQuoteModalOpen(false);
-    setQuoteJobId(null);
-  };
-
   const updateJobStatus = async (jobId, action, payload = null) => {
     try {
       setActionLoading(true);
-      const url = `/job-requests/${jobId}/${action}/`;
+      const url = `/job-requests/${jobId}/submit-quote/`;
 
       let res;
       if (payload) {
@@ -145,39 +140,39 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
   };
 
   const handleAcceptJob = (id) => updateJobStatus(id, "accept");
-
   const handleRejectJob = (id) => {
     if (!window.confirm("Reject this job?")) return;
     updateJobStatus(id, "reject");
   };
-
   const handleStartJob = (id) => updateJobStatus(id, "start");
-
   const handleCompleteJob = () => {
     if (!proofFiles || proofFiles.length === 0)
       return alert("Upload proof files.");
     updateJobStatus(selectedJob.id, "complete", { files: proofFiles });
     setProofFiles([]);
   };
-
   const handleConfirmReceived = (id) => {
     if (!window.confirm("Confirm you've received payment?")) return;
     updateJobStatus(id, "confirm-received");
   };
-
-  const handleSubmitQuoteModal = () => {
+  const handleSubmitQuote = () => {
     if (!quoteDetails.quantity || !quoteDetails.price)
       return alert("Quantity & Price required");
 
-    updateJobStatus(quoteJobId, "submit-quote", { quote: quoteDetails });
-    handleCloseQuoteModal();
-  };
+    const itemEntry = {
+      desc: quoteDetails.item,
+      qty: quoteDetails.quantity,
+      price: parseFloat(quoteDetails.price),
+    };
 
-  const computePaymentBreakdown = (job) => {
-    const total = parseFloat(job.total_payment ?? job.budget ?? 0) || 0;
-    const companyCut = Math.round((total * COMPANY_FEE_PERCENT) / 100);
-    const net = Math.round(total - companyCut);
-    return { total, companyCut, net };
+    const quotePayload = {
+      ...quoteDetails,
+      items: [itemEntry],
+      user: quoteDetails.user,
+      client: quoteDetails.client,
+    };
+
+    updateJobStatus(selectedJob.id, "submit-quote", { quote: quotePayload });
   };
 
   const showPhoneNumber = () => {
@@ -200,44 +195,120 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
     alert(`Open chat with ${selectedJob.client?.full_name}`);
   };
 
-  const formatElapsed = (sec) => {
-    if (!sec && sec !== 0) return "N/A";
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
-    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
-
   const handleDownloadQuotePDF = () => {
     const doc = new jsPDF();
+    const lineHeight = 8;
+    let y = 20;
 
-    doc.setFontSize(14);
-    doc.text("QUOTATION SUMMARY", 10, 10);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("QUOTATION", 105, y, { align: "center" });
 
-    const y = 20;
+    y += 12;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
 
-    doc.text(`Item/Service: ${quoteDetails.item || "N/A"}`, 10, y);
-    doc.text(`Type of Work: ${quoteDetails.workType || "N/A"}`, 10, y + 10);
-    doc.text(`Estimated Duration: ${quoteDetails.duration || "N/A"}`, 10, y + 20);
-    doc.text(`Quantity: ${quoteDetails.quantity}`, 10, y + 30);
-    doc.text(
-      `Unit Price: KSh ${Number(quoteDetails.price).toLocaleString()}`,
-      10,
-      y + 40
-    );
+    const craftsman = quoteDetails.user?.full_name || "Craftsman Name";
+    const craftsmanPhone = quoteDetails.user?.phone || "";
+    const craftsmanEmail = quoteDetails.user?.email || "";
 
-    const subtotal =
-      Number(quoteDetails.quantity) * Number(quoteDetails.price);
-    const companyFee = Math.round(subtotal * 0.1);
-    const total = subtotal + companyFee;
+    doc.text(`From: ${craftsman}`, 14, y);
+    y += lineHeight;
+    if (craftsmanPhone) doc.text(`Phone: ${craftsmanPhone}`, 14, y);
+    y += lineHeight;
+    if (craftsmanEmail) doc.text(`Email: ${craftsmanEmail}`, 14, y);
 
-    doc.text(`Subtotal: KSh ${subtotal.toLocaleString()}`, 10, y + 60);
-    doc.text(`Company Fee (10%): KSh ${companyFee.toLocaleString()}`, 10, y + 70);
-    doc.text(`Total Payable: KSh ${total.toLocaleString()}`, 10, y + 80);
+    const client = quoteDetails.client?.full_name || "Client Name";
+    const clientPhone = quoteDetails.client?.phone || "";
+    const clientEmail = quoteDetails.client?.email || "";
+    const clientAddress = quoteDetails.client?.address || "";
 
-    doc.text(`Notes: ${quoteDetails.notes || "None"}`, 10, y + 100);
+    doc.text(`To: ${client}`, 120, y - lineHeight * 2);
+    if (clientPhone) doc.text(`Phone: ${clientPhone}`, 120, y - lineHeight);
+    if (clientEmail) doc.text(`Email: ${clientEmail}`, 120, y);
+    if (clientAddress) doc.text(`Address: ${clientAddress}`, 120, y + lineHeight);
 
-    doc.save("quotation.pdf");
+    y += lineHeight * 3;
+
+    const quoteNumber = quoteDetails.quoteNumber || "QTN-XXXX";
+    const quoteDate = quoteDetails.date || new Date().toLocaleDateString();
+    doc.text(`Quote #: ${quoteNumber}`, 14, y);
+    doc.text(`Date: ${quoteDate}`, 120, y);
+    y += lineHeight * 2;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFillColor(34, 85, 34);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(14, y - 6, 180, 8, "F");
+    doc.text("Description", 16, y);
+    doc.text("Qty", 120, y);
+    doc.text("Unit Price", 140, y);
+    doc.text("Total", 170, y);
+
+    y += lineHeight;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    const items = quoteDetails.items || [];
+    let subtotal = 0;
+
+    items.forEach((item) => {
+      doc.text(item.desc, 16, y);
+      doc.text(`${item.qty}`, 120, y);
+      doc.text(`${item.price.toLocaleString()} KES`, 140, y);
+
+      const total = item.qty === "-" ? item.price : item.qty * item.price;
+      subtotal += total;
+      doc.text(`${total.toLocaleString()} KES`, 170, y);
+      y += lineHeight;
+    });
+
+    y += 2;
+    const taxRate = quoteDetails.taxRate || 0.16;
+    const tax = Math.round(subtotal * taxRate);
+    const totalCost = subtotal + tax;
+
+    doc.text(`Subtotal: ${subtotal.toLocaleString()} KES`, 140, y);
+    y += lineHeight;
+    doc.text(`Tax (${taxRate * 100}%): ${tax.toLocaleString()} KES`, 140, y);
+    y += lineHeight;
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total Cost: ${totalCost.toLocaleString()} KES`, 140, y);
+    doc.setFont("helvetica", "normal");
+    y += lineHeight * 2;
+
+    const paymentTerms =
+      quoteDetails.paymentTerms || "50% Deposit Required, Balance on Completion";
+    const notes =
+      quoteDetails.notes ||
+      "Work to be completed within the agreed timeline. All work guaranteed.";
+
+    doc.text(`Payment Terms: ${paymentTerms}`, 14, y);
+    y += lineHeight;
+    doc.text(`Notes: ${notes}`, 14, y);
+    y += lineHeight * 3;
+
+    doc.text("Thank you for choosing our services!", 14, y);
+    y += lineHeight * 2;
+
+    doc.text(`${craftsman}`, 14, y);
+    y += lineHeight;
+    if (quoteDetails.craftsmanSignatureImage) {
+      doc.addImage(quoteDetails.craftsmanSignatureImage, "PNG", 14, y, 50, 20);
+      y += 25;
+    } else {
+      doc.text("Craftsman Signature: ___________________________", 14, y);
+      y += lineHeight * 2;
+    }
+
+    doc.text(`${client}`, 120, y - 25);
+    if (quoteDetails.clientSignatureImage) {
+      doc.addImage(quoteDetails.clientSignatureImage, "PNG", 120, y - 20, 50, 20);
+    } else {
+      doc.text("Client Signature: ___________________________", 120, y);
+    }
+
+    doc.save(`${quoteNumber}.pdf`);
   };
 
   const renderFooterButtons = () => {
@@ -257,7 +328,7 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
           <Button
             variant="outline-danger"
             disabled={actionLoading}
-            onClick={() => handleRejectJob(selectedJob.id)}
+            onClick={handleRejectJob}
           >
             Reject
           </Button>
@@ -267,11 +338,19 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
 
     if (status === "accepted") {
       return (
+        <Button variant="secondary" onClick={handleChat}>
+          <FaComments /> Chat
+        </Button>
+      );
+    }
+
+    if (status === "quote submitted") {
+      return (
         <>
           <Button
-            variant="info"
-            disabled={actionLoading}
+            variant="success"
             onClick={() => handleStartJob(selectedJob.id)}
+            disabled={actionLoading}
           >
             Start Job
           </Button>
@@ -282,9 +361,7 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
       );
     }
 
-    if (
-      ["in progress", "inprogress", "in_progress"].includes(status)
-    ) {
+    if (["in progress", "inprogress", "in_progress"].includes(status)) {
       return (
         <>
           <div style={{ minWidth: 240 }}>
@@ -312,9 +389,7 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
     if (status === "completed") {
       return (
         <>
-          <Badge bg="primary">
-            Completed — Pending Admin Payment
-          </Badge>
+          <Badge bg="primary">Completed — Pending Admin Payment</Badge>
           <Button variant="secondary" onClick={handleChat}>
             <FaComments /> Chat
           </Button>
@@ -369,6 +444,8 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
                           ? "secondary"
                           : normalizedStatus(job.status).includes("accepted")
                           ? "info"
+                          : normalizedStatus(job.status).includes("quote submitted")
+                          ? "warning"
                           : normalizedStatus(job.status).includes("in progress")
                           ? "warning"
                           : normalizedStatus(job.status).includes("completed")
@@ -388,13 +465,6 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
                       onClick={() => handleViewJob(job)}
                     >
                       View
-                    </Button>{" "}
-                    <Button
-                      size="sm"
-                      variant="outline-success"
-                      onClick={() => handleOpenQuoteModal(job.id)}
-                    >
-                      Submit Quote
                     </Button>
                   </td>
                 </tr>
@@ -404,186 +474,8 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
         </div>
       )}
 
-      {/* ——— QUOTE MODAL ——— */}
-      <Modal
-        show={quoteModalOpen}
-        onHide={handleCloseQuoteModal}
-        centered
-        size="md"
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Submit Quote</Modal.Title>
-        </Modal.Header>
-
-        <Modal.Body>
-          <Form>
-            <Form.Group>
-              <Form.Label>Item / Service</Form.Label>
-              <Form.Control
-                value={quoteDetails.item}
-                onChange={(e) =>
-                  setQuoteDetails({ ...quoteDetails, item: e.target.value })
-                }
-                placeholder="Painting 2BR House"
-              />
-            </Form.Group>
-
-            <Form.Group className="mt-2">
-              <Form.Label>Type of Work</Form.Label>
-              <Form.Select
-                value={quoteDetails.workType}
-                onChange={(e) =>
-                  setQuoteDetails({
-                    ...quoteDetails,
-                    workType: e.target.value,
-                  })
-                }
-              >
-                <option value="">Select</option>
-                <option value="Labour Only">Labour Only</option>
-                <option value="Labour + Materials">
-                  Labour + Materials
-                </option>
-                <option value="Materials Only">Materials Only</option>
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mt-2">
-              <Form.Label>Estimated Duration</Form.Label>
-              <Form.Control
-                value={quoteDetails.duration}
-                onChange={(e) =>
-                  setQuoteDetails({
-                    ...quoteDetails,
-                    duration: e.target.value,
-                  })
-                }
-                placeholder="2 days"
-              />
-            </Form.Group>
-
-            <Form.Group className="mt-2">
-              <Form.Label>Quantity</Form.Label>
-              <Form.Control
-                type="number"
-                min="1"
-                value={quoteDetails.quantity}
-                onChange={(e) =>
-                  setQuoteDetails({
-                    ...quoteDetails,
-                    quantity: e.target.value,
-                  })
-                }
-              />
-            </Form.Group>
-
-            <Form.Group className="mt-2">
-              <Form.Label>Unit Price (KSh)</Form.Label>
-              <Form.Control
-                type="number"
-                min="1"
-                value={quoteDetails.price}
-                onChange={(e) =>
-                  setQuoteDetails({
-                    ...quoteDetails,
-                    price: e.target.value,
-                  })
-                }
-              />
-            </Form.Group>
-
-            <Form.Group className="mt-2">
-              <Form.Label>Notes</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={quoteDetails.notes}
-                onChange={(e) =>
-                  setQuoteDetails({
-                    ...quoteDetails,
-                    notes: e.target.value,
-                  })
-                }
-              />
-            </Form.Group>
-
-            {/* ——— QUOTE SUMMARY ——— */}
-            {quoteDetails.quantity && quoteDetails.price && (
-              <div className="border rounded p-3 mt-3">
-                <h6 className="fw-bold">QUOTATION SUMMARY</h6>
-                <hr />
-
-                <p>
-                  <strong>Item:</strong> {quoteDetails.item || "N/A"}
-                </p>
-                <p>
-                  <strong>Work Type:</strong>{" "}
-                  {quoteDetails.workType || "N/A"}
-                </p>
-                <p>
-                  <strong>Duration:</strong>{" "}
-                  {quoteDetails.duration || "N/A"}
-                </p>
-                <p>
-                  <strong>Quantity:</strong> {quoteDetails.quantity}
-                </p>
-                <p>
-                  <strong>Unit Price:</strong> KSh{" "}
-                  {Number(quoteDetails.price).toLocaleString()}
-                </p>
-
-                <p>
-                  <strong>Notes:</strong>{" "}
-                  {quoteDetails.notes || "None"}
-                </p>
-
-                {(() => {
-                  const subtotal =
-                    Number(quoteDetails.quantity) *
-                    Number(quoteDetails.price);
-                  const companyFee = Math.round(subtotal * 0.1);
-                  const totalPayable = subtotal + companyFee;
-
-                  return (
-                    <>
-                      <p>
-                        <strong>Subtotal:</strong> KSh{" "}
-                        {subtotal.toLocaleString()}
-                      </p>
-                      <p>
-                        <strong>Company Fee:</strong> KSh{" "}
-                        {companyFee.toLocaleString()}
-                      </p>
-                      <p className="fw-bold">
-                        <strong>Total Payable:</strong> KSh{" "}
-                        {totalPayable.toLocaleString()}
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
-
-            <div className="d-flex justify-content-between mt-3">
-              <Button variant="secondary" onClick={handleDownloadQuotePDF}>
-                Download PDF
-              </Button>
-
-              <Button
-                variant="primary"
-                onClick={handleSubmitQuoteModal}
-                disabled={!quoteDetails.quantity || !quoteDetails.price}
-              >
-                Submit Quote
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* ——— SINGLE JOB VIEW MODAL (unchanged) ——— */}
       {selectedJob && (
-        <Modal show onHide={handleClose} centered size="md">
+        <Modal show onHide={handleClose} centered size="lg">
           <Modal.Header closeButton>
             <Modal.Title>
               {selectedJob.service} (Job #{selectedJob.id})
@@ -597,11 +489,7 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
                   <Col md={8}>
                     <h5 className="fw-bold">{selectedJob.service}</h5>
                     <Badge
-                      bg={
-                        selectedJob.priority === "High"
-                          ? "danger"
-                          : "warning"
-                      }
+                      bg={selectedJob.priority === "High" ? "danger" : "warning"}
                     >
                       {selectedJob.priority}
                     </Badge>
@@ -610,9 +498,7 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
 
                     <p>
                       <FaPhone /> Phone:{" "}
-                      <strong>
-                        {showPhoneNumber() || "Hidden"}
-                      </strong>
+                      <strong>{showPhoneNumber() || "Hidden"}</strong>
                     </p>
                   </Col>
 
@@ -623,6 +509,114 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
                 </Row>
               </Card.Body>
             </Card>
+
+            {/* Quote form */}
+            {normalizedStatus(selectedJob.status) === "accepted" && (
+              <Card className="mb-3 p-3 shadow-sm border">
+                <h6 className="fw-bold">Submit Quote</h6>
+                <Form>
+                  <Form.Group>
+                    <Form.Label>Plumber / Company Name</Form.Label>
+                    <Form.Control
+                      value={quoteDetails.plumberName}
+                      onChange={(e) =>
+                        setQuoteDetails({
+                          ...quoteDetails,
+                          plumberName: e.target.value,
+                        })
+                      }
+                      placeholder="Enter your name or business"
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mt-2">
+                    <Form.Label>Item / Service</Form.Label>
+                    <Form.Control
+                      value={quoteDetails.item}
+                      onChange={(e) =>
+                        setQuoteDetails({ ...quoteDetails, item: e.target.value })
+                      }
+                      placeholder="Painting 2BR House"
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mt-2">
+                    <Form.Label>Type of Work</Form.Label>
+                    <Form.Select
+                      value={quoteDetails.workType}
+                      onChange={(e) =>
+                        setQuoteDetails({ ...quoteDetails, workType: e.target.value })
+                      }
+                    >
+                      <option value="">Select</option>
+                      <option value="Labour Only">Labour Only</option>
+                      <option value="Labour + Materials">Labour + Materials</option>
+                      <option value="Materials Only">Materials Only</option>
+                    </Form.Select>
+                  </Form.Group>
+
+                  <Form.Group className="mt-2">
+                    <Form.Label>Estimated Duration</Form.Label>
+                    <Form.Control
+                      value={quoteDetails.duration}
+                      onChange={(e) =>
+                        setQuoteDetails({ ...quoteDetails, duration: e.target.value })
+                      }
+                      placeholder="2 days"
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mt-2">
+                    <Form.Label>Quantity</Form.Label>
+                    <Form.Control
+                      type="number"
+                      min="1"
+                      value={quoteDetails.quantity}
+                      onChange={(e) =>
+                        setQuoteDetails({ ...quoteDetails, quantity: e.target.value })
+                      }
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mt-2">
+                    <Form.Label>Unit Price (KSh)</Form.Label>
+                    <Form.Control
+                      type="number"
+                      min="1"
+                      value={quoteDetails.price}
+                      onChange={(e) =>
+                        setQuoteDetails({ ...quoteDetails, price: e.target.value })
+                      }
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mt-2">
+                    <Form.Label>Notes</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      value={quoteDetails.notes}
+                      onChange={(e) =>
+                        setQuoteDetails({ ...quoteDetails, notes: e.target.value })
+                      }
+                    />
+                  </Form.Group>
+
+                  <div className="d-flex justify-content-between mt-3">
+                    <Button variant="secondary" onClick={handleDownloadQuotePDF}>
+                      Download PDF
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleSubmitQuote}
+                      disabled={!quoteDetails.quantity || !quoteDetails.price || actionLoading}
+                    >
+                      Submit Quote
+                    </Button>
+                  </div>
+                </Form>
+              </Card>
+            )}
 
             <Modal.Footer>
               {renderFooterButtons()}
