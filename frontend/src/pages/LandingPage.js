@@ -3,6 +3,10 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import heroImage from '../assets/craftOnline.jpg';
 import heroBottom from '../assets/hero-bottom.svg';
+import c2 from '../assets/c2.png';
+import c3 from '../assets/c3.png';
+
+
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -211,35 +215,127 @@ const [searchQuery, setSearchQuery] = useState('');
 >
 </section>
 
-      {/* About Section */}
-      <section className="py-5 bg-light">
-        <div className="container">
-          <div className="text-center mb-5">
-            <h2 className="fw-bold text-success display-6" data-aos="fade-left">About Us</h2>
-            <p className="text-muted fs-5" data-aos="fade-right">
-              Empowering local craftsmen to grow, showcase their work, and reach the world.
-            </p>
-          </div>
-          <div className="row align-items-center">
-            <div className="col-lg-6 mb-4 mb-lg-0" data-aos="fade-right">
-              <p className="fs-5 lh-lg">
-                At KaaKazini, we are passionate about supporting local craftsmen by providing a platform that helps them manage projects, showcase their unique handmade products, and grow their business. We believe in the power of craftsmanship to bring one-of-a-kind creations to the world while fostering community and opportunity.
-              </p>
-              <p className="fs-5 lh-lg">
-                From connecting with clients to managing orders seamlessly, our platform is designed to elevate the craft and empower artisans to succeed.
-              </p>
-            </div>
-            <div className="col-lg-6 text-center" data-aos="fade-right">
-              <img 
-                src="https://www.ariseiip.com/wp-content/uploads/2022/06/textile.png" 
-                alt="Craftsmen at Work" 
-                className="img-fluid rounded shadow-lg" 
-                style={{ maxHeight: "400px", objectFit: "cover" }}
+{/* About Section */}
+{/* About Section */}
+<section className="py-5 bg-light">
+  <div className="container">
+    <div className="text-center mb-5">
+      <h2
+        className="fw-bold text-success display-6"
+        data-aos="fade-left"
+      >
+        About Us
+      </h2>
+      <p
+        className="text-muted fs-5"
+        data-aos="fade-right"
+      >
+        Empowering local craftsmen to grow, showcase their work, and reach the world.
+      </p>
+    </div>
+
+    <div className="row align-items-center">
+      {/* Left Text */}
+      <div
+        className="col-lg-6 mb-4 mb-lg-0"
+        data-aos="fade-right"
+      >
+        <p className="fs-5 lh-lg">
+          At KaaKazini, we are passionate about supporting local craftsmen by providing
+          a platform that helps them manage projects, showcase their unique handmade
+          products, and grow their business. We believe in the power of craftsmanship
+          to bring one-of-a-kind creations to the world while fostering community and
+          opportunity.
+        </p>
+        <p className="fs-5 lh-lg">
+          From connecting with clients to managing orders seamlessly, our platform is
+          designed to elevate the craft and empower artisans to succeed.
+        </p>
+      </div>
+
+      {/* Right Carousel */}
+      <div className="col-lg-6" data-aos="fade-left">
+        <div
+          id="aboutCarousel"
+          className="carousel slide"
+          data-bs-ride="carousel"
+          data-bs-interval="3000"
+        >
+          <div className="carousel-inner carousel-fixed-height rounded shadow-lg">
+
+            <div className="carousel-item active">
+              <img
+                src="https://www.ariseiip.com/wp-content/uploads/2022/06/textile.png"
+                className="d-block w-100 carousel-img"
+                alt="Textile craftsmanship"
               />
             </div>
+
+            <div className="carousel-item">
+              <img
+                src={c2}
+                className="d-block w-100 carousel-img"
+                alt="Plumbing craftsmanship"
+              />
+            </div>
+
+            <div className="carousel-item">
+              <img
+                src={c3}
+                className="d-block w-100 carousel-img"
+                alt="Carpentry craftsmanship"
+              />
+            </div>
+
           </div>
+
+          {/* Controls */}
+          <button
+            className="carousel-control-prev"
+            type="button"
+            data-bs-target="#aboutCarousel"
+            data-bs-slide="prev"
+          >
+            <span className="carousel-control-prev-icon" />
+          </button>
+
+          <button
+            className="carousel-control-next"
+            type="button"
+            data-bs-target="#aboutCarousel"
+            data-bs-slide="next"
+          >
+            <span className="carousel-control-next-icon" />
+          </button>
         </div>
-      </section>
+      </div>
+    </div>
+  </div>
+
+  {/* Carousel Styles */}
+  <style>{`
+    .carousel-fixed-height {
+      height: 400px;
+    }
+
+    .carousel-fixed-height .carousel-item {
+      height: 100%;
+    }
+
+    .carousel-img {
+      height: 100%;
+      width: 100%;
+      object-fit: cover;
+    }
+
+    @media (max-width: 768px) {
+      .carousel-fixed-height {
+        height: 280px;
+      }
+    }
+  `}</style>
+</section>
+
 
 {/* Services Section */}
 <section className="py-5 bg-light" id="services">
