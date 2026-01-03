@@ -119,6 +119,7 @@ const [searchQuery, setSearchQuery] = useState('');
 </div>
 </section>
 
+{/* decoration */}
 <section
   className="text-center d-flex align-items-center"
   style={{
@@ -130,7 +131,84 @@ const [searchQuery, setSearchQuery] = useState('');
     // zIndex: 1,
   }}
 >
-  
+</section>
+
+{/* stats */}
+<section className="py-5 bg-white text-center" id="impact">
+  <div className="container">
+    <div className="row justify-content-center g-4">
+
+      {[
+        { icon: "bi-people-fill", value: "100+", label: "Active Craftsmen" },
+        { icon: "bi-clipboard-check", value: "50+", label: "Jobs Completed" },
+        { icon: "bi-emoji-smile", value: "30+", label: "Happy Clients" },
+        { icon: "bi-shop", value: "100+", label: "Shops Connected" },
+      ].map((item, idx) => (
+        <div key={idx} className="col-6 col-md-3 d-flex justify-content-center">
+          <div className="impact-circle">
+            <i className={`bi ${item.icon} impact-icon`}></i>
+            <h3 className="impact-value">{item.value}</h3>
+            <p className="impact-label">{item.label}</p>
+          </div>
+        </div>
+      ))}
+
+    </div>
+  </div>
+
+  {/* Local styles just like your other sections */}
+  <style>{`
+    .impact-circle {
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      border: 4px solid #f4c430;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #fff;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .impact-circle:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    }
+
+    .impact-icon {
+      font-size: 1.6rem;
+      color: #212529;
+      margin-bottom: 4px;
+    }
+
+    .impact-value {
+      margin: 0;
+      font-weight: 700;
+      color: #f4c430;
+    }
+
+    .impact-label {
+      margin: 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #212529;
+    }
+  `}</style>
+</section>
+
+{/* decoration */}
+<section
+  className="text-center d-flex align-items-center"
+  style={{
+    background: `url(${heroBottom}) no-repeat center center/cover`,
+    height: '10vh',
+    // color: 'white',
+    width: '100%',
+    position: 'relative',
+    // zIndex: 1,
+  }}
+>
 </section>
 
       {/* About Section */}
