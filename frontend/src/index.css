@@ -18,58 +18,58 @@ code {
 }
 
 
-.btn-green-transparent {
+.btn-yellow-transparent {
   background-color: transparent !important;  /* force override Bootstrap blue */
-  border: 2px solid #28a745 !important;
-  color: white !important;
+  border: 2px solid #FFF000 !important;
+  color: rgb(0, 0, 0) !important;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-.btn-green-transparent:hover {
-  background-color: #29a745 !important; /* darker green on hover */
+.btn-yellow-transparent:hover {
+  background-color: #FFF000 !important; /* darker yellow on hover */
   /* border-color: #1e7e34 !important; */
-  color: white !important;
+  color: rgb(0, 0, 0) !important;
 }
 
-.btn-green-scrolled {
-  background-color: #218838 !important; /* darker green on hover */
+.btn-yellow-scrolled {
+  background-color: #FFF000 !important; /* darker yellow on hover */
   /* border-color: #1e7e34 !important; */
-  color: white !important;
+  color: rgb(0, 0, 0) !important;
 }
 
 
-.btn-green:active {
-  background-color: #1e7e34 !important; /* even darker green on active */
-  border-color: #1c7430 !important;
-  color: white !important;
+.btn-yellow:active {
+  background-color: #FFF000 !important; /* even darker yellow on active */
+  border-color: #FFF000 !important;
+  color: rgb(0, 0, 0) !important;
 }
 
-.btn-green-solid {
-  /* background-color: #218838 !important; darker green on hover */
-    background-color: #25973e !important; /* darker green on hover */
+.btn-yellow-solid {
+  /* background-color: #218838 !important; darker yellow on hover */
+    background-color: #FFF000 !important; /* darker yellow on hover */
   /* border-color: #1e7e34 !important; */
-  color: white !important;
+  color: rgb(0, 0, 0) !important;
   transition: transform 0.8s ease-in-out;
 
 }
 
-.btn-green-solid:hover {
-  background-color: #29a745 !important; /* darker green on hover */
+.btn-yellow-solid:hover {
+  background-color: #FFD10A !important; /* darker yellow on hover */
   /* border-color: #1e7e34 !important; */
-  color: white !important;
+  color: rgb(0, 0, 0) !important;
     transform: scale(1.015); /* grows by 10% */
 }
 /* Hover effect for nav-links */
 .navbar-nav .nav-link:hover {
-  color: #2fc552 !important; /* green hover */
+  color: #2fc552 !important; /* yellow hover */
   text-decoration: none;      
 }
 
 /* Active link underline */
 .navbar-nav .nav-link.active {
-  border-bottom: 2px solid #28a745; /* green underline */
+  border-bottom: 2px solid #28a745; /* yellow underline */
   padding-bottom: 2px;
-  color: #28a745 !important; /* match active text with green */
+  color: #28a745 !important; /* match active text with yellow */
 }
 
 @keyframes fadeUp {

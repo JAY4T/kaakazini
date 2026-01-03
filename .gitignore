@@ -1,0 +1,17 @@
+# Environment files
+.env
+myenv/
+
+
+# Static files
+staticfiles/
+**/static/dist/
+**/static/build/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Node
+node_modules/
