@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import heroImage from '../assets/craftOnline.jpg';
+import heroBottom from '../assets/hero-bottom.svg';
+
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
@@ -80,11 +82,11 @@ const [searchQuery, setSearchQuery] = useState('');
   className="text-center d-flex align-items-center"
   style={{
     background: `url(${heroImage}) no-repeat center center/cover`,
-    height: '120vh',
+    height: '80vh',
     color: 'white',
     width: '100%',
     position: 'relative',
-    paddingTop: '100px', // 👈 keeps hero below navbar
+    paddingTop: '100px', //keeps hero below navbar
     zIndex: 1,
   }}
 >
@@ -103,13 +105,13 @@ const [searchQuery, setSearchQuery] = useState('');
 
   <Link
     to="/login"
-    className="btn btn-green-transparent btn-lg fw-bold"
+    className="btn btn-yellow-solid btn-lg fw-bold"
   >
     Become A Craftsman
   </Link>
   <Link
     to="/Hirelogin"
-    className="btn btn-green-solid btn-lg fw-bold"
+    className="btn btn-yellow-solid btn-lg fw-bold"
   >
     Hire a Craftsman
   </Link>
@@ -117,7 +119,19 @@ const [searchQuery, setSearchQuery] = useState('');
 </div>
 </section>
 
-
+<section
+  className="text-center d-flex align-items-center"
+  style={{
+    background: `url(${heroBottom}) no-repeat center center/cover`,
+    height: '10vh',
+    // color: 'white',
+    width: '100%',
+    position: 'relative',
+    // zIndex: 1,
+  }}
+>
+  
+</section>
 
       {/* About Section */}
       <section className="py-5 bg-light">
@@ -336,7 +350,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
       position: absolute;
       top: -10px;
       right: -10px;
-      background-color: #198754; /* Changed to green */
+      background-color: #198754; /* Changed to yellow */
       color: white;
       border-radius: 50%;
       width: 28px;
@@ -347,18 +361,18 @@ Tell us about your project, and skilled craftsmen will start responding within 2
       font-size: 0.9rem;
       font-weight: bold;
       border: 2px solid white;
-      box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); /* Green shadow */
+      box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); /* yellow shadow */
       animation: pulse-glow 2s infinite; /* Pulsing glow */
     }
     @keyframes pulse-glow {
-      0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); } /* Green shadow */
-      70% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); } /* Green shadow */
-      100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); } /* Green shadow */
+      0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); } /* yellow shadow */
+      70% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); } /* yellow shadow */
+      100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); } /* yellow shadow */
     }
 
     .step-icon {
       background-color: white;
-      color: #198754; /* Changed to green */
+      color: #198754; /* Changed to yellow */
       width: 60px;
       height: 60px;
       border-radius: 50%;
@@ -384,7 +398,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
     .step-icon:hover {
       transform: scale(1.1); /* Slightly enlarge on hover */
       box-shadow: 0 8px 20px rgba(0,0,0,0.2); /* Deeper shadow on hover */
-      color: #157347; /* Slightly darker green on hover */
+      color: #157347; /* Slightly darker yellow on hover */
     }
     .step-content h5 {
       color: #343a40;
@@ -508,7 +522,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
                   <i key={i} className="far fa-star" />
                 ))}
               </div>
-              <h5 className="card-title mt-3 fw-bold text-green">
+              <h5 className="card-title mt-3 fw-bold text-yellow">
                 – {testi.name}
               </h5>
             </div>
@@ -541,7 +555,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
       margin-top: 1rem;
     }
 
-    .text-green {
+    .text-yellow {
       color: #2fc552;
     }
 
@@ -652,7 +666,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
     .faq-accordion {
       border: none !important;
     }
-    .text-green{
+    .text-yellow{
       color: #2fc552;
     }
     .accordion-item {
