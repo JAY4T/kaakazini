@@ -3,8 +3,15 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import heroImage from '../assets/craftOnline.jpg';
 import heroBottom from '../assets/hero-bottom.svg';
+import CoverFlow from '../components/CoverFlow.js';
+
 import c2 from '../assets/c2.png';
 import c3 from '../assets/c3.png';
+import c4 from '../assets/c4.png';
+import c5 from '../assets/c5.png';
+import c6 from '../assets/c6.png';
+import c7 from '../assets/c7.png';
+import c8 from '../assets/c8.png';
 
 
 
@@ -216,7 +223,6 @@ const [searchQuery, setSearchQuery] = useState('');
 </section>
 
 {/* About Section */}
-{/* About Section */}
 <section className="py-5 bg-light">
   <div className="container">
     <div className="text-center mb-5">
@@ -340,12 +346,16 @@ const [searchQuery, setSearchQuery] = useState('');
 {/* Services Section */}
 <section className="py-5 bg-light" id="services">
   <div className="container overflow-hidden">
-    <h2 className="text-center fw-bold text-success display-6" data-aos="fade-left">
+    <h2 className="text-center fw-bold text-success display-6">
       Explore Our Services
     </h2>
-    <p className="text-center fs-5 lh-lg" data-aos="fade-right">
+    <p className="text-center fs-5 lh-lg">
       Discover skilled services offered by experienced craftsmen.
     </p>
+
+    {/* ================= COVERFLOW ================= */}
+    <CoverFlow />
+    {/* ============================================ */}
 
     {filteredServices.length === 0 ? (
       <p className="text-center">No services found.</p>
@@ -353,62 +363,65 @@ const [searchQuery, setSearchQuery] = useState('');
       <>
         <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
           {filteredServices.map((service, idx) => {
-            const imageUrl = service.services?.[0]?.image || service.service_image || "https://via.placeholder.com/300";
+            const imageUrl =
+              service.services?.[0]?.image ||
+              service.service_image ||
+              "https://via.placeholder.com/300";
 
             return (
               <div key={idx} className="col d-flex justify-content-center">
-                <div className="card border-0 shadow" style={{ width: '18rem' }}>
+                <div className="card border-0 shadow" style={{ width: "18rem" }}>
                   <div className="position-relative">
                     <img
                       src={getImageUrl(imageUrl)}
                       alt={service.primary_service}
                       className="card-img-top"
-                      style={{ height: '300px', objectFit: 'cover' }}
+                      style={{ height: "300px", objectFit: "cover" }}
                     />
-                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
+                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
                       <h5 className="fw-bold">{service.primary_service}</h5>
                     </div>
                   </div>
-                 <div className="card-body text-center">
-  <h5 className="card-title fw-bold mb-1">{service.service || service.primary_service}</h5>
-  {service.location && (
-    <p className="mb-0">
-      <a
-        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.location)}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-success fw-bold text-decoration-none"
-      >
-        <i className="fas fa-map-marker-alt me-1"></i> {service.location} 
-      </a>
-    </p>
-  )}
-</div>
 
-
+                  <div className="card-body text-center">
+                    <h5 className="fw-bold mb-1">
+                      {service.service || service.primary_service}
+                    </h5>
+                    {service.location && (
+                      <p className="mb-0">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            service.location
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-success fw-bold text-decoration-none"
+                        >
+                          <i className="fas fa-map-marker-alt me-1"></i>{" "}
+                          {service.location}
+                        </a>
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Button below the services grid */}
         <div className="text-center mt-4">
-          <a
-            href="/services"
-            className="btn btn-success btn-lg fw-bold"
-            style={{ backgroundColor: '#198754', borderColor: '#198754' }}
-          >
+          <a href="/services" className="btn btn-success btn-lg fw-bold">
             View Our Services
           </a>
         </div>
       </>
     )}
 
+    {/* ================= STYLES ================= */}
     <style>{`
       .overlay {
         opacity: 0;
-        transition: opacity 0.4s ease-in-out;
+        transition: opacity 0.4s ease;
       }
       .position-relative:hover .overlay {
         opacity: 1;
