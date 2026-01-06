@@ -12,6 +12,7 @@ import c5 from '../assets/c5.png';
 import c6 from '../assets/c6.png';
 import c7 from '../assets/c7.png';
 import c8 from '../assets/c8.png';
+import bgImage from '../assets/background.png';
 
 
 
@@ -665,122 +666,111 @@ Tell us about your project, and skilled craftsmen will start responding within 2
  
 
 
-   <section className="py-5 bg-light">
-  <div className="container">
-    <h2
-      className="text-center fw-bold text-success display-6 mb-5"
-      data-aos="fade-left"
+   <section 
+      className="py-5" 
+      style={{ 
+        // backgroundImage: `url(${bgImage})`,
+        // backgroundSize: 'cover',
+        // backgroundPosition: 'center',
+        // backgroundAttachment: 'fixed',
+        // backgroundRepeat: 'no-repeat'
+            backgroundImage: `url(${bgImage})`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: '400px 400px', // adjust tile size
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed'
+      }}
     >
-      What Our Clients Say
-    </h2>
-    <div className="row justify-content-center">
-      {[
-        {
-          quote:
-            "The carpenter I hired was extremely professional. Highly recommend!",
-          stars: 4,
-          name: "Sarah M.",
-        },
-        {
-          quote: "The metalworker exceeded my expectations. Great job!",
-          stars: 5,
-          name: "James K.",
-        },
-        {
-          quote:
-            "The textile artist made a beautiful custom outfit. Loved it!",
-          stars: 3.5,
-          name: "Linda O.",
-        },
-      ].map((testi, idx) => (
-        <div className="col-md-4 mb-4" key={idx}>
-          <div className="card h-100 border-0 testimonial-card-glow text-center shadow-lg flip-right-infinite">
-            <div className="card-body d-flex flex-column align-items-center p-4">
-              <i className="bi bi-quote display-4 text-muted mb-2"></i>
-              <p className="card-text fst-italic flex-grow-1 mb-3">
-                "{testi.quote}"
-              </p>
-              <div className="text-warning mb-2">
-                {[...Array(Math.floor(testi.stars))].map((_, i) => (
-                  <i key={i} className="fas fa-star" />
-                ))}
-                {testi.stars % 1 !== 0 && <i className="fas fa-star-half-alt" />}
-                {[...Array(5 - Math.ceil(testi.stars))].map((_, i) => (
-                  <i key={i} className="far fa-star" />
-                ))}
+      <div className="container">
+        <h2 className="text-center fw-bold text-success display-5 mb-5" data-aos="fade-left">What Our Clients Say</h2>
+        <div className="row justify-content-center">
+          {[
+            {
+              quote: "The carpenter I hired was extremely professional. Highly recommend!",
+              stars: 4,
+              name: "Sarah M.",
+              img: c2, 
+            },
+            {
+              quote: "The metalworker exceeded my expectations. Great job!",
+              stars: 5,
+              name: "James K.",
+              img: c3,
+            },
+            {
+              quote: "The textile artist made a beautiful custom outfit. Loved it!",
+              stars: 3.5,
+              name: "Linda O.",
+              img: c4,
+            },
+          ].map((testi, idx) => (
+            <div className="col-md-4 mb-4" key={idx}>
+              <div className="card h-100 border-0 testimonial-card-glow text-center shadow-lg"> 
+                <div className="card-body d-flex flex-column align-items-center p-4">
+                  <img src={testi.img} className="rounded-circle testimonial-img-circle mb-3" alt={testi.name} />
+                  <i className="bi bi-quote display-4 text-muted mb-2"></i>
+                  <p className="card-text fst-italic flex-grow-1 mb-3">"{testi.quote}"</p>
+                  <div className="text-warning mb-2">
+                    {[...Array(Math.floor(testi.stars))].map((_, i) => (
+                      <i key={i} className="fas fa-star" />
+                    ))}
+                    {testi.stars % 1 !== 0 && (
+                      <i className="fas fa-star-half-alt" />
+                    )}
+                    {[...Array(5 - Math.ceil(testi.stars))].map((_, i) => (
+                      <i key={i} className="far fa-star" />
+                    ))}
+                  </div>
+                  <h5 className="card-title mt-3 fw-bold text-green">– {testi.name}</h5> 
+                </div>
               </div>
-              <h5 className="card-title mt-3 fw-bold text-yellow">
-                – {testi.name}
-              </h5>
             </div>
-          </div>
+          ))}
         </div>
-      ))}
-    </div>
-  </div>
+      </div>
 
-  <style>{`
-    .testimonial-card-glow {
-      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-      border-radius: 0.75rem;
-      background-color: #fff;
-    }
+      <style>{`
+        .testimonial-card-glow {
+          transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+          border-radius: 0.75rem;
+          background-color: #fff;
+        }
 
-    .testimonial-card-glow:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 0.5rem 2rem rgba(33, 253, 13, 0.3),
-                  0 0.25rem 1rem rgba(0,0,0,0.1) !important;
-    }
+        .testimonial-card-glow:hover {
+          transform: translateY(-10px);
+          box-shadow: 0 0.5rem 2rem rgba(33, 253, 13, 0.3), 0 0.25rem 1rem rgba(0,0,0,0.1) !important;
+        }
 
-    .testimonial-card-glow .card-body p {
-      font-size: 1.15rem;
-      color: #495057;
-    }
+        .testimonial-img-circle {
+          width: 90px;
+          height: 90px;
+          object-fit: cover;
+          border: 3px solid #29a745;
+          box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.1);
+        }
 
-    .testimonial-card-glow .card-body h5 {
-      color: #2fc552;
-      margin-top: 1rem;
-    }
+        .testimonial-card-glow .card-body p {
+          font-size: 1.15rem;
+          color: #495057;
+        }
 
-    .text-yellow {
-      color: #2fc552;
-    }
+        .testimonial-card-glow .card-body h5 {
+          color: #2fc552; 
+          margin-top: 1rem;
+        }
+        .text-green{
+          color: #2fc552;
+        }
+        .testimonial-card-glow .bi-quote {
+          font-size: 3.5rem;
+          color: #adb5bd;
+        }
 
-    .testimonial-card-glow .bi-quote {
-      font-size: 3.5rem;
-      color: #adb5bd;
-    }
-
-    .testimonial-card-glow .text-warning i {
-      color: #ffc107;
-    }
-  `}</style>
-</section>
-
-     {/* Impact / Statistics */}
-<section className="py-5 bg-light text-center" id="impact">
-  <div className="container">
-    <div className="row text-center justify-content-center">
-      {[
-        { icon: "bi-people-fill", label: "Active Craftsmen", value: 100 },
-        { icon: "bi-clipboard-check", label: "Jobs Completed", value: 50 },
-        { icon: "bi-emoji-smile-fill", label: "Happy Clients", value: 30 },
-        { icon: "bi-shop", label: "Shops Connected", value: 2 },
-      ].map((stat, idx) => (
-        <div className="col-md-3 mb-4" key={idx}>
-          <i 
-            className={`bi ${stat.icon} mb-2`}
-            style={{ fontSize: "2.5rem", color: "#28a745" }}
-          ></i>
-          <h3 className="fw-bold">{stat.value}+</h3>
-          <p className="mb-0 fw-bold">{stat.label}</p>
-        </div>
-      ))}
-    </div>
-  </div>
-</section>
-
-
+        .testimonial-card-glow .text-warning i {
+          color: #ffc107;
+        }
+      `}</style>
+    </section>
 
 
 
@@ -797,105 +787,255 @@ Tell us about your project, and skilled craftsmen will start responding within 2
 `}</style>
 
 
-    <section className="py-5 bg-white">
+   <section className="py-5 bg-white">
   <div className="container">
-    <h2 className="text-center mb-5 fw-bold text-success" data-aos="fade-left">Frequently Asked Questions</h2>
-    <div className="row justify-content-center">
-      <div className="col-lg-12">
-        <div className="accordion faq-accordion shadow-lg rounded-3" id="faqAccordion" data-aos="fade-right">
+    <h2
+      className="text-center mb-5 fw-bold text-success"
+      data-aos="fade-left"
+    >
+      Frequently Asked Questions
+    </h2>
+
+    <div className="row align-items-start g-5">
+      {/* ================= LEFT: FAQ ACCORDION ================= */}
+      <div className="col-lg-6">
+        <div
+          className="accordion faq-accordion"
+          id="faqAccordion"
+          data-aos="fade-right"
+        >
           {[
             {
               question: "How do I hire a craftsman?",
-              answer: "Click on 'Hire a Craftsman', register your account, and post your project. Craftsmen will reach out to you with quotes."
+              answer:
+                "Click on 'Hire a Craftsman', register your account, and post your project. Craftsmen will reach out to you with quotes.",
             },
             {
               question: "Is there a cost to join as a craftsman?",
-              answer: "No, joining the platform as a craftsman is completely free."
+              answer:
+                "No, joining the platform as a craftsman is completely free.",
             },
             {
               question: "Can I trust the craftsmen on your platform?",
-              answer: "Yes, we review all craftsmen submissions and only approve those with complete and verified profiles."
+              answer:
+                "Yes, we review all craftsmen submissions and only approve those with complete and verified profiles.",
             },
             {
               question: "How do I leave a review for a craftsman?",
-              answer: "After your project is completed, go to your dashboard and leave a review based on your experience."
-            }
+              answer:
+                "After your project is completed, go to your dashboard and leave a review based on your experience.",
+            },
+            {
+              question: "Are all the craftsmen local?",
+              answer:
+                "Yes, we focus on connecting you with skilled craftsmen within your region.",
+            },
           ].map((faq, index) => (
-            <div className="accordion-item" key={index}>
+            <div
+              className="accordion-item faq-item"
+              key={index}
+              data-aos="fade-up"
+              data-aos-delay={index * 100}
+            >
               <h2 className="accordion-header" id={`heading${index}`}>
                 <button
-                  className={`accordion-button faq-button fw-bold ${index !== 0 ? 'collapsed' : ''}`}
+                  className={`accordion-button faq-button ${
+                    index !== 0 ? "collapsed" : ""
+                  }`}
                   type="button"
                   data-bs-toggle="collapse"
                   data-bs-target={`#collapse${index}`}
-                  aria-expanded={index === 0 ? 'true' : 'false'}
+                  aria-expanded={index === 0 ? "true" : "false"}
                   aria-controls={`collapse${index}`}
                 >
                   {faq.question}
                 </button>
               </h2>
+
               <div
                 id={`collapse${index}`}
-                className={`accordion-collapse collapse ${index === 0 ? 'show' : ''}`}
+                className={`accordion-collapse collapse ${
+                  index === 0 ? "show" : ""
+                }`}
                 aria-labelledby={`heading${index}`}
                 data-bs-parent="#faqAccordion"
               >
-                <div className="accordion-body text-secondary">{faq.answer}</div>
+                <div className="accordion-body">{faq.answer}</div>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* ================= RIGHT: QUESTION CARD ================= */}
+      <div className="col-lg-6" data-aos="zoom-in">
+        <div className="question-card text-center shadow-sm">
+          <div
+            className="question-blob mx-auto mb-4"
+            data-aos="fade-down"
+            data-aos-delay="200"
+          >
+            <span className="question-mark">?</span>
+          </div>
+
+          <h4 className="fw-bold mb-2">Any Question?</h4>
+          <p className="text-muted mb-4">
+            We will get back to you as soon as possible
+          </p>
+
+          <input
+            type="text"
+            className="form-control question-input"
+            placeholder="Enter here"
+            data-aos="fade-up"
+            data-aos-delay="400"
+          />
+        </div>
+      </div>
     </div>
   </div>
-  
+
+  {/* ================= STYLES ================= */}
   <style>{`
+    /* Accordion base */
     .faq-accordion {
-      border: none !important;
+      border: none;
     }
-    .text-yellow{
-      color: #2fc552;
-    }
-    .accordion-item {
-      border: none !important;
+
+    .faq-item {
+      border: none;
+      border-radius: 12px;
       margin-bottom: 1rem;
-      border-radius: 0.5rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.05);
       overflow: hidden;
-      box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.05);
-      transition: box-shadow 0.3s ease-in-out;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-    .accordion-item:hover {
-      box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+
+    .faq-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 35px rgba(0,0,0,0.12);
     }
-    .accordion-button.faq-button {
-      background-color: #f8f9fa;
-      color: #343a40;
-      padding: 1.5rem;
-      transition: background-color 0.3s ease-in-out;
+
+    .faq-button {
+      background: #ffffff;
+      font-weight: 600;
+      padding: 1.25rem 1.5rem;
     }
-    .accordion-button.faq-button:hover {
-      background-color: #e9ecef;
-    }
+
     .accordion-button:not(.collapsed) {
-      background-color: #e9ecef;
-      color: #2fc552;
+      background-color: #f8f9fa;
+      color: #198754;
     }
-    .accordion-button:focus {
-      border-color: #86b7fe;
-      box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
-    }
-    .accordion-button::after {
-      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23212529'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
-      transition: transform 0.3s ease-in-out;
-    }
-    .accordion-button:not(.collapsed)::after {
-      transform: rotate(-180deg);
-    }
+
     .accordion-body {
-      padding: 1.5rem;
+      background-color: #fff;
+      padding: 1.25rem 1.5rem;
+      color: #6c757d;
+      animation: fadeSlideIn 0.35s ease forwards;
+    }
+
+    /* + / − animation */
+    .accordion-button::after {
+      background-image: none;
+      content: "+";
+      font-size: 1.5rem;
+      font-weight: 700;
+      transition: transform 0.3s ease;
+    }
+
+    .accordion-button:hover::after {
+      transform: scale(1.25);
+    }
+
+    .accordion-button:not(.collapsed)::after {
+      content: "−";
+      color: #198754;
+    }
+
+    /* Question card */
+    .question-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .question-blob {
+      width: 140px;
+      height: 120px;
+      background: #ffcc33;
+      border-radius: 45% 55% 50% 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.4s ease;
+    }
+
+    .question-blob:hover {
+      transform: scale(1.05);
+    }
+
+    .question-mark {
+      font-size: 4rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .question-input {
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+
+    .question-input:focus {
+      border-color: #198754;
+      box-shadow: 0 0 0 0.25rem rgba(25,135,84,0.25);
+    }
+
+    /* Smooth accordion animation */
+    .accordion-collapse {
+      transition: all 0.35s ease;
+    }
+
+    .accordion-collapse.collapsing {
+      height: auto !important;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition:
+        max-height 0.35s ease,
+        opacity 0.25s ease,
+        transform 0.25s ease;
+    }
+
+    .accordion-collapse.show {
+      max-height: 500px;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .question-card {
+        margin-top: 2rem;
+      }
     }
   `}</style>
 </section>
+
 
 <footer className="footer text-light pt-5 pb-4 mt-5">
   <div className="container">
