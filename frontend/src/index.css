@@ -160,3 +160,7 @@ html, body {
   padding-top: 90px; /* adjust to match navbar height */
   overflow-x: hidden;
 }
+
+.text-yellow {
+  color: #FFD43C;
+}

@@ -538,7 +538,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
       position: absolute;
       top: -10px;
       right: -10px;
-      background-color: #198754; /* Changed to yellow */
+      background-color: #FFD43C; /* Changed to yellow */
       color: white;
       border-radius: 50%;
       width: 28px;
@@ -560,7 +560,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
 
     .step-icon {
       background-color: white;
-      color: #198754; /* Changed to yellow */
+      color: #FFD43C; /* Changed to yellow */
       width: 60px;
       height: 60px;
       border-radius: 50%;
@@ -624,8 +624,8 @@ Tell us about your project, and skilled craftsmen will start responding within 2
   </p>
   <a
     href="/craftsmen"
-    className="btn btn-lg fw-bold mt-3"
-    style={{ backgroundColor: '#198754', borderColor: '#198754', color: '#fff' }}
+    className="btn btn-lg btn-yellow-solid fw-bold mt-3"
+    // style={{ backgroundColor: '#198754', borderColor: '#198754', color: '#fff' }}
   >
     Find & Hire Craftsmen
   </a>
@@ -663,7 +663,9 @@ Tell us about your project, and skilled craftsmen will start responding within 2
   </div>
 </section>
 
- 
+<section className="py-5 bg-light">
+  <h2 className="text-center fw-bold text-success display-5 mb-5" data-aos="fade-left">What Our Clients Say</h2>
+</section> 
 
 
    <section 
@@ -676,13 +678,13 @@ Tell us about your project, and skilled craftsmen will start responding within 2
         // backgroundRepeat: 'no-repeat'
             backgroundImage: `url(${bgImage})`,
             backgroundRepeat: 'repeat',
-            backgroundSize: '400px 400px', // adjust tile size
+            backgroundSize: '300px 300px', // adjust tile size
             backgroundPosition: 'center',
             backgroundAttachment: 'fixed'
       }}
     >
       <div className="container">
-        <h2 className="text-center fw-bold text-success display-5 mb-5" data-aos="fade-left">What Our Clients Say</h2>
+        {/* <h2 className="text-center fw-bold text-success display-5 mb-5" data-aos="fade-left">What Our Clients Say</h2> */}
         <div className="row justify-content-center">
           {[
             {
@@ -1099,7 +1101,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
 
   <style>{`
     .footer {
-     background-color: #1b692cff;
+     background-color: #222222ff;
     }
     .footer-links li a {
       transition: color 0.3s ease-in-out;
