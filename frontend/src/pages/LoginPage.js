@@ -143,7 +143,9 @@ function LoginPage() {
           <div className="col-md-8 col-lg-6 col-xl-5">
             <div className="card shadow-lg border-0">
               <div className="card-body p-5">
-                <h2 className="text-center mb-4 fw-bold" style={{ color: '#0d6efd' }}>
+                <h2 className="text-center mb-4 fw-bold text-success"
+                //  style={{ color: '#0d6efd' }}
+                 >
                   Group Login
                 </h2>
 
@@ -180,7 +182,7 @@ function LoginPage() {
 
                   {error && <div className="alert alert-danger">{error}</div>}
 
-                  <button className="btn btn-primary w-100 py-2 mb-3" type="submit" disabled={loading}>
+                  <button className="btn btn-yellow-solid w-100 py-2 mb-3" type="submit" disabled={loading}>
                     {loading ? 'Logging in...' : 'Login'}
                   </button>
                 </form>

@@ -140,7 +140,7 @@ function Navbar({ cart }) {
             <li className="nav-item">
               <Link
                 to="/signup"
-                className="btn fs-5 btn-yellow-solid ms-2 rounded-pill"
+                className="btn fs-5 btn-yellow-solid fw-semibold ms-2 rounded-pill"
               >
                 Join Now
               </Link>

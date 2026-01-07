@@ -93,7 +93,8 @@ const [searchQuery, setSearchQuery] = useState('');
 <section
   className="text-center d-flex align-items-center"
   style={{
-    background: `url(${heroImage}) no-repeat center center/cover`,
+    // background: `url(${heroImage}) no-repeat center center/cover`,
+    background: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${heroImage}) no-repeat center center/cover`,
     height: '80vh',
     color: 'white',
     width: '100%',
@@ -110,7 +111,7 @@ const [searchQuery, setSearchQuery] = useState('');
     >
       Empowering Local Craftsmen
     </h1>
-    <p className="lead mt-3" style={{ fontSize: '1.3rem' }}>
+    <p className="lead mt-3 fw-semibold" style={{ fontSize: '1.4rem' }}>
       Manage clients, showcase your work, and grow your trade — all in one platform.
     </p>
     <div className="d-flex justify-content-center align-items-center gap-3 mb-4 hero-buttons">
@@ -586,7 +587,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
     .step-icon:hover {
       transform: scale(1.1); /* Slightly enlarge on hover */
       box-shadow: 0 8px 20px rgba(0,0,0,0.2); /* Deeper shadow on hover */
-      color: #157347; /* Slightly darker yellow on hover */
+      color: #FFD43C; /* Slightly darker yellow on hover */
     }
     .step-content h5 {
       color: #343a40;
@@ -624,7 +625,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
   </p>
   <a
     href="/craftsmen"
-    className="btn btn-lg btn-yellow-solid fw-bold mt-3"
+    className="btn btn-lg btn-yellow-solid fw-semibold mt-3"
     // style={{ backgroundColor: '#198754', borderColor: '#198754', color: '#fff' }}
   >
     Find & Hire Craftsmen
@@ -678,7 +679,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
         // backgroundRepeat: 'no-repeat'
             backgroundImage: `url(${bgImage})`,
             backgroundRepeat: 'repeat',
-            backgroundSize: '300px 300px', // adjust tile size
+            backgroundSize: '200px 200px', // adjust tile size
             backgroundPosition: 'center',
             backgroundAttachment: 'fixed'
       }}
@@ -740,14 +741,14 @@ Tell us about your project, and skilled craftsmen will start responding within 2
 
         .testimonial-card-glow:hover {
           transform: translateY(-10px);
-          box-shadow: 0 0.5rem 2rem rgba(33, 253, 13, 0.3), 0 0.25rem 1rem rgba(0,0,0,0.1) !important;
+          box-shadow: 0 0.5rem 2rem rgba(253, 249, 13, 1), 0 0.25rem 1rem rgba(0,0,0,0.1) !important;
         }
 
         .testimonial-img-circle {
           width: 90px;
           height: 90px;
           object-fit: cover;
-          border: 3px solid #29a745;
+          border: 8px solid #FFD43C;
           box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.1);
         }
 
