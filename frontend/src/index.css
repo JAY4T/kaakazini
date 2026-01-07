@@ -134,7 +134,7 @@ code {
   }
 }
 
-/* ✅ Prevent horizontal scroll and white space */
+/* Prevent horizontal scroll and white space */
 html, body {
   overflow-x: hidden !important;
   width: 100%;
@@ -143,7 +143,7 @@ html, body {
 
 }
 
-/* ✅ Make sure navbar always stays above hero section */
+/* Make sure navbar always stays above hero section */
 .navbar {
   position: fixed;
   top: 0;
@@ -152,7 +152,7 @@ html, body {
   z-index: 1050 !important; /* higher than hero */
 }
 
-/* ✅ Ensure hero section never overlaps navbar */
+/* Ensure hero section never overlaps navbar */
 .hero-section {
   position: relative;
   z-index: 1;
@@ -163,4 +163,84 @@ html, body {
 
 .text-yellow {
   color: #FFD43C;
+}
+
+
+ /* ================= MOBILE RESPONSIVENESS ================= */
+/*  @media (max-width: 768px) {
+    .hero-title {
+      font-size: 1.9rem !important;
+      line-height: 1.3;
+    }
+
+    .hero-subtitle {
+      font-size: 1.05rem !important;
+      padding: 0 1rem;
+    }
+
+    /* .hero-buttons {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .hero-buttons .btn {
+      width: 100%;
+      max-width: 320px;
+      font-size: 1rem;
+      padding: 0.75rem 1.25rem;
+    } */
+  /* }  */
+
+  @media (max-width: 480px) {
+    .hero-title {
+      font-size: 1.6rem !important;
+    }
+
+    .hero-subtitle {
+      font-size: 0.92rem !important;
+    }
+
+    /* .hero-buttons {
+      flex-direction: column;
+      gap: 0.75rem;
+
+    } */
+     .hero-buttons .btn {
+    
+      font-size: 0.7rem;
+    }
+  }
+
+    @media (max-width: 480px) {
+    .image-collage {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .hire-craftsman .btn{
+      font-size: 0.8rem;
+    }
+   
+  }
+
+
+  /* Inside your existing <style> tag */
+@media (max-width: 525px) {
+   .navbar-nav {
+    gap: 1px !important; /* Increase or decrease this for overall spacing */
+  }
+  /* Target the links specifically for mobile menu */
+  .navbar-nav .nav-link {
+    font-size: 1rem !important; /* Adjust this value to your liking */
+    padding-top: 2px !important; 
+    /* font-weight: 500; */
+  }
+
+  /* Target the dropdown items (What We Offer, etc.) */
+  .dropdown-item {
+    font-size: 0.8rem !important; 
+  }
+  
+
+
 }

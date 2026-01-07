@@ -106,12 +106,12 @@ const [searchQuery, setSearchQuery] = useState('');
 
   <div className="container">
     <h1
-      className="display-4 fw-bold moving-text"
+      className="display-4 fw-bold moving-text hero-title"
       style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }}
     >
       Empowering Local Craftsmen
     </h1>
-    <p className="lead mt-3 fw-semibold" style={{ fontSize: '1.4rem' }}>
+    <p className="lead mt-3 fw-semibold hero-subtitle" style={{ fontSize: '1.4rem' }}>
       Manage clients, showcase your work, and grow your trade — all in one platform.
     </p>
     <div className="d-flex justify-content-center align-items-center gap-3 mb-4 hero-buttons">
@@ -611,7 +611,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
   `}</style>
 </section>
 
-<section className="py-5 bg-light">
+<section className="py-5 bg-light hire-craftsman">
   <div className="container">
 {/* Hero/About Section */}
 <div className="row align-items-center mb-5">
@@ -634,7 +634,7 @@ Tell us about your project, and skilled craftsmen will start responding within 2
 
 
   {/* Images */}
-  <div className="col-md-6 position-relative">
+  <div className="col-md-6 position-relative py-5 image-collage">
     {/* Main Image */}
     <img
       src="https://couplingz.com/wp-content/uploads/2025/01/Couplingz-Plumbers-12.jpg"
