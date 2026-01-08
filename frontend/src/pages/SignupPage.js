@@ -144,7 +144,7 @@ function Signup() {
             <div className="col-md-8 col-lg-6 col-xl-5">
               <div className="card shadow-lg border-0">
                 <div className="card-body p-5">
-                  <h2 className="text-center mb-4 fw-bold" style={{ color: '#0d6efd' }}>
+                  <h2 className="text-center mb-4 fw-bold text-success">
                     Group Craftsman Signup
                   </h2>
 
@@ -217,7 +217,7 @@ function Signup() {
                       {phoneError && <div className="text-danger mt-1">{phoneError}</div>}
                     </div>
 
-                    <button className="btn btn-primary w-100 py-2" disabled={loading}>
+                    <button className="btn btn-yellow-solid w-100 py-2" disabled={loading}>
                       Sign Up
                     </button>
                   </form>
@@ -266,31 +266,46 @@ function Signup() {
       )}
 
       {/* Footer */}
-      <footer className="bg-white text-dark pt-5 pb-4 mt-5">
+      <footer className="footer text-light pt-5 pb-4 mt-5">
         <div className="container">
           <div className="row">
-            <div className="col-md-3 mb-4">
-              <h5 className="text-uppercase fw-bold">Quick Links</h5>
-              <ul className="list-unstyled">
-                <li><Link to="/" className="text-dark text-decoration-none">Home</Link></li>
-                <li><Link to="/signup" className="text-dark text-decoration-none">Join as a Craftsman</Link></li>
-                <li><Link to="/HireSignUp" className="text-dark text-decoration-none">Hire a Craftsman</Link></li>
-                <li><a href="#services" className="text-dark text-decoration-none">Services</a></li>
-                <li><a href="#how-it-works" className="text-dark text-decoration-none">How It Works</a></li>
+            {/* Quick Links */}
+            <div className="col-lg-3 col-md-6 mb-4">
+              <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Quick Links</h5>
+              <ul className="list-unstyled" data-aos="fade-right">
+                <li className="mb-2"><Link to="/" className="text-light text-decoration-none">Home</Link></li>
+                <li className="mb-2"><Link to="/signup" className="text-light text-decoration-none">Become A Craftsman</Link></li>
+                <li className="mb-2"><Link to="/HireSignUp" className="text-light text-decoration-none">Hire a Craftsman</Link></li>
+                <li className="mb-2"><a href="#services" className="text-light text-decoration-none">Services</a></li>
+                <li className="mb-2"><a href="#how-it-works" className="text-light text-decoration-none">How It Works</a></li>
               </ul>
             </div>
-            <div className="col-md-4 mb-4">
-              <h5 className="text-uppercase fw-bold">Contact Us</h5>
-              <p><i className="fas fa-map-marker-alt me-2 text-primary"></i> Kisumu, Kenya</p>
-              <p><i className="fas fa-envelope me-2 text-primary"></i>support@kaakazini.com</p>
+      
+            {/* Contact Info */}
+            <div className="col-lg-4 col-md-6 mb-4">
+              <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Contact Us</h5>
+              <p><i className="fas fa-map-marker-alt me-2 " data-aos="fade-right"></i> Kisumu, Kenya</p>
+              <p><i className="fas fa-envelope me-2" data-aos="fade-right"></i> support@kaakazini.com
+      
+      </p>
+              {/* Social Icons */}
+              <div className="mt-4 social-icons" data-aos="fade-right">
+                <h6 className="fw-bold mb-3">Follow Us</h6>
+                <a href="#" className="me-3 text-light"><i className="fab fa-facebook-f fa-lg"></i></a>
+                <a href="#" className="me-3 text-light"><i className="fab fa-twitter fa-lg"></i></a>
+                <a href="#" className="me-3 text-light"><i className="fab fa-instagram fa-lg"></i></a>
+                <a href="#" className="me-3 text-light"><i className="fab fa-linkedin-in fa-lg"></i></a>
+              </div>
             </div>
-            <div className="col-md-5 mb-4">
-              <h5 className="text-uppercase fw-bold">Find Us</h5>
-              <div style={{ width: '100%', height: '350px', borderRadius: '10px', overflow: 'hidden' }}>
+            
+            {/* Map */}
+            <div className="col-lg-5 col-md-12 mb-4">
+              <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Find Us</h5>
+              <div className="map-container" data-aos="fade-right">
                 <iframe
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
                   width="100%"
-                  height="400"
+                  height="300"
                   style={{ border: 0 }}
                   allowFullScreen=""
                   loading="lazy"
@@ -300,11 +315,74 @@ function Signup() {
               </div>
             </div>
           </div>
-          <hr className="border-secondary" />
-          <div className="d-flex justify-content-between align-items-center">
-            <p className="mb-0">&copy; {new Date().getFullYear()} <strong>KaaKazini</strong> - Empowering Craftsmen Everywhere.</p>
+          
+          <hr className="border-secondary mt-0" />
+          
+          <div className="d-flex justify-content-between align-items-center flex-column flex-md-row">
+            <p className="mb-md-0 text-center ">© {new Date().getFullYear()} <strong>KaaKazini</strong>. All Rights Reserved.</p>
+            <div className="mt-2 mt-md-0 text-center">
+              <a href="#top" className="text-light text-decoration-none">Back to top <i className="fas fa-arrow-up ms-2"></i></a>
+            </div>
           </div>
         </div>
+      
+        <style>{`
+          .footer {
+           background-color: #222222ff;
+          }
+          .footer-links li a {
+            transition: color 0.3s ease-in-out;
+          }
+          .footer-links li a:hover {
+            color: #0d6efd !important;
+          }
+          .social-icons a {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease-in-out;
+          }
+          .social-icons a:hover {
+            transform: scale(1.1);
+            color: #0d6efd !important;
+          }
+          .map-container {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+          }
+           @keyframes slide {
+                0% { transform: translateX(0px); }
+                100% { transform: translateX(20px); }
+              }
+      
+        `
+        
+        
+        }</style>
+        <style>{`
+        .hero-buttons {
+          flex-wrap: nowrap !important; /* prevents wrapping on smaller screens */
+          gap: 1rem;
+        }
+      
+        .hero-buttons a {
+          min-width: 150px;
+        }
+      
+        @media (max-width: 576px) {
+          .hero-buttons {
+            flex-direction: row !important;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: nowrap !important;
+          }
+          .hero-buttons a {
+            font-size: 0.9rem;
+            padding: 0.6rem 1rem;
+          }
+        }
+      `}</style>
+      
+        
       </footer>
     </>
   );

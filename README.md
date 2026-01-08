@@ -89,3 +89,5 @@ Kaakazini is a full-stack web platform built with React.js (frontend) and Django
 - npm run build
 
 - Configure Nginx to serve React & proxy API.
+
+
