@@ -13,6 +13,11 @@ import c6 from '../assets/c6.png';
 import c7 from '../assets/c7.png';
 import c8 from '../assets/c8.png';
 import bgImage from '../assets/background.png';
+import client1 from '../assets/68.png';
+import client2 from '../assets/20.png';
+import client3 from '../assets/33.png';
+
+
 
 
 
@@ -692,19 +697,19 @@ Tell us about your project, and skilled craftsmen will start responding within 2
               quote: "The carpenter I hired was extremely professional. Highly recommend!",
               stars: 4,
               name: "Sarah M.",
-              img: c2, 
+              img: client1, 
             },
             {
               quote: "The metalworker exceeded my expectations. Great job!",
               stars: 5,
               name: "James K.",
-              img: c3,
+              img: client2,
             },
             {
               quote: "The textile artist made a beautiful custom outfit. Loved it!",
               stars: 3.5,
               name: "Linda O.",
-              img: c4,
+              img: client3,
             },
           ].map((testi, idx) => (
             <div className="col-md-4 mb-4" key={idx}>
