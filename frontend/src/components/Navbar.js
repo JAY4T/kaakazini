@@ -119,6 +119,7 @@ function Navbar({ cart }) {
               {/* SERVICES DROPDOWN */}
               <li className="nav-item dropdown" onClick={toggleServices} style={{ cursor: "pointer" }}>
                 <span className="nav-link fs-5 d-flex align-items-center justify-content-end">
+                  Services
                   <span
                     style={{
                       display: "inline-block",
@@ -130,7 +131,6 @@ function Navbar({ cart }) {
                   >
                     ▼
                   </span>
-                  Services
                 </span>
 
                 {servicesOpen && (
