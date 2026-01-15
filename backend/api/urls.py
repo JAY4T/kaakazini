@@ -4,7 +4,7 @@ from .views import (
     AdminCraftsmanListView, AdminCraftsmanApproveView, AdminCraftsmanRejectView,
     AdminProductListView, AdminProductApproveView, AdminProductRejectView,  PublicCraftsmanListView,PublicCraftsmanDetailView, ServiceListCreateView, ServiceDetailView,
    ApproveCraftsmanView,ContactMessageCreateView,JobRequestListCreateView, JobRequestDetailView,
-    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView
+    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView,SubmitQuoteView
 
 
 )
@@ -64,6 +64,10 @@ urlpatterns = [
     path("job-requests/<int:pk>/approve/", AdminApproveJobView.as_view(), name="job-approve"),
     path("job-requests/<int:pk>/paid/", MarkJobPaidView.as_view(), name="job-paid"),
     path("job-requests/<int:pk>/cancel/", CancelJobView.as_view(), name="job-cancel"),
+
+    # submit-quote
+    path('job-requests/<int:pk>/submit-quote/', SubmitQuoteView.as_view(), name='submit-quote'),
+
     # contact us
 
     path('contact/', ContactMessageCreateView.as_view(), name='submit-contact'),
