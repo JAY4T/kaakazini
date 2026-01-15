@@ -2,6 +2,9 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
+import heroImage from '../assets/craftOnline.jpg';
+
+
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
 
@@ -54,40 +57,68 @@ const HireLogin = () => {
   };
 
   return (
-    <div className="container my-5">
-      <div className="row justify-content-center">
-        <div className="col-md-6">
-          <div className="card p-4 shadow">
-            <h3 className="text-center">Client Login</h3>
-            {message.text && <div className={`alert alert-${message.type}`}>{message.text}</div>}
-            <form onSubmit={handleSubmit}>
-              <input
-                id="email"
-                type="email"
-                placeholder="Email"
-                className="form-control mb-3"
-                value={form.email}
-                onChange={handleChange}
-                required
-              />
-              <input
-                id="password"
-                type="password"
-                placeholder="Password"
-                className="form-control mb-3"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
-              <button className="btn btn-primary w-100" type="submit">Login</button>
-            </form>
-            <p className="mt-3 text-center">
-              Don't have an account? <Link to="/HireSignup">Sign Up</Link>
-            </p>
-          </div>
+    <div
+  className="min-vh-100 d-flex align-items-center"
+  style={{
+      // background: `url(${heroImage}) no-repeat center center/cover`,
+      background: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${heroImage}) no-repeat center center/cover`,
+      height: '80vh',
+      color: 'white',
+      width: '100%',
+      position: 'relative',
+      paddingTop: '100px', //keeps hero below navbar
+      zIndex: 1,
+    }}
+>
+  <div className="container">
+    <div className="row justify-content-center">
+      <div className="col-md-8">
+        <div className="card p-4 shadow">
+          <h2 className="text-center mb-4 fw-bold text-success">
+            Client Login
+          </h2>
+
+          {message.text && (
+            <div className={`alert alert-${message.type}`}>
+              {message.text}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <input
+              id="email"
+              type="email"
+              placeholder="Email"
+              className="form-control mb-3"
+              value={form.email}
+              onChange={handleChange}
+              required
+            />
+
+            <input
+              id="password"
+              type="password"
+              placeholder="Password"
+              className="form-control mb-3"
+              value={form.password}
+              onChange={handleChange}
+              required
+            />
+
+            <button className="btn btn-yellow-solid w-100" type="submit">
+              Login
+            </button>
+          </form>
+
+          <p className="mt-3 text-center">
+            Don't have an account? <Link to="/HireSignup">Sign Up</Link>
+          </p>
         </div>
       </div>
     </div>
+  </div>
+</div>
+
   );
 };
 
