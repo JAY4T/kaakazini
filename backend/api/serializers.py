@@ -110,6 +110,8 @@ class JobRequestSerializer(serializers.ModelSerializer):
     craftsman_name = serializers.CharField(source='craftsman.user.full_name', read_only=True)
     craftsman_id = serializers.IntegerField(source='craftsman.id', read_only=True)
     client = serializers.SerializerMethodField(read_only=True)
+    quote_details = serializers.JSONField(read_only=True)  # add this
+
 
     class Meta:
         model = JobRequest
@@ -120,7 +122,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
             'status', 'review', 'created_at',
             'budget', 'distance_km', 'start_time', 'end_time',
             'duration_hours', 'expected_end', 'overtime_hours',
-            'total_payment', 'company_fee', 'net_payment',
+            'total_payment', 'company_fee', 'net_payment','quote_details',
         ]
         read_only_fields = [
             'distance_km', 'duration_hours', 'expected_end', 'overtime_hours',
