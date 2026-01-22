@@ -1,8 +1,8 @@
-import React from 'react';
+import React from "react";
 
 export default function CraftsmenTable({
-  list,
-  filterValue,
+  list = [],
+  filterValue = "",
   setFilterValue,
   isPending = false,
   getImageUrl,
@@ -10,24 +10,32 @@ export default function CraftsmenTable({
   checkCraftsmanApprovalCriteria,
   isCraftsmanApproved,
   handleAction,
-  openRejectModal
+  openRejectModal,
 }) {
-  const q = (filterValue || '').toLowerCase();
-  const filtered = list.filter(c => ((c.full_name || '').toLowerCase()).includes(q));
+  const query = filterValue.toLowerCase();
+
+  const filtered = list.filter((c) =>
+    (c.full_name || "").toLowerCase().includes(query)
+  );
 
   return (
     <>
-      <div className="d-flex justify-content-between mb-3">
-        <h4>{isPending ? 'Pending Craftsmen' : 'Approved Craftsmen'}</h4>
+      {/* Header + Search */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h4 className="mb-0">
+          {isPending ? "Pending Craftsmen" : "Approved Craftsmen"}
+        </h4>
+
         <input
           type="text"
           className="form-control form-control-sm w-25"
-          placeholder="Search..."
+          placeholder="Search by name..."
           value={filterValue}
-          onChange={e => setFilterValue(e.target.value)}
+          onChange={(e) => setFilterValue(e.target.value)}
         />
       </div>
 
+      {/* Table */}
       <table className="table table-bordered table-hover bg-white">
         <thead className="table-primary">
           <tr>
@@ -41,60 +49,108 @@ export default function CraftsmenTable({
             {isPending && <th>Actions</th>}
           </tr>
         </thead>
+
         <tbody>
           {filtered.length > 0 ? (
-            filtered.map(c => {
+            filtered.map((c) => {
               const errors = checkCraftsmanApprovalCriteria(c);
+              const approved = isCraftsmanApproved(c);
 
               const mainService = {
-                name: c.primary_service || c.services?.[0]?.service_name,
-                image: c.services?.[0]?.image || c.service_image
+                name:
+                  c.primary_service ||
+                  c.services?.[0]?.service_name ||
+                  null,
+                image: c.services?.[0]?.image || c.service_image || null,
               };
-
-              const approved = isCraftsmanApproved(c);
 
               return (
                 <tr key={c.id} className="align-middle">
+                  {/* Profile Image */}
                   <td>
                     {c.profile ? (
                       <img
                         src={getImageUrl(c.profile)}
-                        alt=""
-                        style={{ width: '60px', height: '60px', objectFit: 'cover' }}
+                        alt="Profile"
                         className="rounded"
+                        style={{
+                          width: "60px",
+                          height: "60px",
+                          objectFit: "cover",
+                        }}
+                        onError={(e) => {
+                          e.target.src =
+                            "https://via.placeholder.com/60x60?text=No+Image";
+                        }}
                       />
-                    ) : colorText('No image', 'red')}
+                    ) : (
+                      colorText("No image", "red")
+                    )}
                   </td>
-                  <td>{c.full_name || colorText('No name', 'orange')}</td>
-                  <td>{c.profession || colorText('No profession', 'purple')}</td>
-                  <td>{c.description || colorText('No description', 'brown')}</td>
-                  <td>{mainService?.name || colorText('No service', 'blue')}</td>
+
+                  {/* Name */}
+                  <td>{c.full_name || colorText("No name", "orange")}</td>
+
+                  {/* Profession */}
                   <td>
-                    {mainService?.image ? (
+                    {c.profession || colorText("No profession", "purple")}
+                  </td>
+
+                  {/* Description */}
+                  <td>
+                    {c.description || colorText("No description", "brown")}
+                  </td>
+
+                  {/* Service */}
+                  <td>
+                    {mainService.name ||
+                      colorText("No service", "blue")}
+                  </td>
+
+                  {/* Service Image */}
+                  <td>
+                    {mainService.image ? (
                       <img
                         src={getImageUrl(mainService.image)}
-                        alt=""
-                        style={{ width: '80px', height: '60px', objectFit: 'cover' }}
+                        alt="Service"
                         className="rounded"
+                        style={{
+                          width: "80px",
+                          height: "60px",
+                          objectFit: "cover",
+                        }}
+                        onError={(e) => {
+                          e.target.src =
+                            "https://via.placeholder.com/80x60?text=No+Image";
+                        }}
                       />
-                    ) : colorText('No image', 'red')}
+                    ) : (
+                      colorText("No image", "red")
+                    )}
                   </td>
+
+                  {/* Status */}
                   <td>
-                    {errors.length
-                      ? colorText(errors.join(', '), 'red')
+                    {errors.length > 0
+                      ? colorText(errors.join(", "), "red")
                       : approved
-                      ? colorText('Approved', 'green')
-                      : colorText('Pending', 'gray')}
+                      ? colorText("Approved", "green")
+                      : colorText("Pending", "gray")}
                   </td>
+
+                  {/* Actions */}
                   {isPending && (
                     <td>
                       <button
                         className="btn btn-success btn-sm me-2"
                         disabled={errors.length > 0}
-                        onClick={() => handleAction('approve', c.id, 'craftsman', c)}
+                        onClick={() =>
+                          handleAction("approve", c.id, "craftsman", c)
+                        }
                       >
                         Approve
                       </button>
+
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => openRejectModal(c)}
@@ -108,8 +164,13 @@ export default function CraftsmenTable({
             })
           ) : (
             <tr>
-              <td colSpan={isPending ? 8 : 7} className="text-center text-muted">
-                {isPending ? 'No pending craftsmen' : 'No approved craftsmen'}
+              <td
+                colSpan={isPending ? 8 : 7}
+                className="text-center text-muted"
+              >
+                {isPending
+                  ? "No pending craftsmen"
+                  : "No approved craftsmen"}
               </td>
             </tr>
           )}

@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import axios from 'axios';
-
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
+import api from '../api/axiosClient'; // ✅ cookie-based axios instance
 
 function CraftsmanProfile() {
   const { slug } = useParams();
@@ -26,32 +23,25 @@ function CraftsmanProfile() {
       setNotFound(false);
       setErrorMsg('');
 
-      const storedData = sessionStorage.getItem(`craftsman-${slug}`);
-      if (storedData) {
-        setCraftsman(JSON.parse(storedData));
-        setLoading(false);
-      } else {
-        try {
-          const response = await axios.get(`${API_BASE_URL}/public-craftsman/${slug}/`);
+      try {
+        const response = await api.get(`/public-craftsman/${slug}/`);
 
-          if (response.status === 200 && response.data) {
-            setCraftsman(response.data);
-            sessionStorage.setItem(`craftsman-${slug}`, JSON.stringify(response.data));
-          } else {
-            setNotFound(true);
-            setErrorMsg('No data returned from API.');
-          }
-        } catch (error) {
-          console.error('Error fetching craftsman data:', error);
-          setErrorMsg(
-            error.response?.status === 404
-              ? 'Craftsman not found on the server.'
-              : 'Failed to fetch craftsman data.'
-          );
+        if (response.status === 200 && response.data) {
+          setCraftsman(response.data);
+        } else {
           setNotFound(true);
-        } finally {
-          setLoading(false);
+          setErrorMsg('No data returned from API.');
         }
+      } catch (error) {
+        console.error('Error fetching craftsman data:', error);
+        setErrorMsg(
+          error.response?.status === 404
+            ? 'Craftsman not found on the server.'
+            : 'Failed to fetch craftsman data.'
+        );
+        setNotFound(true);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -87,14 +77,15 @@ function CraftsmanProfile() {
 
   const handleCopyLink = () => {
     const profileUrl = `${window.location.origin}/craftsman/${slug}`;
-    navigator.clipboard.writeText(profileUrl).then(() => alert('Profile link copied to clipboard!'));
+    navigator.clipboard.writeText(profileUrl).then(() =>
+      alert('Profile link copied to clipboard!')
+    );
   };
 
   return (
     <>
       <div className="container py-4">
         <div className="card shadow-lg p-4">
-
           {/* Profile Header */}
           <div className="text-center mb-4">
             <img
@@ -104,7 +95,9 @@ function CraftsmanProfile() {
               style={{ width: '144px', height: '144px', objectFit: 'cover' }}
             />
             <h2 className="fw-bold d-block">{craftsman.name}</h2>
-            <p className="text-muted mb-2">{craftsman.company_name || 'Independent Craftsman'}</p>
+            <p className="text-muted mb-2">
+              {craftsman.company_name || 'Independent Craftsman'}
+            </p>
 
             {/* Share & Hire Buttons */}
             <button
@@ -178,31 +171,36 @@ function CraftsmanProfile() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white text-dark pt-5 pb-4 mt-5">
+      <footer className="footer text-light pt-5 pb-4 mt-5" style={{ backgroundColor: '#222' }}>
         <div className="container">
           <div className="row">
-            <div className="col-md-3 mb-4">
-              <h5 className="text-uppercase fw-bold">Quick Links</h5>
+            {/* Quick Links */}
+            <div className="col-lg-3 col-md-6 mb-4">
+              <h5 className="text-uppercase fw-bold mb-3">Quick Links</h5>
               <ul className="list-unstyled">
-                <li><Link to="/" className="text-dark text-decoration-none">Home</Link></li>
-                <li><Link to="/signup" className="text-dark text-decoration-none">Join as a Craftsman</Link></li>
-                <li><Link to="/HireSignUp" className="text-dark text-decoration-none">Hire a Craftsman</Link></li>
-                <li><a href="#services" className="text-dark text-decoration-none">Services</a></li>
-                <li><a href="#how-it-works" className="text-dark text-decoration-none">How It Works</a></li>
+                <li className="mb-2"><Link to="/" className="text-light text-decoration-none">Home</Link></li>
+                <li className="mb-2"><Link to="/signup" className="text-light text-decoration-none">Become A Craftsman</Link></li>
+                <li className="mb-2"><Link to="/HireSignUp" className="text-light text-decoration-none">Hire a Craftsman</Link></li>
+                <li className="mb-2"><a href="#services" className="text-light text-decoration-none">Services</a></li>
+                <li className="mb-2"><a href="#how-it-works" className="text-light text-decoration-none">How It Works</a></li>
               </ul>
             </div>
-            <div className="col-md-4 mb-4">
-              <h5 className="text-uppercase fw-bold">Contact Us</h5>
-              <p><i className="fas fa-map-marker-alt me-2 text-primary"></i> Kisumu, Kenya</p>
-              <p><i className="fas fa-envelope me-2 text-primary"></i> support@kaakazini.com</p>
+
+            {/* Contact Info */}
+            <div className="col-lg-4 col-md-6 mb-4">
+              <h5 className="text-uppercase fw-bold mb-3">Contact Us</h5>
+              <p><i className="fas fa-map-marker-alt me-2"></i> Kisumu, Kenya</p>
+              <p><i className="fas fa-envelope me-2"></i> support@kaakazini.com</p>
             </div>
-            <div className="col-md-5 mb-4">
-              <h5 className="text-uppercase fw-bold">Find Us</h5>
-              <div style={{ width: '100%', height: '350px', borderRadius: '10px', overflow: 'hidden' }}>
+
+            {/* Map */}
+            <div className="col-lg-5 col-md-12 mb-4">
+              <h5 className="text-uppercase fw-bold mb-3">Find Us</h5>
+              <div style={{ width: '100%', height: '300px', borderRadius: '0.5rem', overflow: 'hidden' }}>
                 <iframe
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
                   width="100%"
-                  height="400"
+                  height="100%"
                   style={{ border: 0 }}
                   allowFullScreen=""
                   loading="lazy"
@@ -212,9 +210,13 @@ function CraftsmanProfile() {
               </div>
             </div>
           </div>
-          <hr className="border-secondary" />
-          <div className="d-flex justify-content-between align-items-center">
-            <p className="mb-0">&copy; {new Date().getFullYear()} <strong>KaaKazini</strong> - Empowering Craftsmen Everywhere.</p>
+
+          <hr className="border-secondary mt-0" />
+          <div className="d-flex justify-content-between align-items-center flex-column flex-md-row">
+            <p className="mb-md-0 text-center">© {new Date().getFullYear()} <strong>KaaKazini</strong>. All Rights Reserved.</p>
+            <div className="mt-2 mt-md-0 text-center">
+              <a href="#top" className="text-light text-decoration-none">Back to top <i className="fas fa-arrow-up ms-2"></i></a>
+            </div>
           </div>
         </div>
       </footer>

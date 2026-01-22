@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { authAxios } from "../api/axiosClient";
+import api from "../api/axiosClient";
+
 import { getFullImageUrl } from "../utils/helpers";
 import DashboardSidebar from "../components/DashboardSidebar";
 import ProfileTab from "../components/ProfileTab";
@@ -40,7 +41,8 @@ function DashboardPage() {
 
   const fetchCraftsmanData = async () => {
     try {
-      const res = await authAxios.get("/craftsman/");
+      const res = await api.get("/craftsman/");
+
       const data = res.data;
       setCraftsman(data);
       setProfileData({
@@ -64,7 +66,7 @@ function DashboardPage() {
 
   const fetchAssignedJobs = async () => {
     try {
-      const res = await authAxios.get("/job-requests/");
+      const res = await api.get("/job-requests/");
       setJobs(res.data || []);
     } catch (err) {
       console.error("Error fetching jobs", err);
@@ -104,7 +106,7 @@ function DashboardPage() {
       if (proofDocumentFile) formData.append("proof_document", proofDocumentFile);
       if (serviceImageFile) formData.append("service_image", serviceImageFile);
 
-      const res = await authAxios.patch("/craftsman/", formData, {
+      const res = await api.patch("/craftsman/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

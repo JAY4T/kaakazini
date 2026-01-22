@@ -448,70 +448,85 @@ class CancelJobView(APIView):
 
 # Payment
 
+# ----------------------------
+# Initiate Payment View
+# ----------------------------
 class InitiatePaymentView(APIView):
-    permission_classes = [IsAdminUser]  # Only admin can trigger payments
+    permission_classes = [IsAuthenticated]  # craftsman or admin
 
     def post(self, request, pk, format=None):
         """
         Initiates payment to the craftsman via STK push.
+        Admins or the assigned craftsman can trigger payment.
         """
         try:
             job = JobRequest.objects.get(pk=pk)
-
-            if not job.craftsman or not job.craftsman.phone_number:
-                return Response(
-                    {'detail': 'Craftsman phone number not found.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            amount = job.budget or 0
-            phone_number = job.craftsman.phone_number
-
-            # Trigger the STK Push via your payment library / Interswitch API
-            success, response = send_stk_push(phone_number, amount, job.id)
-
-            if success:
-                job.status = 'Paid — Awaiting Confirmation'
-                job.save()
-                return Response({
-                    'detail': 'Payment initiated via STK Push.',
-                    'response': response
-                })
-            else:
-                return Response({
-                    'detail': 'Payment failed.',
-                    'response': response
-                }, status=status.HTTP_400_BAD_REQUEST)
-
         except JobRequest.DoesNotExist:
             return Response({'detail': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        user = request.user
+
+        # Check permission: admin or assigned craftsman
+        if not (user.is_staff or (hasattr(user, 'craftsman') and job.craftsman == user.craftsman)):
+            return Response({'detail': 'Not authorized to initiate payment.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Ensure craftsman and phone number exist
+        if not job.craftsman:
+            return Response({'detail': 'No craftsman assigned to this job.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not job.craftsman.phone_number:
+            return Response({'detail': 'Craftsman phone number is missing.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        amount = job.budget or 0
+        phone_number = job.craftsman.phone_number
+
+        # Trigger STK Push payment
+        try:
+            success, response_data = send_stk_push(phone_number, amount, job.id)
+        except Exception as e:
+            logger.error(f"STK Push error for Job {job.id}: {e}")
+            return Response({'detail': 'Payment initiation failed.', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Update job status only if payment initiated
+        if success:
+            job.status = JobRequest.STATUS_PAID  # Use model constant
+            job.save()
+            serializer = JobRequestSerializer(job)
+            return Response({'detail': 'Payment initiated successfully.', 'job': serializer.data, 'response': response_data})
+        else:
+            return Response({'detail': 'Payment failed.', 'response': response_data}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+# ----------------------------
+# Submit Quote View
+# ----------------------------
 class SubmitQuoteView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
+        """
+        Allows an assigned craftsman to submit a quote for a job request.
+        """
         try:
             job = JobRequest.objects.get(pk=pk)
         except JobRequest.DoesNotExist:
-            return Response({"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Job not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        if not hasattr(request.user, 'craftsman'):
-            return Response({"error": "Not a craftsman"}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
 
-        if job.craftsman != request.user.craftsman:
-            return Response({"error": "Job not assigned to you"}, status=status.HTTP_403_FORBIDDEN)
+        # Check permission: must be the assigned craftsman
+        if not hasattr(user, 'craftsman'):
+            return Response({"error": "Not a craftsman."}, status=status.HTTP_403_FORBIDDEN)
+        if job.craftsman != user.craftsman:
+            return Response({"error": "You are not assigned to this job."}, status=status.HTTP_403_FORBIDDEN)
 
         quote_data = request.data.get("quote_details")
         if not quote_data:
-            return Response({"error": "Quote details required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Quote details are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Save the quote
+        # Save quote and update status
         job.quote_details = quote_data
-        job.status = "Quote Submitted"
+        job.status = JobRequest.STATUS_QUOTE_SUBMITTED  # consistent with model
         job.save()
 
         serializer = JobRequestSerializer(job)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"detail": "Quote submitted successfully.", "job": serializer.data}, status=status.HTTP_200_OK)

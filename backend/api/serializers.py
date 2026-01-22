@@ -106,33 +106,19 @@ class ContactMessageSerializer(serializers.ModelSerializer):
 
 
 class JobRequestSerializer(serializers.ModelSerializer):
-    craftsman = serializers.SerializerMethodField(read_only=True)
+    craftsman = serializers.SerializerMethodField()
     craftsman_name = serializers.CharField(source='craftsman.user.full_name', read_only=True)
     craftsman_id = serializers.IntegerField(source='craftsman.id', read_only=True)
-    client = serializers.SerializerMethodField(read_only=True)
-    quote_details = serializers.JSONField(read_only=True)  # add this
-
+    client = serializers.SerializerMethodField()
+    quote_details = serializers.JSONField(read_only=True)
 
     class Meta:
         model = JobRequest
-        fields = [
-            'id', 'client', 'craftsman', 'craftsman_id', 'craftsman_name',
-            'service', 'custom_service', 'description', 'schedule',
-            'address', 'location', 'name', 'phone', 'isUrgent', 'media',
-            'status', 'review', 'created_at',
-            'budget', 'distance_km', 'start_time', 'end_time',
-            'duration_hours', 'expected_end', 'overtime_hours',
-            'total_payment', 'company_fee', 'net_payment','quote_details',
-        ]
-        read_only_fields = [
-            'distance_km', 'duration_hours', 'expected_end', 'overtime_hours',
-            'total_payment', 'company_fee', 'net_payment',
-            'status', 'created_at'
-        ]
+        fields = '__all__'
 
     def get_craftsman(self, obj):
         if not obj.craftsman:
-            return None
+            return {'id': None, 'full_name': 'Unassigned', 'profession': None}
         return {
             'id': obj.craftsman.id,
             'full_name': obj.craftsman.user.full_name,
@@ -141,7 +127,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
     def get_client(self, obj):
         if not obj.client:
-            return None
+            return {'id': None, 'full_name': 'Unknown', 'phone': None}
         return {
             'id': obj.client.id,
             'full_name': obj.client.full_name,
