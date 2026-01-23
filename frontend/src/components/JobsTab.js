@@ -1,9 +1,9 @@
-// JobsTab.js
 import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { Modal, Button, Badge, Form, Row, Col, Card } from "react-bootstrap";
 import { FaPhone, FaComments } from "react-icons/fa";
-import { authAxios } from "../api/axiosClient";
+import api from "../api/axiosClient";
+
 import jsPDF from "jspdf";
 
 const COMPANY_FEE_PERCENT = 10;
@@ -107,11 +107,11 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
           formData.append("quote_details", JSON.stringify(payload.quote));
         }
 
-        res = await authAxios.post(url, formData, {
+        res = await api.post(url, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
       } else {
-        res = await authAxios.post(url, {});
+        res = await api.post(url, {});
       }
 
       applyUpdatedJob(res.data);

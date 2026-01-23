@@ -1,20 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import api from "../api/axiosClient"; // ✅ cookie-based axios
 
 import CraftsmenTable from '../components/CraftsmenTable';
 import JobRequests from '../components/JobRequests';
 import PaymentDashboard from '../components/AdminPaymentDashboard';
 import RejectModal from '../components/RejectModal';
 
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const authAxios = axios.create({ baseURL: API_BASE_URL });
-authAxios.interceptors.request.use(config => {
-  const token = sessionStorage.getItem('access_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import { getFullImageUrl } from "../utils/getFullImageUrl"; // DigitalOcean Spaces helper
 
 function isCraftsmanApproved(c) {
   return c?.is_approved === true;
@@ -38,6 +31,9 @@ export default function AdminDashboard() {
 
   const [selectedCraftsmen, setSelectedCraftsmen] = useState({});
 
+  // ----------------------------
+  // Check Craftsman Approval
+  // ----------------------------
   const checkCraftsmanApprovalCriteria = c => {
     const errs = [];
     if (!c.full_name?.trim()) errs.push('Full name missing.');
@@ -51,10 +47,13 @@ export default function AdminDashboard() {
     return errs;
   };
 
+  // ----------------------------
+  // Fetch Craftsmen
+  // ----------------------------
   const fetchCraftsmen = async () => {
     setLoading(true);
     try {
-      const res = await authAxios.get('admin/craftsman/');
+      const res = await api.get('admin/craftsman/');
       const allCraftsmen = Array.isArray(res.data) ? res.data : [];
       setApprovedCraftsmen(allCraftsmen.filter(isCraftsmanApproved));
       setPendingCraftsmen(allCraftsmen.filter(c => !isCraftsmanApproved(c)));
@@ -69,16 +68,23 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchCraftsmen(); }, []);
 
-  const getImageUrl = path => (path?.startsWith('http') ? path : `${API_BASE_URL}${path?.startsWith('/') ? path : '/' + path}`);
+  // ----------------------------
+  // DigitalOcean Spaces Image URLs
+  // ----------------------------
+  const getImageUrlSafe = (path) => getFullImageUrl(path);
+
   const colorText = (text, color) => <span style={{ color }}>{text}</span>;
 
+  // ----------------------------
+  // Approve / Reject Craftsman
+  // ----------------------------
   const handleAction = async (type, id, model, craftsman = null, reason = null) => {
     if (model === 'craftsman' && type === 'approve') {
       const errors = checkCraftsmanApprovalCriteria(craftsman);
       if (errors.length) { alert('Cannot approve:\n' + errors.join('\n')); return; }
     }
     try {
-      await authAxios.post(`admin/${model}/${id}/${type}/`, reason ? { reason } : {});
+      await api.post(`admin/${model}/${id}/${type}/`, reason ? { reason } : {});
       await fetchCraftsmen();
       alert(type === 'approve' ? '✅ Craftsman approved successfully!' : '❌ Craftsman rejected successfully');
     } catch (err) {
@@ -99,10 +105,13 @@ export default function AdminDashboard() {
     setShowRejectModal(false);
   };
 
+  // ----------------------------
+  // Jobs
+  // ----------------------------
   const fetchAllJobs = async () => {
     setJobsLoading(true);
     try {
-      const { data } = await authAxios.get(`/job-requests/`);
+      const { data } = await api.get(`/job-requests/`);
       setJobs(data);
     } catch (err) { console.error('Error fetching jobs:', err); }
     finally { setJobsLoading(false); }
@@ -112,21 +121,21 @@ export default function AdminDashboard() {
     const craftsmanId = selectedCraftsmen[jobId];
     if (!craftsmanId) { alert('Please select a craftsman first.'); return; }
     try {
-      await authAxios.patch(`/job-requests/${jobId}/assign/`, { craftsman_id: craftsmanId });
+      await api.patch(`/job-requests/${jobId}/assign/`, { craftsman_id: craftsmanId });
       alert('✅ Craftsman assigned successfully!');
       fetchAllJobs();
     } catch (err) { console.error('Error assigning craftsman:', err); alert('❌ Failed to assign craftsman'); }
   };
 
-  useEffect(() => { if (activeSection === 'jobs' || activeSection === 'payments') fetchAllJobs(); }, [activeSection]);
+  useEffect(() => { 
+    if (activeSection === 'jobs' || activeSection === 'payments') fetchAllJobs(); 
+  }, [activeSection]);
 
-  // --- FIXED: Jobs ready for payment filter ---
-  const jobsReadyForPayment = jobs.filter(j => j.status === 'Completed'); // or 'Client Approved' if your backend sets it
+  const jobsReadyForPayment = jobs.filter(j => j.status === 'Completed');
 
   const processPayment = async jobId => {
     try {
-      await authAxios.post(`/job-requests/${jobId}/pay/`);
-
+      await api.post(`/job-requests/${jobId}/pay/`);
       alert('✅ Payment initiated via MPesa. Status updated to "Paid — Awaiting Confirmation".');
       fetchAllJobs();
     } catch (err) {
@@ -135,6 +144,9 @@ export default function AdminDashboard() {
     }
   };
 
+  // ----------------------------
+  // RENDER
+  // ----------------------------
   return (
     <div className="d-flex min-vh-100">
       {/* Sidebar */}
@@ -169,7 +181,7 @@ export default function AdminDashboard() {
               filterValue={pendingFilter}
               setFilterValue={setPendingFilter}
               isPending
-              getImageUrl={getImageUrl}
+              getImageUrl={getImageUrlSafe}
               colorText={colorText}
               checkCraftsmanApprovalCriteria={checkCraftsmanApprovalCriteria}
               isCraftsmanApproved={isCraftsmanApproved}
@@ -181,7 +193,7 @@ export default function AdminDashboard() {
               filterValue={approvedFilter}
               setFilterValue={setApprovedFilter}
               isPending={false}
-              getImageUrl={getImageUrl}
+              getImageUrl={getImageUrlSafe}
               colorText={colorText}
               checkCraftsmanApprovalCriteria={checkCraftsmanApprovalCriteria}
               isCraftsmanApproved={isCraftsmanApproved}

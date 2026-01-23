@@ -5,16 +5,21 @@ from decouple import config
 from corsheaders.defaults import default_headers
 
 # ---------------------------
-# BASE CONFIG
+# BASE
 # ---------------------------
-BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ---------------------------
+# ENVIRONMENT
+# ---------------------------
+ENVIRONMENT = config("ENVIRONMENT", default="development")
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="fallback-secret-for-dev")
-DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
+DEBUG = True
 
 ALLOWED_HOSTS = config(
     "DJANGO_ALLOWED_HOSTS",
-    default="localhost,127.0.0.1,staging.kaakazini.com,kaakazini.com,www.kaakazini.com",
+    default="localhost,127.0.0.1",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 
@@ -31,15 +36,16 @@ INSTALLED_APPS = [
 
     # Third-party
     "rest_framework",
-    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "djoser",
     "django_rest_passwordreset",
     "django_extensions",
+    "storages",
 
     # Local apps
-    "api",
     "accounts",
+    "api",
     "services",
 ]
 
@@ -94,44 +100,66 @@ DATABASES = {
 # AUTHENTICATION
 # ---------------------------
 AUTH_USER_MODEL = "accounts.CustomUser"
+
 AUTHENTICATION_BACKENDS = [
     "accounts.authentication.EmailBackend",
-    "django.contrib.auth.backends.ModelBackend",
 ]
 
-# ---------------------------
-# REST FRAMEWORK
-# ---------------------------
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
-    ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
-    ),
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "accounts.authentication.CookieJWTAuthentication",
+    ],
 }
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
-# ---------------------------
-# CORS / CSRF
-# ---------------------------
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_HEADERS = list(default_headers) + ["authorization"]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+CORS_ALLOW_CREDENTIALS = True
+
 CSRF_TRUSTED_ORIGINS = [
-    "https://staging.kaakazini.com",
-    "https://kaakazini.com",
-    "https://www.kaakazini.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
 
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
+
+
+
+# ============================
+# DIGITALOCEAN SPACES (MEDIA)
+# ============================
+
+USE_SPACES = config("USE_SPACES", default=False, cast=bool)
+
+if USE_SPACES:
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+    AWS_ACCESS_KEY_ID = config("DO_SPACES_KEY")
+    AWS_SECRET_ACCESS_KEY = config("DO_SPACES_SECRET")
+
+    AWS_STORAGE_BUCKET_NAME = config("DO_SPACES_BUCKET")
+    AWS_S3_REGION_NAME = config("DO_SPACES_REGION", default="nyc3")
+    AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
+
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_QUERYSTRING_AUTH = False
+
+    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
+
 # ---------------------------
-# STATIC & MEDIA
+# STATIC / MEDIA
 # ---------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -139,19 +167,15 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-
 # ---------------------------
 # SECURITY
 # ---------------------------
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
 X_FRAME_OPTIONS = "DENY"
 
 # ---------------------------
-# OTHER CONFIG
+# OTHER
 # ---------------------------
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Africa/Nairobi"
@@ -159,5 +183,9 @@ USE_I18N = True
 USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
+
+# ---------------------------
+# BREVO / SENDINBLUE API
+# ---------------------------
 BREVO_API_KEY = config("BREVO_API_KEY", default="")
-FRONTEND_URL = config("FRONTEND_URL", default="https://staging.kaakazini.com")

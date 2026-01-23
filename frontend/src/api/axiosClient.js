@@ -1,13 +1,24 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
+// API base URL (your Django backend)
+export const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  (window.location.hostname === "localhost"
+    ? "http://localhost:8000/api"
+    : "http://127.0.0.1:8000/api");
 
-const authAxios = axios.create({ baseURL: API_BASE_URL });
+// Bucket / Media URL (for DigitalOcean/S3)
+export const BUCKET_URL =
+  process.env.REACT_APP_BUCKET_URL ||
+  "https://kaakazini-image.frai.digitaloceanspaces.com";
 
-authAxios.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem("access_token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
+// Axios instance for API calls (with cookies)
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true, 
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-export { authAxios, API_BASE_URL };
+export default api;

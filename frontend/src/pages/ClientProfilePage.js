@@ -1,37 +1,59 @@
 // src/pages/ClientProfilePage.js
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
+import api from "../api/axiosClient"; // ✅ cookie-based axios instance
 
 const ClientProfilePage = () => {
   const [client, setClient] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // Load client from sessionStorage
-    const storedClient = sessionStorage.getItem("client");
-    if (storedClient) {
-      setClient(JSON.parse(storedClient));
-    }
+    const fetchClientData = async () => {
+      setLoading(true);
+      setError("");
 
-    // Fetch client's past orders
-    const token = sessionStorage.getItem("access_token");
-    if (token && storedClient) {
-      const parsed = JSON.parse(storedClient);
-      axios
-        .get(`${BASE_URL}/job-requests/`, {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { client: parsed.id },
-        })
-        .then((res) => setOrders(res.data))
-        .catch((err) => console.error("Error fetching orders:", err));
-    }
+      try {
+        // Fetch client profile
+        const profileRes = await api.get("/client/me/"); // assuming you have a cookie-authenticated endpoint
+        setClient(profileRes.data);
+
+        // Fetch client's orders
+        const ordersRes = await api.get("/job-requests/", {
+          params: { client: profileRes.data.id },
+        });
+        setOrders(ordersRes.data);
+      } catch (err) {
+        console.error("Error fetching client data:", err);
+        setError("Failed to load your profile. Please log in again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClientData();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="container py-4 text-center text-secondary">
+        Loading profile...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container py-4 text-center text-danger">
+        <h2>Error</h2>
+        <p>{error}</p>
+      </div>
+    );
+  }
 
   if (!client) {
     return (
-      <div className="container py-4">
+      <div className="container py-4 text-center">
         <h2 className="text-danger">Not Logged In</h2>
         <p>Please log in to view your profile.</p>
       </div>
@@ -57,11 +79,20 @@ const ClientProfilePage = () => {
         ) : (
           <ul className="list-group">
             {orders.map((order) => (
-              <li key={order.id} className="list-group-item d-flex justify-content-between">
+              <li
+                key={order.id}
+                className="list-group-item d-flex justify-content-between align-items-center"
+              >
                 <span>
                   {order.service} - {new Date(order.schedule).toLocaleDateString()}
                 </span>
-                <span className="badge bg-info text-dark">{order.status}</span>
+                <span className={`badge ${
+                  order.status === "completed" ? "bg-success" :
+                  order.status === "pending" ? "bg-warning text-dark" :
+                  "bg-secondary"
+                }`}>
+                  {order.status}
+                </span>
               </li>
             ))}
           </ul>

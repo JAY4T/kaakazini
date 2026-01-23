@@ -1,199 +1,100 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
+import api from "../api/axiosClient";
+import { useAuth } from "../context/AuthContext";
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth(); // from context
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false); // loading state
+  const [loading, setLoading] = useState(false);
   const googleButtonRef = useRef(null);
+
+  const fetchProfile = async () => {
+    const res = await api.get("me/");
+    return res.data;
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (!email || !password) {
-      setError('Email and password are required.');
-      return;
-    }
+    if (!email || !password) return setError("Email and password are required.");
 
     setLoading(true);
-
     try {
-      const response = await fetch(`${API_BASE_URL}/token/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.detail || 'Invalid email or password!');
-      }
-
-      const data = await response.json();
-      sessionStorage.setItem('access_token', data.access);
-      sessionStorage.setItem('refresh_token', data.refresh);
-
-      // Fetch user profile
-      const profileResponse = await fetch(`${API_BASE_URL}/profile/`, {
-        headers: {
-          Authorization: `Bearer ${data.access}`,
-        },
-      });
-
-      if (!profileResponse.ok) {
-        throw new Error('Failed to fetch profile.');
-      }
-
-      const profileData = await profileResponse.json();
-
-      navigate('/dashboard');
+      await api.post("/login/", { email, password }); // backend sets cookie
+      await login(); // fetch user and update context
+      const user = await fetchProfile();
+      console.log("Logged in user:", user);
+      navigate("/dashboard");
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Something went wrong. Please try again.');
+      console.error(err);
+      setError(err.response?.data?.detail || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
+  // Google login
   const handleCredentialResponse = async (response) => {
-    const googleToken = response?.credential;
-    if (!googleToken) return alert('Invalid Google credential');
+    const token = response?.credential;
+    if (!token) return alert("Invalid Google credential");
 
     setLoading(true);
-
     try {
-      const res = await fetch(`${API_BASE_URL}/google-login/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: googleToken }),
-      });
-
-      if (!res.ok) throw new Error('Google login failed.');
-
-      const data = await res.json();
-      sessionStorage.setItem('access_token', data.access);
-      sessionStorage.setItem('refresh_token', data.refresh);
-
-      // Fetch user profile after Google login
-      const profileResponse = await fetch(`${API_BASE_URL}/profile/`, {
-        headers: {
-          Authorization: `Bearer ${data.access}`,
-        },
-      });
-
-      if (!profileResponse.ok) {
-        throw new Error('Failed to fetch profile.');
-      }
-
-      const profileData = await profileResponse.json();
-
-      sessionStorage.setItem('user_profile', JSON.stringify(profileData));
-
-      navigate('/dashboard');
+      await api.post("/google-login/", { token, role: "craftsman" });
+      await login();
+      const user = await fetchProfile();
+      console.log("Google logged in user:", user);
+      navigate("/dashboard");
     } catch (err) {
-      console.error('Google login error:', err);
-      alert(err.message || 'Something went wrong with Google login.');
+      console.error(err);
+      alert(err.response?.data?.detail || "Google login failed.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    try {
-      if (typeof window !== 'undefined' && window.google && googleButtonRef.current) {
-        window.google.accounts.id.initialize({
-          client_id: '551247510793-ria1stm1obcn36nkkl2is4tknoqaj2sv.apps.googleusercontent.com',
-          callback: handleCredentialResponse,
-        });
-
-        window.google.accounts.id.renderButton(googleButtonRef.current, {
-          theme: 'outline',
-          size: 'large',
-          type: 'standard',
-          text: 'signin_with',
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load Google Sign-In button:', error);
+    if (window.google && googleButtonRef.current) {
+      window.google.accounts.id.initialize({
+        client_id: "551247510793-ria1stm1obcn36nkkl2is4tknoqaj2sv.apps.googleusercontent.com",
+        callback: handleCredentialResponse,
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "outline",
+        size: "large",
+        type: "standard",
+        text: "signin_with",
+      });
     }
   }, []);
 
   return (
-    <div
-      style={{
-        backgroundImage:
-          'url("https://jay4t.org/wp-content/uploads/2025/04/pexels-kindelmedia-8487371-1536x1152.webp")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        minHeight: '100vh',
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-      }}
-    >
-      <div className="container" style={{ marginTop: '150px', marginBottom: '50px' }}>
+    <div style={{ backgroundImage: 'url("/background.webp")', backgroundSize: "cover", minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
+      <div className="container" style={{ marginTop: "150px" }}>
         <div className="row justify-content-center">
           <div className="col-md-8 col-lg-6 col-xl-5">
             <div className="card shadow-lg border-0">
               <div className="card-body p-5">
-                <h2 className="text-center mb-4 fw-bold text-success"
-                //  style={{ color: '#0d6efd' }}
-                 >
-                  Group Login
-                </h2>
-
+                <h2 className="text-center mb-4 fw-bold text-success">Group Login</h2>
                 <form onSubmit={handleLogin}>
                   <div className="mb-4">
-                    <label className="form-label">Email Address</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoComplete="email"
-                      disabled={loading}
-                    />
+                    <label>Email Address</label>
+                    <input type="email" className="form-control" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading} />
                   </div>
                   <div className="mb-4">
-                    <label className="form-label">Password</label>
-                    <input
-                      type="password"
-                      className="form-control"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoComplete="current-password"
-                      disabled={loading}
-                    />
+                    <label>Password</label>
+                    <input type="password" className="form-control" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading} />
                   </div>
-                  <p className="text-center mt-2">
-  <Link to="/forgot-password" className="text-primary">
-    Forgot Password?
-  </Link>
-</p>
-
                   {error && <div className="alert alert-danger">{error}</div>}
-
-                  <button className="btn btn-yellow-solid w-100 py-2 mb-3" type="submit" disabled={loading}>
-                    {loading ? 'Logging in...' : 'Login'}
-                  </button>
+                  <button className="btn btn-yellow-solid w-100 py-2 mb-3" type="submit" disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
                 </form>
-
                 <div className="text-center mb-3" ref={googleButtonRef} />
-
                 <p className="mt-3 text-center">
-                  Don&apos;t have an account?{' '}
-                  <Link to="/signup" className="text-primary">
-                    Sign Up
-                  </Link>
+                  Don&apos;t have an account? <Link to="/signup" className="text-primary">Sign Up</Link>
                 </p>
               </div>
             </div>
@@ -201,7 +102,6 @@ function LoginPage() {
         </div>
       </div>
     </div>
-    
   );
 }
 

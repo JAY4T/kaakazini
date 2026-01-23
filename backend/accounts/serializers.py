@@ -1,74 +1,66 @@
 from rest_framework import serializers
-from .models import CustomUser
 from django.contrib.auth import authenticate
-from django.contrib.auth import get_user_model
-# from .models import Client
+from .models import CustomUser
 
-
-
-User = get_user_model()
-
-class RegisterSerializer(serializers.ModelSerializer):
+# -----------------------------
+# Base Signup Serializer
+# -----------------------------
+class BaseSignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
 
     class Meta:
-        model = User
-        fields = ('full_name', 'email', 'password', 'phone_number', 'location', 'subscription', 'role')
+        model = CustomUser
+        fields = ['full_name', 'email', 'password', 'phone_number', 'location', 'role', 'subscription']
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        return CustomUser.objects.create_user(**validated_data)
 
+# -----------------------------
+# Craftsman Signup Serializer
+# -----------------------------
+class CraftsmanSignupSerializer(BaseSignupSerializer):
+    def create(self, validated_data):
+        validated_data['role'] = 'craftsman'
+        return super().create(validated_data)
 
-class LoginSerializer(serializers.Serializer):
+# -----------------------------
+# Client Signup Serializer
+# -----------------------------
+class ClientSignupSerializer(BaseSignupSerializer):
+    def create(self, validated_data):
+        validated_data['role'] = 'client'
+        return super().create(validated_data)
+
+# -----------------------------
+# Unified Role-Aware Login Serializer
+# -----------------------------
+class RoleLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES, required=False)  # optional
 
     def validate(self, data):
-        user = authenticate(username=data['email'], password=data['password'])
+        email = data['email']
+        password = data['password']
+        role = data.get('role')  # optional
+
+        user = authenticate(username=email, password=password)
         if not user:
-            raise serializers.ValidationError("Invalid credentials")
+            raise serializers.ValidationError("Invalid credentials.")
+
+        # Role enforcement only if provided
+        if role == 'admin' and not user.is_staff:
+            raise serializers.ValidationError("You are not authorized as admin.")
+        if role and user.role != role and role != 'admin':
+            raise serializers.ValidationError(f"You are not authorized as {role}.")
+
         self.context['user'] = user
         return data
 
-
+# -----------------------------
+# User Profile Serializer
+# -----------------------------
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
-        fields = ['id', 'email', 'full_name', 'phone_number', 'location', 'role', 'subscription']
-
-
-
-from rest_framework import serializers
-from .models import CustomUser
-from django.contrib.auth import authenticate
-
-class ClientSignupSerializer(serializers.ModelSerializer):
-    class Meta:
         model = CustomUser
-        fields = ['full_name', 'email', 'phone_number', 'password', 'role']
-        extra_kwargs = {'password': {'write_only': True}}
-
-    def create(self, validated_data):
-        validated_data['role'] = 'client'
-        return CustomUser.objects.create_user(**validated_data)
-    
-
-
-
-
-class ClientLoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField()
-
-    def validate(self, data):
-        email = data.get('email')
-        password = data.get('password')
-
-        user = authenticate(username=email, password=password)
-
-        if not user:
-            raise serializers.ValidationError("Invalid email or password.")
-        if user.role != 'client':
-            raise serializers.ValidationError("You are not authorized as a client.")
-
-        return {'user': user}
+        fields = ['id', 'email', 'full_name', 'phone_number', 'location', 'role', 'subscription']

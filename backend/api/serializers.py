@@ -15,11 +15,15 @@ User = get_user_model()
 
 # ================== GALLERY IMAGE SERIALIZER ==================
 class GalleryImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = GalleryImage
-        fields = ['id', 'image']
+        fields = ["id", "image_url"]
+
+    def get_image_url(self, obj):
+        return obj.image.url if obj.image else None
+
 
 
 # ================== REVIEW SERIALIZER ==================
@@ -32,9 +36,14 @@ class ReviewSerializer(serializers.ModelSerializer):
 # ================== SERVICE SERIALIZER ==================
 
 class ServiceSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Service
-        fields = ['id', 'service_name', 'image']
+        fields = ["id", "service_name", "image_url"]
+
+    def get_image_url(self, obj):
+        return obj.image.url if obj.image else None
 
 
 # ================== SERVICE VIDEO SERIALIZER ==================
@@ -52,16 +61,27 @@ class CraftsmanSerializer(serializers.ModelSerializer):
     gallery_images = GalleryImageSerializer(many=True, read_only=True)
     reviews = ReviewSerializer(many=True, read_only=True)
     services = ServiceSerializer(many=True, read_only=True)
-    service_image = serializers.ImageField(required=False, allow_null=True)
     service_videos = ServiceVideoSerializer(many=True, read_only=True)
+
+    # ✅ URL fields for images
+    profile_url = serializers.SerializerMethodField()
+    service_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Craftsman
         fields = [
             'id',
             'full_name',
-            'slug',  
+            'slug',
+
+            # raw fields (keep for uploads/forms)
             'profile',
+            'service_image',
+
+            # public URLs (use in React)
+            'profile_url',
+            'service_image_url',
+
             'description',
             'status',
             'profession',
@@ -71,29 +91,44 @@ class CraftsmanSerializer(serializers.ModelSerializer):
             'skills',
             'video',
             'gallery_images',
-            'is_approved',   
+            'is_approved',
             'reviews',
             'primary_service',
             'services',
-            'service_image', 
             'service_videos',
         ]
 
-    
+    def get_profile_url(self, obj):
+        if obj.profile:
+            return obj.profile.url
+        return None
+
+    def get_service_image_url(self, obj):
+        if obj.service_image:
+            return obj.service_image.url
+        return None
 
 
 
 # ================== PRODUCT SERIALIZER ==================
 class ProductSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(required=False)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'price', 'description', 'image', 'status', 'is_approved']
+        fields = [
+            "id",
+            "name",
+            "price",
+            "description",
+            "image_url",
+            "status",
+            "is_approved",
+        ]
 
-    def create(self, validated_data):
-        validated_data['craftsman'] = self.context['request'].user.craftsman
-        return super().create(validated_data)
+    def get_image_url(self, obj):
+        return obj.image.url if obj.image else None
+
 
 
 # ================== CONTACT MESSAGE SERIALIZER ==================
@@ -106,33 +141,19 @@ class ContactMessageSerializer(serializers.ModelSerializer):
 
 
 class JobRequestSerializer(serializers.ModelSerializer):
-    craftsman = serializers.SerializerMethodField(read_only=True)
+    craftsman = serializers.SerializerMethodField()
     craftsman_name = serializers.CharField(source='craftsman.user.full_name', read_only=True)
     craftsman_id = serializers.IntegerField(source='craftsman.id', read_only=True)
-    client = serializers.SerializerMethodField(read_only=True)
-    quote_details = serializers.JSONField(read_only=True)  # add this
-
+    client = serializers.SerializerMethodField()
+    quote_details = serializers.JSONField(read_only=True)
 
     class Meta:
         model = JobRequest
-        fields = [
-            'id', 'client', 'craftsman', 'craftsman_id', 'craftsman_name',
-            'service', 'custom_service', 'description', 'schedule',
-            'address', 'location', 'name', 'phone', 'isUrgent', 'media',
-            'status', 'review', 'created_at',
-            'budget', 'distance_km', 'start_time', 'end_time',
-            'duration_hours', 'expected_end', 'overtime_hours',
-            'total_payment', 'company_fee', 'net_payment','quote_details',
-        ]
-        read_only_fields = [
-            'distance_km', 'duration_hours', 'expected_end', 'overtime_hours',
-            'total_payment', 'company_fee', 'net_payment',
-            'status', 'created_at'
-        ]
+        fields = '__all__'
 
     def get_craftsman(self, obj):
         if not obj.craftsman:
-            return None
+            return {'id': None, 'full_name': 'Unassigned', 'profession': None}
         return {
             'id': obj.craftsman.id,
             'full_name': obj.craftsman.user.full_name,
@@ -141,7 +162,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
     def get_client(self, obj):
         if not obj.client:
-            return None
+            return {'id': None, 'full_name': 'Unknown', 'phone': None}
         return {
             'id': obj.client.id,
             'full_name': obj.client.full_name,

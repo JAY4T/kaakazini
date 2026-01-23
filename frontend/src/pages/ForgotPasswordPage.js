@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
-
+import api from "../api/axiosClient"; // ✅ cookie-based axios
 
 function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -17,20 +15,10 @@ function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/password-reset/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.detail || "Failed to request password reset");
-      }
-
+      await api.post("/password-reset/", { email }); // ✅ cookie-based POST
       setMessage("If this email is registered, you’ll receive reset instructions shortly.");
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.detail || "Failed to request password reset");
     } finally {
       setLoading(false);
     }

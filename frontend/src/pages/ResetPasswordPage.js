@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
-
+import api from "../api/axiosClient"; // ✅ cookie-based axios
 
 function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -32,21 +30,13 @@ function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/password-reset-confirm/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid, token, password }), // ✅ include uid
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.detail || data?.error || "Failed to reset password.");
-      }
+      // ✅ cookie-based reset
+      await api.post("/password-reset-confirm/", { uid, token, password });
 
       setMessage("Password reset successful. Redirecting to login...");
       setTimeout(() => navigate("/login"), 1800);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.detail || "Failed to reset password.");
     } finally {
       setLoading(false);
     }

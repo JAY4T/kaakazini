@@ -7,20 +7,22 @@ const BASE_URL =
 export default function ClientPaymentTab({ clientId }) {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchPayments();
+    if (clientId) fetchPayments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clientId]);
 
   const fetchPayments = async () => {
     try {
-      const token = sessionStorage.getItem("access_token");
+      setLoading(true);
+      setError("");
+
       const { data } = await axios.get(`${BASE_URL}/payments/`, {
-        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true, // ✅ cookie-based auth
       });
 
-      // Filter payments belonging to this client
       const clientPayments = data.filter(
         (p) => p.client === clientId || p.client?.id === clientId
       );
@@ -28,19 +30,23 @@ export default function ClientPaymentTab({ clientId }) {
       setPayments(clientPayments);
     } catch (err) {
       console.error("Error fetching payments:", err);
+      setError("Failed to load payments. Please refresh the page.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading)
+  if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center py-5">
-        <div className="spinner-border text-success" role="status">
-          <span className="visually-hidden">Loading payments...</span>
-        </div>
+        <div className="spinner-border text-success" role="status" />
       </div>
     );
+  }
+
+  if (error) {
+    return <p className="text-danger">{error}</p>;
+  }
 
   return (
     <div className="card p-4">
@@ -61,6 +67,7 @@ export default function ClientPaymentTab({ clientId }) {
                 <th>Date</th>
               </tr>
             </thead>
+
             <tbody>
               {payments.map((pay) => {
                 const total = pay.amount || 0;
@@ -90,7 +97,11 @@ export default function ClientPaymentTab({ clientId }) {
                           : "Cancelled"}
                       </span>
                     </td>
-                    <td>{new Date(pay.created_at).toLocaleString()}</td>
+                    <td>
+                      {pay.created_at
+                        ? new Date(pay.created_at).toLocaleString()
+                        : "—"}
+                    </td>
                   </tr>
                 );
               })}

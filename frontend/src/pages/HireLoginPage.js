@@ -1,124 +1,115 @@
-// HireLogin.js
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from "../api/axiosClient";
+
 import heroImage from '../assets/craftOnline.jpg';
 
-
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://staging.kaakazini.com/api';
-
 const HireLogin = () => {
-  const [form, setForm] = useState({
-    email: '',
-    password: ''
-  });
-
+  const [form, setForm] = useState({ email: '', password: '', remember: false });
   const [message, setMessage] = useState({ text: '', type: '' });
   const navigate = useNavigate();
-  const location = useLocation();   // 👈 to get the "from" route
+  const location = useLocation();
 
-  // fallback if no state was passed (go to dashboard after login)
   const from = location.state?.from?.pathname || "/hire";
 
   const handleChange = (e) => {
-    const { id, value } = e.target;
-    setForm(prev => ({ ...prev, [id]: value }));
+    const { id, value, type, checked } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [id]: type === "checkbox" ? checked : value
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.email || !form.password) {
-      setMessage({ text: 'Email and password are required.', type: 'danger' });
+      setMessage({ text: "Email and password are required.", type: "danger" });
       return;
     }
 
     try {
-      const res = await axios.post(`${API_BASE_URL}/client-login/`, {
+      // Login request
+      await api.post("/client-login/", {
         email: form.email,
         password: form.password,
+        remember: form.remember
       });
 
-      sessionStorage.setItem('access_token', res.data.token);
-      sessionStorage.setItem('client', JSON.stringify(res.data.user));
+      // Verify session via /me/ endpoint
+      const meRes = await api.get("/me/");
+      if (!meRes.data || meRes.data.role !== "client") {
+        throw new Error("Not authorized as client.");
+      }
 
-      setMessage({ text: 'Login successful! Redirecting...', type: 'success' });
+      setMessage({ text: "Login successful! Redirecting...", type: "success" });
 
-      // 👇 Redirect back to where the client was going (e.g. /hire/:id)
-      setTimeout(() => navigate(from), 1500);
+      // Redirect to /hire
+      setTimeout(() => navigate(from, { replace: true }), 500);
 
     } catch (error) {
       setMessage({
-        text: 'Login failed. ' + (error.response?.data?.detail || 'Invalid credentials.'),
-        type: 'danger',
+        text: "Login failed. " + (error.response?.data?.detail || error.message),
+        type: "danger"
       });
     }
   };
 
   return (
     <div
-  className="min-vh-100 d-flex align-items-center"
-  style={{
-      // background: `url(${heroImage}) no-repeat center center/cover`,
-      background: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${heroImage}) no-repeat center center/cover`,
-      height: '80vh',
-      color: 'white',
-      width: '100%',
-      position: 'relative',
-      paddingTop: '100px', //keeps hero below navbar
-      zIndex: 1,
-    }}
->
-  <div className="container">
-    <div className="row justify-content-center">
-      <div className="col-md-8">
-        <div className="card p-4 shadow">
-          <h2 className="text-center mb-4 fw-bold text-success">
-            Client Login
-          </h2>
+      className="min-vh-100 d-flex align-items-center"
+      style={{
+        background: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${heroImage}) no-repeat center center/cover`,
+        height: "80vh", color: "white", width: "100%", position: "relative", paddingTop: "100px", zIndex: 1
+      }}
+    >
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-md-8">
+            <div className="card p-4 shadow">
+              <h2 className="text-center mb-4 fw-bold text-success">Client Login</h2>
+              {message.text && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
-          {message.text && (
-            <div className={`alert alert-${message.type}`}>
-              {message.text}
+              <form onSubmit={handleSubmit}>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Email"
+                  className="form-control mb-3"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                />
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="Password"
+                  className="form-control mb-3"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+                <div className="form-check mb-3">
+                  <input
+                    id="remember"
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={form.remember}
+                    onChange={handleChange}
+                  />
+                  <label htmlFor="remember" className="form-check-label">Remember Me</label>
+                </div>
+                <button className="btn btn-yellow-solid w-100" type="submit">Login</button>
+              </form>
+
+              <p className="mt-3 text-center">
+                Don't have an account? <Link to="/HireSignup">Sign Up</Link>
+              </p>
             </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <input
-              id="email"
-              type="email"
-              placeholder="Email"
-              className="form-control mb-3"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-
-            <input
-              id="password"
-              type="password"
-              placeholder="Password"
-              className="form-control mb-3"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-
-            <button className="btn btn-yellow-solid w-100" type="submit">
-              Login
-            </button>
-          </form>
-
-          <p className="mt-3 text-center">
-            Don't have an account? <Link to="/HireSignup">Sign Up</Link>
-          </p>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
-
   );
 };
 
