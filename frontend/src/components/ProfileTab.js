@@ -1,20 +1,36 @@
 import React, { useState, useEffect } from "react";
 import { Button, Card, Row, Col, Badge, Form, Collapse } from "react-bootstrap";
+import { getFullImageUrl } from "../utils/getFullImageUrl";
 
 // ----------------- Reusable Inputs -----------------
-export const TextInputWithDatalist = ({ label, name, value, onChange, options = [], required, isArray = false }) => {
+export const TextInputWithDatalist = ({
+  label,
+  name,
+  value,
+  onChange,
+  options = [],
+  required,
+  isArray = false,
+}) => {
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (required && (!value || (isArray && value.length === 0))) setError("This field is required");
-    else setError("");
+    if (required && (!value || (isArray && value.length === 0))) {
+      setError("This field is required");
+    } else {
+      setError("");
+    }
   }, [value, required, isArray]);
 
   const handleAddItem = () => {
     if (!inputValue.trim()) return;
     if (isArray) {
-      if (!value.includes(inputValue.trim())) onChange({ target: { name, value: [...value, inputValue.trim()] } });
+      if (!(value || []).includes(inputValue.trim())) {
+        onChange({
+          target: { name, value: [...(value || []), inputValue.trim()] },
+        });
+      }
     } else {
       onChange({ target: { name, value: inputValue } });
     }
@@ -23,7 +39,9 @@ export const TextInputWithDatalist = ({ label, name, value, onChange, options = 
 
   const handleRemoveItem = (item) => {
     if (isArray) {
-      onChange({ target: { name, value: value.filter((v) => v !== item) } });
+      onChange({
+        target: { name, value: (value || []).filter((v) => v !== item) },
+      });
     }
   };
 
@@ -36,7 +54,10 @@ export const TextInputWithDatalist = ({ label, name, value, onChange, options = 
 
   return (
     <Card className="mb-4 p-3 shadow-sm border-0">
-      <label className="form-label">{label} {required && "*"}</label>
+      <label className="form-label">
+        {label} {required && "*"}
+      </label>
+
       {isArray ? (
         <>
           <div className="d-flex mb-2">
@@ -48,10 +69,13 @@ export const TextInputWithDatalist = ({ label, name, value, onChange, options = 
               onKeyDown={handleKeyDown}
               placeholder={`Add ${label.toLowerCase()}`}
             />
-            <Button variant="secondary" onClick={handleAddItem}>Add</Button>
+            <Button variant="secondary" onClick={handleAddItem}>
+              Add
+            </Button>
           </div>
+
           <div>
-            {value.map((item) => (
+            {(value || []).map((item) => (
               <Badge
                 key={item}
                 bg="primary"
@@ -65,22 +89,24 @@ export const TextInputWithDatalist = ({ label, name, value, onChange, options = 
           </div>
         </>
       ) : (
-        <>
-          <input
-            list={options.length ? `${name}-options` : undefined}
-            className={`form-control ${error ? "border-danger" : ""}`}
-            name={name}
-            value={value || ""}
-            onChange={(e) => onChange(e)}
-            placeholder={`Select or type ${label.toLowerCase()}`}
-          />
-        </>
+        <input
+          list={options.length ? `${name}-options` : undefined}
+          className={`form-control ${error ? "border-danger" : ""}`}
+          name={name}
+          value={value || ""}
+          onChange={onChange}
+          placeholder={`Select or type ${label.toLowerCase()}`}
+        />
       )}
+
       {options.length > 0 && (
         <datalist id={`${name}-options`}>
-          {options.map((opt) => <option key={opt} value={opt} />)}
+          {options.map((opt) => (
+            <option key={opt} value={opt} />
+          ))}
         </datalist>
       )}
+
       {error && <small className="text-danger">{error}</small>}
     </Card>
   );
@@ -88,6 +114,13 @@ export const TextInputWithDatalist = ({ label, name, value, onChange, options = 
 
 export const FileInput = ({ label, file, onChange, accept = "image/*", required }) => {
   const [error, setError] = useState("");
+
+  const fileUrl = file
+    ? accept.includes("image")
+      ? getFullImageUrl(file)
+      : file
+    : null;
+
   useEffect(() => {
     if (required && !file) setError("This field is required");
     else setError("");
@@ -95,14 +128,26 @@ export const FileInput = ({ label, file, onChange, accept = "image/*", required 
 
   return (
     <Card className="mb-4 p-3 shadow-sm border-0 text-center">
-      <label className="form-label fw-bold">{label} {required && "*"}</label>
-      {file && (accept.includes("image") && <img src={file} alt={label} className="img-thumbnail mb-2" style={{ maxWidth: "200px", maxHeight: "150px" }} />)}
+      <label className="form-label fw-bold">
+        {label} {required && "*"}
+      </label>
+
+      {fileUrl && accept.includes("image") && (
+        <img
+          src={fileUrl}
+          alt={label}
+          className="img-thumbnail mb-2"
+          style={{ maxWidth: "200px", maxHeight: "150px" }}
+        />
+      )}
+
       <input
         type="file"
         className={`form-control ${error ? "border-danger" : ""}`}
         accept={accept}
-        onChange={(e) => onChange(e)}
+        onChange={onChange}
       />
+
       {error && <small className="text-danger">{error}</small>}
     </Card>
   );
@@ -110,6 +155,7 @@ export const FileInput = ({ label, file, onChange, accept = "image/*", required 
 
 export const RadioGroup = ({ label, name, options = [], value, onChange, required }) => {
   const [error, setError] = useState("");
+
   useEffect(() => {
     if (required && !value) setError("This field is required");
     else setError("");
@@ -117,19 +163,24 @@ export const RadioGroup = ({ label, name, options = [], value, onChange, require
 
   return (
     <Card className="mb-4 p-3 shadow-sm border-0">
-      <label className="form-label d-block">{label} {required && "*"}</label>
-      {options.map((opt) => (
+      <label className="form-label d-block">
+        {label} {required && "*"}
+      </label>
+
+      {options.map((opt, i) => (
         <Form.Check
           inline
           key={opt}
+          id={`${name}-${i}`}
           label={opt}
           name={name}
           type="radio"
           value={opt}
           checked={value === opt}
-          onChange={(e) => onChange(e)}
+          onChange={onChange}
         />
       ))}
+
       {error && <small className="text-danger d-block">{error}</small>}
     </Card>
   );
@@ -151,7 +202,15 @@ function ProfileTab({
   handleServiceImageChange,
   saveProfile,
 }) {
-  const locations = ["South B", "Westlands", "Karen", "Embakasi", "Nakuru", "Eldoret", "Kisumu"];
+  const locations = [
+    "South B",
+    "Westlands",
+    "Karen",
+    "Embakasi",
+    "Nakuru",
+    "Eldoret",
+    "Kisumu",
+  ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -159,15 +218,27 @@ function ProfileTab({
   };
 
   const handleSave = () => {
-    const requiredFields = ["description", "profession", "skills", "location", "primary_service"];
-    if (profileData.account_type === "Company") requiredFields.push("company_name");
+    const requiredFields = [
+      "description",
+      "profession",
+      "skills",
+      "location",
+      "primary_service",
+    ];
+    if (profileData.account_type === "Company") {
+      requiredFields.push("company_name");
+    }
 
     const missingFields = requiredFields.filter(
-      (field) => !profileData[field] || (Array.isArray(profileData[field]) && profileData[field].length === 0)
+      (field) =>
+        !profileData[field] ||
+        (Array.isArray(profileData[field]) &&
+          profileData[field].length === 0)
     );
 
     if (missingFields.length === 0) saveProfile();
-    else alert(`Please fill in all required fields: ${missingFields.join(", ")}`);
+    else
+      alert(`Please fill in all required fields: ${missingFields.join(", ")}`);
   };
 
   const cardHeaderStyle = {
@@ -182,7 +253,9 @@ function ProfileTab({
 
   return (
     <Card className="p-4 shadow-sm border-0" style={{ backgroundColor: "#f9fafd" }}>
-      {craftsman?.full_name && <div style={cardHeaderStyle}>Welcome, {craftsman.full_name}!</div>}
+      {craftsman?.full_name && (
+        <div style={cardHeaderStyle}>Welcome, {craftsman.full_name}!</div>
+      )}
 
       <RadioGroup
         label="Account Type"
@@ -213,7 +286,11 @@ function ProfileTab({
               accept=".pdf,image/*"
               onChange={handleProofDocumentChange}
             />
-            {proofDocument && <Badge bg="success">Uploaded: {proofDocument}</Badge>}
+            {proofDocument && (
+              <Badge bg="success">
+                Uploaded: {getFullImageUrl(proofDocument)}
+              </Badge>
+            )}
           </Card>
         </Col>
       </Row>
@@ -225,6 +302,7 @@ function ProfileTab({
         onChange={handleInputChange}
         required
       />
+
       <Row>
         <Col md={6}>
           <TextInputWithDatalist
@@ -236,6 +314,7 @@ function ProfileTab({
             required
           />
         </Col>
+
         <Col md={6}>
           <TextInputWithDatalist
             label="Skills"
@@ -272,6 +351,7 @@ function ProfileTab({
             required
           />
         </Col>
+
         <Col md={6}>
           <TextInputWithDatalist
             label="Primary Service"
@@ -293,9 +373,15 @@ function ProfileTab({
       />
 
       <div className="d-flex align-items-center gap-3 mb-4">
-        <Button variant="success" onClick={handleSave}>Save Profile</Button>
+        <Button variant="success" onClick={handleSave}>
+          Save Profile
+        </Button>
+
         {craftsman?.status && (
-          <Badge bg={craftsman.status === "approved" ? "success" : "warning"} className="py-2 px-3">
+          <Badge
+            bg={craftsman.status === "approved" ? "success" : "warning"}
+            className="py-2 px-3"
+          >
             {craftsman.status.charAt(0).toUpperCase() + craftsman.status.slice(1)}
           </Badge>
         )}

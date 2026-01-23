@@ -103,8 +103,7 @@ export default function CraftsmenTable({
 
                   {/* Service */}
                   <td>
-                    {mainService.name ||
-                      colorText("No service", "blue")}
+                    {mainService.name || colorText("No service", "blue")}
                   </td>
 
                   {/* Service Image */}

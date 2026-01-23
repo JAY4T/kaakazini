@@ -7,6 +7,8 @@ import JobRequests from '../components/JobRequests';
 import PaymentDashboard from '../components/AdminPaymentDashboard';
 import RejectModal from '../components/RejectModal';
 
+import { getFullImageUrl } from "../utils/getFullImageUrl"; // DigitalOcean Spaces helper
+
 function isCraftsmanApproved(c) {
   return c?.is_approved === true;
 }
@@ -29,6 +31,9 @@ export default function AdminDashboard() {
 
   const [selectedCraftsmen, setSelectedCraftsmen] = useState({});
 
+  // ----------------------------
+  // Check Craftsman Approval
+  // ----------------------------
   const checkCraftsmanApprovalCriteria = c => {
     const errs = [];
     if (!c.full_name?.trim()) errs.push('Full name missing.');
@@ -63,7 +68,10 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchCraftsmen(); }, []);
 
-  const getImageUrl = (path) => (path?.startsWith('http') ? path : `${path}`);
+  // ----------------------------
+  // DigitalOcean Spaces Image URLs
+  // ----------------------------
+  const getImageUrlSafe = (path) => getFullImageUrl(path);
 
   const colorText = (text, color) => <span style={{ color }}>{text}</span>;
 
@@ -173,7 +181,7 @@ export default function AdminDashboard() {
               filterValue={pendingFilter}
               setFilterValue={setPendingFilter}
               isPending
-              getImageUrl={getImageUrl}
+              getImageUrl={getImageUrlSafe}
               colorText={colorText}
               checkCraftsmanApprovalCriteria={checkCraftsmanApprovalCriteria}
               isCraftsmanApproved={isCraftsmanApproved}
@@ -185,7 +193,7 @@ export default function AdminDashboard() {
               filterValue={approvedFilter}
               setFilterValue={setApprovedFilter}
               isPending={false}
-              getImageUrl={getImageUrl}
+              getImageUrl={getImageUrlSafe}
               colorText={colorText}
               checkCraftsmanApprovalCriteria={checkCraftsmanApprovalCriteria}
               isCraftsmanApproved={isCraftsmanApproved}

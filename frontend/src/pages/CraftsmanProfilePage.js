@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import api from '../api/axiosClient'; // ✅ cookie-based axios instance
+import api from '../api/axiosClient';
+import { getFullImageUrl } from '../utils/getFullImageUrl';
 
 function CraftsmanProfile() {
   const { slug } = useParams();
-
   const [craftsman, setCraftsman] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -22,10 +22,8 @@ function CraftsmanProfile() {
       setLoading(true);
       setNotFound(false);
       setErrorMsg('');
-
       try {
         const response = await api.get(`/public-craftsman/${slug}/`);
-
         if (response.status === 200 && response.data) {
           setCraftsman(response.data);
         } else {
@@ -55,37 +53,34 @@ function CraftsmanProfile() {
     return (
       <div className="text-center py-5">
         <h2 className="text-danger fs-4 fw-semibold">Craftsman Not Found</h2>
-        <p className="text-muted mt-2">
-          {errorMsg || 'Please check the URL or select another craftsman.'}
-        </p>
+        <p className="text-muted mt-2">{errorMsg || 'Please check the URL or select another craftsman.'}</p>
       </div>
     );
 
-  const profileImage = craftsman.profile || 'https://via.placeholder.com/150';
+  // Get full URLs for images
+  const profileImage = getFullImageUrl(craftsman.profile);
+  const proofDocument = getFullImageUrl(craftsman.proof_document);
   const primaryService = craftsman.primary_service || null;
   const services = primaryService
-    ? [{ name: primaryService }, ...(craftsman.services || [])]
+    ? [{ name: primaryService, service_image_url: craftsman.service_image }] 
+      .concat(craftsman.services || [])
     : craftsman.services || [];
 
   const avgRating =
     craftsman.reviews && craftsman.reviews.length > 0
-      ? (
-          craftsman.reviews.reduce((sum, r) => sum + r.rating, 0) /
-          craftsman.reviews.length
-        ).toFixed(1)
+      ? (craftsman.reviews.reduce((sum, r) => sum + r.rating, 0) / craftsman.reviews.length).toFixed(1)
       : null;
 
   const handleCopyLink = () => {
     const profileUrl = `${window.location.origin}/craftsman/${slug}`;
-    navigator.clipboard.writeText(profileUrl).then(() =>
-      alert('Profile link copied to clipboard!')
-    );
+    navigator.clipboard.writeText(profileUrl).then(() => alert('Profile link copied to clipboard!'));
   };
 
   return (
     <>
       <div className="container py-4">
         <div className="card shadow-lg p-4">
+
           {/* Profile Header */}
           <div className="text-center mb-4">
             <img
@@ -93,17 +88,12 @@ function CraftsmanProfile() {
               alt={craftsman.name}
               className="rounded-circle shadow mb-3"
               style={{ width: '144px', height: '144px', objectFit: 'cover' }}
+              onError={(e) => (e.target.src = 'https://via.placeholder.com/150')}
             />
             <h2 className="fw-bold d-block">{craftsman.name}</h2>
-            <p className="text-muted mb-2">
-              {craftsman.company_name || 'Independent Craftsman'}
-            </p>
+            <p className="text-muted mb-2">{craftsman.company_name || 'Independent Craftsman'}</p>
 
-            {/* Share & Hire Buttons */}
-            <button
-              className="btn btn-sm btn-outline-secondary mb-2 me-2"
-              onClick={handleCopyLink}
-            >
+            <button className="btn btn-sm btn-outline-secondary mb-2 me-2" onClick={handleCopyLink}>
               <i className="fas fa-share-alt me-1"></i> Share profile
             </button>
 
@@ -111,12 +101,7 @@ function CraftsmanProfile() {
               <i className="fas fa-handshake me-1"></i> Hire Now
             </Link>
 
-            {/* Rating */}
-            {avgRating && (
-              <p className="fw-bold text-warning mt-2">
-                ⭐ {avgRating}/10 ({craftsman.reviews.length} reviews)
-              </p>
-            )}
+            {avgRating && <p className="fw-bold text-warning mt-2">⭐ {avgRating}/10 ({craftsman.reviews.length} reviews)</p>}
           </div>
 
           {/* Location */}
@@ -131,15 +116,60 @@ function CraftsmanProfile() {
             <p className="text-muted">{craftsman.description || 'No information available.'}</p>
           </div>
 
-          {/* Services Offered */}
-          <div className="mb-4">
-            <h4 className="fw-semibold mb-2">Services Offered</h4>
-            {services.length > 0 ? (
-              services.map((service, index) => <p key={index}>{service.name}</p>)
-            ) : (
-              <p className="text-muted">No services listed.</p>
-            )}
+         {/* Services Offered */}
+<div className="mb-4">
+  <h4 className="fw-semibold mb-2">Gallery images</h4>
+
+  {services.length > 0 ? (
+    <div
+      className="d-flex overflow-auto gap-3 py-2"
+      style={{
+        whiteSpace: 'nowrap',
+        paddingBottom: '10px'
+      }}
+    >
+      {services.map((service, index) => {
+        const imageUrl = getFullImageUrl(service.service_image_url);
+
+        return (
+          <div
+            key={index}
+            className="text-center flex-shrink-0"
+            style={{ width: '150px' }}
+          >
+            <img
+              src={imageUrl}
+              // alt={service.name || 'Service'}
+              className="img-fluid rounded-circle shadow"
+              style={{
+                width: '150px',
+                height: '150px',
+                objectFit: 'cover',
+                cursor: 'pointer',
+              }}
+              onError={(e) => (e.target.src = 'https://via.placeholder.com/150')}
+            />
+            {/* <p className="mt-2 mb-0 fw-semibold text-center">
+              {service.name || 'Unnamed Service'}
+            </p> */}
           </div>
+        );
+      })}
+    </div>
+  ) : (
+    <p className="text-muted">No images.</p>
+  )}
+</div>
+
+          {/* Proof Document (if any) */}
+          {proofDocument && (
+            <div className="mb-4">
+              <h4 className="fw-semibold mb-2">Proof Document</h4>
+              <a href={proofDocument} target="_blank" rel="noopener noreferrer">
+                View Document
+              </a>
+            </div>
+          )}
 
           {/* Client Reviews */}
           <div className="mb-4">
@@ -174,7 +204,6 @@ function CraftsmanProfile() {
       <footer className="footer text-light pt-5 pb-4 mt-5" style={{ backgroundColor: '#222' }}>
         <div className="container">
           <div className="row">
-            {/* Quick Links */}
             <div className="col-lg-3 col-md-6 mb-4">
               <h5 className="text-uppercase fw-bold mb-3">Quick Links</h5>
               <ul className="list-unstyled">
@@ -186,14 +215,12 @@ function CraftsmanProfile() {
               </ul>
             </div>
 
-            {/* Contact Info */}
             <div className="col-lg-4 col-md-6 mb-4">
               <h5 className="text-uppercase fw-bold mb-3">Contact Us</h5>
               <p><i className="fas fa-map-marker-alt me-2"></i> Kisumu, Kenya</p>
               <p><i className="fas fa-envelope me-2"></i> support@kaakazini.com</p>
             </div>
 
-            {/* Map */}
             <div className="col-lg-5 col-md-12 mb-4">
               <h5 className="text-uppercase fw-bold mb-3">Find Us</h5>
               <div style={{ width: '100%', height: '300px', borderRadius: '0.5rem', overflow: 'hidden' }}>
