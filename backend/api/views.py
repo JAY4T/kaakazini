@@ -8,6 +8,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.conf import settings
+import boto3
+import uuid
+
 
 from .models import (
     Craftsman, Product, Service, JobRequest,
@@ -530,3 +534,51 @@ class SubmitQuoteView(APIView):
 
         serializer = JobRequestSerializer(job)
         return Response({"detail": "Quote submitted successfully.", "job": serializer.data}, status=status.HTTP_200_OK)
+
+
+class UploadImageView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, format=None):
+        """
+        Upload an image to DigitalOcean Spaces with user-based folder and unique filename.
+        """
+        file = request.FILES.get("file")
+        folder = request.data.get("folder", "profiles")  # default folder
+
+        if not file:
+            return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate file type (only images)
+        if not file.content_type.startswith("image/"):
+            return Response({"error": "Only image files are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Initialize Spaces client
+        client = boto3.client(
+            "s3",
+            region_name="fra1",
+            endpoint_url="https://fra1.digitaloceanspaces.com",
+            aws_access_key_id=settings.DO_SPACES_KEY,
+            aws_secret_access_key=settings.DO_SPACES_SECRET,
+        )
+
+        # Create unique file name
+        unique_filename = f"{uuid.uuid4().hex}_{file.name}"
+
+        # Construct file path in Spaces with user-based folder
+        file_path = f"{folder}/{request.user.id}/{unique_filename}"
+
+        try:
+            client.upload_fileobj(
+                file,
+                settings.DO_SPACES_BUCKET,
+                file_path,
+                ExtraArgs={"ACL": "public-read"}  # make file public
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Construct public URL
+        url = f"https://{settings.DO_SPACES_BUCKET}.fra1.digitaloceanspaces.com/{file_path}"
+
+        return Response({"url": url}, status=status.HTTP_201_CREATED)
