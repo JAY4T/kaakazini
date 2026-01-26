@@ -568,7 +568,8 @@ class UploadImageView(APIView):
         unique_filename = f"{uuid.uuid4().hex}.{ext}"
 
         # Path: folder/user_id/filename
-        file_path = f"{folder}/{request.user.id}/{unique_filename}"
+        file_path = f"{folder}/{unique_filename}"
+
 
         try:
             client.upload_fileobj(
