@@ -536,6 +536,7 @@ class SubmitQuoteView(APIView):
         return Response({"detail": "Quote submitted successfully.", "job": serializer.data}, status=status.HTTP_200_OK)
 
 
+
 class UploadImageView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -561,6 +562,8 @@ class UploadImageView(APIView):
         filename = f"{uuid.uuid4().hex}.{ext}"
         key = f"{folder}/{filename}"
 
+        logger.error("UPLOAD KEY = %s", key)  # 🔥 IMPORTANT
+
         client.upload_fileobj(
             file,
             settings.DO_SPACES_BUCKET,
@@ -569,5 +572,7 @@ class UploadImageView(APIView):
         )
 
         url = f"https://{settings.DO_SPACES_BUCKET}.fra1.digitaloceanspaces.com/{key}"
+
+        logger.error("UPLOAD URL = %s", url) 
 
         return Response({"url": url}, status=201)
