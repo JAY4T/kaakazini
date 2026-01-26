@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import api from "../api/axiosClient"; 
+import api from "../api/axiosClient";
+
 export default function ImageUpload({ folder = "profiles", onUpload }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -18,11 +19,13 @@ export default function ImageUpload({ folder = "profiles", onUpload }) {
       const res = await api.post("/upload-image/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      onUpload(res.data.url); 
+
+      // res.data.url is the correct public URL
+      onUpload(res.data.url);
       setFile(null);
     } catch (err) {
       console.error(err);
-      alert("Upload failed, check console.");
+      alert("Upload failed. Check console for details.");
     } finally {
       setLoading(false);
     }
