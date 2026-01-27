@@ -538,9 +538,27 @@ class SubmitQuoteView(APIView):
 
 
 
+import os
+import uuid
+import logging
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
+logger = logging.getLogger(__name__)
 
 class UploadImageView(APIView):
+    """
+    Staging-ready upload to DigitalOcean Spaces.
+    Ensures:
+    - Unique filenames
+    - Correct folder placement
+    - Public URL returned
+    - Debug logging for path verification
+    """
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
@@ -554,23 +572,30 @@ class UploadImageView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Generate safe unique filename
-        ext = os.path.splitext(file.name)[1]
-        filename = f"{folder}/{uuid.uuid4()}{ext}"
+        # Extract file extension safely
+        ext = os.path.splitext(file.name)[1] or ".png"
+        # Generate unique filename
+        filename = f"{folder}/{uuid.uuid4().hex}{ext}"
 
-        # Save using django-storages (DigitalOcean Spaces)
-        saved_path = default_storage.save(
-            filename,
-            ContentFile(file.read())
-        )
+        try:
+            # Save file to DigitalOcean Spaces
+            saved_path = default_storage.save(filename, ContentFile(file.read()))
+            file_url = default_storage.url(saved_path)
 
-        # Get public URL (THIS is the important part)
-        file_url = default_storage.url(saved_path)
+            # Log the path for debugging (can remove in production)
+            logger.info(f"File uploaded to: {saved_path}, URL: {file_url}")
 
-        return Response(
-            {
-                "url": file_url,
-                "path": saved_path
-            },
-            status=status.HTTP_201_CREATED
-        )
+            return Response(
+                {
+                    "url": file_url,
+                    "path": saved_path
+                },
+                status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            logger.error(f"Error uploading file to Spaces: {e}", exc_info=True)
+            return Response(
+                {"error": "Upload failed. See server logs for details."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
