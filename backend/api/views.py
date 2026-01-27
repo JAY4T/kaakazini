@@ -8,9 +8,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.conf import settings
-import boto3
-import uuid
 
 
 from .models import (
@@ -28,7 +25,10 @@ from .serializers import JobRequestSerializer
 from .models import JobRequest
 from django.utils import timezone
 from .payments import send_stk_push  
-
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import uuid
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -537,42 +537,40 @@ class SubmitQuoteView(APIView):
 
 
 
+
+
+
 class UploadImageView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
-    def post(self, request):
+    def post(self, request, format=None):
         file = request.FILES.get("file")
         folder = request.data.get("folder", "profiles")
 
         if not file:
-            return Response({"error": "No file provided"}, status=400)
+            return Response(
+                {"error": "No file provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        if not file.content_type.startswith("image/"):
-            return Response({"error": "Only images allowed"}, status=400)
+        # Generate safe unique filename
+        ext = os.path.splitext(file.name)[1]
+        filename = f"{folder}/{uuid.uuid4()}{ext}"
 
-        client = boto3.client(
-            "s3",
-            region_name="fra1",
-            endpoint_url="https://fra1.digitaloceanspaces.com",
-            aws_access_key_id=settings.DO_SPACES_KEY,
-            aws_secret_access_key=settings.DO_SPACES_SECRET,
+        # Save using django-storages (DigitalOcean Spaces)
+        saved_path = default_storage.save(
+            filename,
+            ContentFile(file.read())
         )
 
-        ext = file.name.split(".")[-1]
-        filename = f"{uuid.uuid4().hex}.{ext}"
-        key = f"{folder}/{filename}"
+        # Get public URL (THIS is the important part)
+        file_url = default_storage.url(saved_path)
 
-        logger.error("UPLOAD KEY = %s", key)  # 🔥 IMPORTANT
-
-        client.upload_fileobj(
-            file,
-            settings.DO_SPACES_BUCKET,
-            key,
-            ExtraArgs={"ACL": "public-read"},
+        return Response(
+            {
+                "url": file_url,
+                "path": saved_path
+            },
+            status=status.HTTP_201_CREATED
         )
-
-        url = f"https://{settings.DO_SPACES_BUCKET}.fra1.digitaloceanspaces.com/{key}"
-
-        logger.error("UPLOAD URL = %s", url) 
-
-        return Response({"url": url}, status=201)

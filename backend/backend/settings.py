@@ -162,15 +162,17 @@ if USE_SPACES:
     AWS_ACCESS_KEY_ID = config("DO_SPACES_KEY")
     AWS_SECRET_ACCESS_KEY = config("DO_SPACES_SECRET")
     AWS_STORAGE_BUCKET_NAME = config("DO_SPACES_BUCKET")
-    AWS_S3_REGION_NAME = config("DO_SPACES_REGION", default="nyc3")
+    AWS_S3_REGION_NAME = config("DO_SPACES_REGION", default="fra1")
     AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
     AWS_DEFAULT_ACL = "public-read"
     AWS_QUERYSTRING_AUTH = False
     MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
 else:
+    # fallback to local filesystem
     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
+
 
 # ---------------------------
 # STATIC

@@ -8,6 +8,7 @@ from .views import (
 
 
 
+
 )
 
 urlpatterns = [
@@ -81,9 +82,8 @@ urlpatterns = [
     # payment
     path('job-requests/<int:pk>/pay/', InitiatePaymentView.as_view(), name='initiate_payment'),
 
-    # image-uploads
+    
     path("upload-image/", UploadImageView.as_view(), name="upload-image"),
-
 
 
 
