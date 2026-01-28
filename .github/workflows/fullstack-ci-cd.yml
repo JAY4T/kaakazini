@@ -12,7 +12,7 @@ jobs:
   # 0. Pre-Deploy Check
   ##########################
   precheck:
-    name: 🛡️ Pre-Deploy Check
+    name: Pre-Deploy Check
     runs-on: ubuntu-latest
     steps:
       - name: Setup SSH
@@ -43,6 +43,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install --legacy-peer-deps
+
       - name: Build React App
         run: |
           # Create branch-specific frontend .env only during CI/CD
@@ -52,6 +53,7 @@ jobs:
             echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_STAGING_API_URL }}" > .env
           fi
           CI=false npm run build
+
       - name: Deploy frontend
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -91,6 +93,7 @@ jobs:
         with:
           python-version: 3.12
       - run: pip install -r requirements.txt
+
       - name: Deploy backend (preserve .env)
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -116,6 +119,7 @@ jobs:
             REMOTE_HOST=$REMOTE_HOST_PROD
             BACKEND_PATH=$BACKEND_PATH_PROD
             SERVICE_NAME=kaakazini.service
+            export ENVIRONMENT=production
             export DB_NAME=$DB_NAME
             export DB_USER=$DB_USER
             export DB_PASSWORD=$DB_PASSWORD
@@ -123,6 +127,7 @@ jobs:
             REMOTE_HOST=$REMOTE_HOST_STAGING
             BACKEND_PATH=$BACKEND_PATH_STAGING
             SERVICE_NAME=gunicorn-kaakazini-dev.service
+            export ENVIRONMENT=staging
             export DB_NAME=$STAGING_DB_NAME
             export DB_USER=$STAGING_DB_USER
             export DB_PASSWORD=$STAGING_DB_PASSWORD

@@ -1,3 +1,4 @@
+// src/App.js
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
@@ -14,7 +15,6 @@ import TextileCategoryPage from './pages/TextileCategoryPage';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import CraftsmenListPage from './pages/CraftsmenListPage';
 import CraftsmanProfilePage from './pages/CraftsmanProfilePage';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import AdminDashboardPage from './pages/AdminDashboardPage'; 
 import AdminLoginPage from './pages/AdminLoginPage';
 import HireSignUp from './pages/HireSignUpPage';
@@ -27,9 +27,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import NoShopPage from "./pages/NoShopPage"; 
 import OrderTrackingPage from "./pages/OrderTrackingPage";
 import ClientProfilePage from "./pages/ClientProfilePage";
-
-
-
 
 function App() {
   const [cart, setCart] = useState({});
@@ -59,7 +56,7 @@ function App() {
     <Router>
       <Navbar cart={cart} />
       <Routes>
-        {/* Public routes */}
+        {/* -------------------- PUBLIC ROUTES -------------------- */}
         <Route
           path="/"
           element={
@@ -83,23 +80,56 @@ function App() {
         <Route path="/category/textile" element={<TextileCategoryPage />} />
         <Route path="/craftsmen" element={<CraftsmenListPage />} />
         <Route path="/craftsman/:slug" element={<CraftsmanProfilePage />} />
-        <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
         <Route path="/HireSignUp" element={<HireSignUp />} />
         <Route path="/HireLogin" element={<HireLogin />} />
         <Route path="/terms" element={<TermsConditionPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
         <Route path="/services" element={<ServicesPage />} />
-
         <Route path="/no-shop" element={<NoShopPage />} />
         <Route path="/orders" element={<OrderTrackingPage />} />
-        <Route path="/profile" element={<ClientProfilePage />} /> 
 
-       {/* ✅ Protected hire route */}
+        {/* -------------------- CLIENT PROTECTED ROUTES -------------------- */}
         <Route
           path="/hire"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute role="client">
               <HireCraftsmanPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute role="client">
+              <ClientProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* -------------------- CRAFTSMAN PROTECTED ROUTES -------------------- */}
+        <Route
+          path="/craftsman-dashboard"
+          element={
+            <ProtectedRoute role="craftsman">
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/craftsman/profile"
+          element={
+            <ProtectedRoute role="craftsman">
+              <CraftsmanProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* -------------------- ADMIN PROTECTED ROUTES -------------------- */}
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute role="admin">
+              <AdminDashboardPage />
             </ProtectedRoute>
           }
         />
