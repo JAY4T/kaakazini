@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     "djoser",
     "django_rest_passwordreset",
     "django_extensions",
-    "storages",  # DigitalOcean Spaces
+    # "storages",  # DigitalOcean Spaces
 
     # Local apps
     "accounts",
@@ -155,24 +155,32 @@ SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=True, cast=bool)
 # ---------------------------
 # DIGITALOCEAN SPACES (MEDIA)
 # ---------------------------
-USE_SPACES = config("USE_SPACES", default=True, cast=bool)
+# USE_SPACES = config("USE_SPACES", default=True, cast=bool)
 
-if USE_SPACES:
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-    AWS_ACCESS_KEY_ID = config("DO_SPACES_KEY")
-    AWS_SECRET_ACCESS_KEY = config("DO_SPACES_SECRET")
-    AWS_STORAGE_BUCKET_NAME = config("DO_SPACES_BUCKET")
-    AWS_S3_REGION_NAME = config("DO_SPACES_REGION", default="fra1")
-    AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
-    AWS_DEFAULT_ACL = "public-read"
-    AWS_QUERYSTRING_AUTH = False
-    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
-else:
-    # fallback to local filesystem
-    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-    MEDIA_URL = "/media/"
-    MEDIA_ROOT = BASE_DIR / "media"
+# if USE_SPACES:
+#     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+#     AWS_ACCESS_KEY_ID = config("DO_SPACES_KEY")
+#     AWS_SECRET_ACCESS_KEY = config("DO_SPACES_SECRET")
+#     AWS_STORAGE_BUCKET_NAME = config("DO_SPACES_BUCKET")
+#     AWS_S3_REGION_NAME = config("DO_SPACES_REGION", default="fra1")
+#     AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
+#     AWS_DEFAULT_ACL = "public-read"
+#     AWS_QUERYSTRING_AUTH = False
+#     MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
+# else:
+#     # fallback to local filesystem
+#     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+#     MEDIA_URL = "/media/"
+#     MEDIA_ROOT = BASE_DIR / "media"
 
+
+
+# ---------------------------
+# MEDIA (LOCAL FILE STORAGE)
+# ---------------------------
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # ---------------------------
 # STATIC
