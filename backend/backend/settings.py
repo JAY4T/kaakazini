@@ -4,18 +4,17 @@ from datetime import timedelta
 from decouple import config
 from corsheaders.defaults import default_headers
 
-# ---------------------------
-# BASE
-# ---------------------------
+# ============================
+# BASE CONFIG
+# ============================
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ---------------------------
 # ENVIRONMENT
 # ---------------------------
-ENVIRONMENT = config("ENVIRONMENT", default="development")
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = config("DJANGO_SECRET_KEY", default="fallback-secret-for-dev")
-DEBUG = True
+ENVIRONMENT = config("ENVIRONMENT", default="staging")  # staging or production
+SECRET_KEY = config("DJANGO_SECRET_KEY", default="fallback-secret")
+DEBUG = config("DJANGO_DEBUG", default=(ENVIRONMENT == "staging"), cast=bool)
 
 ALLOWED_HOSTS = config(
     "DJANGO_ALLOWED_HOSTS",
@@ -24,7 +23,7 @@ ALLOWED_HOSTS = config(
 )
 
 # ---------------------------
-# APPS
+# APPLICATIONS
 # ---------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -41,7 +40,7 @@ INSTALLED_APPS = [
     "djoser",
     "django_rest_passwordreset",
     "django_extensions",
-    "storages",
+    # "storages",  # DigitalOcean Spaces
 
     # Local apps
     "accounts",
@@ -88,9 +87,9 @@ WSGI_APPLICATION = "backend.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="kaakazini_local"),
-        "USER": config("DB_USER", default="kakaadmin_local"),
-        "PASSWORD": config("DB_PASSWORD", default="kazikazi_local"),
+        "NAME": config("DB_NAME"),
+        "USER": config("DB_USER"),
+        "PASSWORD": config("DB_PASSWORD"),
         "HOST": config("DB_HOST", default="localhost"),
         "PORT": config("DB_PORT", default="5432"),
     }
@@ -105,9 +104,15 @@ AUTHENTICATION_BACKENDS = [
     "accounts.authentication.EmailBackend",
 ]
 
+# ---------------------------
+# REST FRAMEWORK
+# ---------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "accounts.authentication.CookieJWTAuthentication",
+        "accounts.authentication.CookieJWTAuthentication",  # cookie JWT
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
     ],
 }
 
@@ -118,54 +123,70 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# ---------------------------
+# CORS / CSRF / COOKIE SETTINGS
+# ---------------------------
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="https://staging.kaakazini.com,https://kaakazini.com,https://www.kaakazini.com",
+    cast=lambda v: [s.strip() for s in v.split(",")]
+)
+CORS_ALLOW_HEADERS = list(default_headers) + ["authorization"]
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="https://staging.kaakazini.com,https://kaakazini.com,https://www.kaakazini.com",
+    cast=lambda v: [s.strip() for s in v.split(",")]
+)
 
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=True, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=True, cast=bool)
+SESSION_COOKIE_SAMESITE = config("SESSION_COOKIE_SAMESITE", default="None")
+CSRF_COOKIE_SAMESITE = config("CSRF_COOKIE_SAMESITE", default="None")
+SESSION_COOKIE_HTTPONLY = config("SESSION_COOKIE_HTTPONLY", default=True, cast=bool)
+CSRF_COOKIE_HTTPONLY = config("CSRF_COOKIE_HTTPONLY", default=False, cast=bool)
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
 
-
-
-
-# ============================
-# DIGITALOCEAN SPACES (MEDIA)
-# ============================
-
-USE_SPACES = config("USE_SPACES", default=False, cast=bool)
-
-if USE_SPACES:
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-
-    AWS_ACCESS_KEY_ID = config("DO_SPACES_KEY")
-    AWS_SECRET_ACCESS_KEY = config("DO_SPACES_SECRET")
-
-    AWS_STORAGE_BUCKET_NAME = config("DO_SPACES_BUCKET")
-    AWS_S3_REGION_NAME = config("DO_SPACES_REGION", default="nyc3")
-    AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
-
-    AWS_DEFAULT_ACL = "public-read"
-    AWS_QUERYSTRING_AUTH = False
-
-    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=31536000, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True, cast=bool)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=True, cast=bool)
 
 # ---------------------------
-# STATIC / MEDIA
+# DIGITALOCEAN SPACES (MEDIA)
+# ---------------------------
+# USE_SPACES = config("USE_SPACES", default=True, cast=bool)
+
+# if USE_SPACES:
+#     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+#     AWS_ACCESS_KEY_ID = config("DO_SPACES_KEY")
+#     AWS_SECRET_ACCESS_KEY = config("DO_SPACES_SECRET")
+#     AWS_STORAGE_BUCKET_NAME = config("DO_SPACES_BUCKET")
+#     AWS_S3_REGION_NAME = config("DO_SPACES_REGION", default="fra1")
+#     AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
+#     AWS_DEFAULT_ACL = "public-read"
+#     AWS_QUERYSTRING_AUTH = False
+#     MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
+# else:
+#     # fallback to local filesystem
+#     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+#     MEDIA_URL = "/media/"
+#     MEDIA_ROOT = BASE_DIR / "media"
+
+
+
+# ---------------------------
+# MEDIA (LOCAL FILE STORAGE)
+# ---------------------------
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# ---------------------------
+# STATIC
 # ---------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
 
 # ---------------------------
 # SECURITY
@@ -184,8 +205,5 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
-
-# ---------------------------
-# BREVO / SENDINBLUE API
-# ---------------------------
 BREVO_API_KEY = config("BREVO_API_KEY", default="")
+

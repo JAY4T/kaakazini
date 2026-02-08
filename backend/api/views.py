@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 
+
 from .models import (
     Craftsman, Product, Service, JobRequest,
     ContactMessage, Review, ServiceVideo,
@@ -24,7 +25,10 @@ from .serializers import JobRequestSerializer
 from .models import JobRequest
 from django.utils import timezone
 from .payments import send_stk_push  
-
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import uuid
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -612,3 +616,73 @@ class SubmitQuoteView(APIView):
 
         serializer = JobRequestSerializer(job)
         return Response({"detail": "Quote submitted successfully.", "job": serializer.data}, status=status.HTTP_200_OK)
+
+
+
+
+import os
+import uuid
+import logging
+import boto3
+from botocore.exceptions import ClientError
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from rest_framework.parsers import MultiPartParser, FormParser
+
+logger = logging.getLogger(__name__)
+
+class UploadImageView(APIView):
+    """
+    Staging-ready UploadImageView for DigitalOcean Spaces.
+    Full debug logging and guaranteed public URL correctness.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, format=None):
+        file = request.FILES.get("file")
+        folder = request.data.get("folder", "profiles")  # default folder
+
+        if not file:
+            logger.error("[UploadImageView] No file provided in request")
+            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate unique filename
+        ext = os.path.splitext(file.name)[1]
+        filename = f"{folder}/{uuid.uuid4()}{ext}"
+
+        try:
+            # Save file to Spaces
+            saved_path = default_storage.save(filename, ContentFile(file.read()))
+            file_url = default_storage.url(saved_path)
+
+            # Verify the file actually exists in Spaces using boto3 client
+            s3_client = boto3.client(
+                "s3",
+                region_name=settings.AWS_S3_REGION_NAME,
+                endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+            )
+
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+
+            try:
+                s3_client.head_object(Bucket=bucket_name, Key=saved_path)
+                logger.info(f"[UploadImageView] Successfully uploaded: {saved_path}")
+            except ClientError as e:
+                logger.error(f"[UploadImageView] File not found in Spaces after upload: {saved_path}")
+                return Response(
+                    {"error": "File upload failed. File not found in Spaces."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            return Response({"url": file_url, "path": saved_path}, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.exception(f"[UploadImageView] Unexpected error: {str(e)}")
+            return Response({"error": "File upload failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
