@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axiosClient'; // ✅ cookie-based axios instance
+import api from "../../api/axiosClient"; 
 
 function CraftsmenList() {
   const [craftsmen, setCraftsmen] = useState([]);

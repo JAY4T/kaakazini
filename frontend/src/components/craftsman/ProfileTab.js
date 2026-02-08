@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button, Card, Row, Col, Badge, Form, Collapse } from "react-bootstrap";
-import { getFullImageUrl } from "../utils/getFullImageUrl";
+import { getFullImageUrl } from "../../utils/getFullImageUrl";
 
 // ----------------- Reusable Inputs -----------------
 export const TextInputWithDatalist = ({
