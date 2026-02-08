@@ -6,12 +6,10 @@ from .views import (
    ApproveCraftsmanView,ContactMessageCreateView,JobRequestListCreateView, JobRequestDetailView,
     ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView,SubmitQuoteView, AdminCraftsmanUpdateView, 
     AdminCraftsmanToggleActiveView
-    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView,SubmitQuoteView, UploadImageView
-
-
 
 
 )
+
 
 urlpatterns = [
     # Craftsman
