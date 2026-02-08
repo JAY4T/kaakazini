@@ -1,11 +1,10 @@
-// src/App.js
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
-import SignupPage from './pages/SignupPage';
+import SignupPage from './pages/craftsman/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
+import LoginPage from './pages/craftsman/LoginPage';
+import DashboardPage from './pages/craftsman/DashboardPage';
 import PublicProfile from './pages/PublicProfile';
 import Navbar from './components/Navbar';
 import CartPage from './pages/CartPage';
@@ -13,20 +12,20 @@ import WoodworkingCategoryPage from './pages/WoodworkingCategoryPage';
 import MetalworkingCategoryPage from './pages/MetalworkingCategoryPage';
 import TextileCategoryPage from './pages/TextileCategoryPage';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import CraftsmenListPage from './pages/CraftsmenListPage';
-import CraftsmanProfilePage from './pages/CraftsmanProfilePage';
-import AdminDashboardPage from './pages/AdminDashboardPage'; 
-import AdminLoginPage from './pages/AdminLoginPage';
-import HireSignUp from './pages/HireSignUpPage';
-import HireCraftsmanPage from './pages/HireCraftsmanPage';
+import CraftsmenListPage from './pages/craftsman/CraftsmenListPage';
+import CraftsmanProfilePage from './pages/craftsman/CraftsmanProfilePage';
+// import AdminDashboardPage from './pages/admin/AdminDashboardPage'; 
+// import AdminLoginPage from './pages/admin/AdminLoginPage';
+import HireSignUp from './pages/client/HireSignUpPage';
+import HireCraftsmanPage from './pages/client/HireCraftsmanPage';
 import TermsConditionPage from './pages/TermsConditionPage';
-import HireLogin from './pages/HireLoginPage';
+import HireLogin from './pages/client/HireLoginPage';
 import ServicesPage from './pages/ServicesPage';
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NoShopPage from "./pages/NoShopPage"; 
 import OrderTrackingPage from "./pages/OrderTrackingPage";
-import ClientProfilePage from "./pages/ClientProfilePage";
+import ClientProfilePage from "./pages/client/ClientProfilePage";
 
 function App() {
   const [cart, setCart] = useState({});
@@ -83,7 +82,7 @@ function App() {
         <Route path="/HireSignUp" element={<HireSignUp />} />
         <Route path="/HireLogin" element={<HireLogin />} />
         <Route path="/terms" element={<TermsConditionPage />} />
-        <Route path="/admin-login" element={<AdminLoginPage />} />
+        {/* <Route path="/admin-login" element={<AdminLoginPage />} /> */}
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/no-shop" element={<NoShopPage />} />
         <Route path="/orders" element={<OrderTrackingPage />} />
@@ -125,14 +124,14 @@ function App() {
         />
 
         {/* -------------------- ADMIN PROTECTED ROUTES -------------------- */}
-        <Route
+        {/* <Route
           path="/admin-dashboard"
           element={
             <ProtectedRoute role="admin">
               <AdminDashboardPage />
             </ProtectedRoute>
-          }
-        />
+          } */}
+        {/* /> */}
       </Routes>
     </Router>
   );

@@ -158,6 +158,86 @@ class ApproveCraftsmanView(generics.UpdateAPIView):
 
 
 # ----------------------------
+# NEW: Admin Edit Craftsman View
+# ----------------------------
+class AdminCraftsmanUpdateView(generics.UpdateAPIView):
+    """
+    Allows admin to edit craftsman details (full_name, profession, description, primary_service)
+    """
+    queryset = Craftsman.objects.all()
+    serializer_class = CraftsmanSerializer
+    permission_classes = [IsAdminUser]
+    
+    def patch(self, request, *args, **kwargs):
+        try:
+            craftsman = self.get_object()
+            
+            # Update only the fields that are provided
+            if 'full_name' in request.data:
+                craftsman.full_name = request.data['full_name']
+            if 'profession' in request.data:
+                craftsman.profession = request.data['profession']
+            if 'description' in request.data:
+                craftsman.description = request.data['description']
+            if 'primary_service' in request.data:
+                craftsman.primary_service = request.data['primary_service']
+            
+            craftsman.save()
+            
+            serializer = self.get_serializer(craftsman)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Craftsman.DoesNotExist:
+            return Response(
+                {'error': 'Craftsman not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error updating craftsman {kwargs.get('pk')}: {e}")
+            return Response(
+                {'error': 'Failed to update craftsman'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+# ----------------------------
+# NEW: Toggle Active Status View
+# ----------------------------
+class AdminCraftsmanToggleActiveView(APIView):
+    """
+    Toggles the is_active status of a craftsman
+    """
+    permission_classes = [IsAdminUser]
+    
+    def patch(self, request, pk):
+        try:
+            craftsman = Craftsman.objects.get(pk=pk)
+            
+            # Toggle the is_active field
+            craftsman.is_active = not craftsman.is_active
+            craftsman.save()
+            
+            serializer = CraftsmanSerializer(craftsman)
+            return Response(
+                {
+                    'message': f'Craftsman is now {"active" if craftsman.is_active else "inactive"}',
+                    'craftsman': serializer.data
+                }, 
+                status=status.HTTP_200_OK
+            )
+        except Craftsman.DoesNotExist:
+            return Response(
+                {'error': 'Craftsman not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error toggling active status for craftsman {pk}: {e}")
+            return Response(
+                {'error': 'Failed to toggle active status'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+# ----------------------------
 # Product Views
 # ----------------------------
 class ProductListCreateView(generics.ListCreateAPIView):
@@ -262,36 +342,38 @@ class JobRequestDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
 
 
-class AssignCraftsmanView(generics.UpdateAPIView):
-    """
-    Allows an admin to assign a craftsman to a specific job request.
-    """
-    queryset = JobRequest.objects.all()
-    serializer_class = JobRequestSerializer
-    permission_classes = [IsAdminUser]
 
-    def update(self, request, *args, **kwargs):
-        job_id = kwargs.get("pk")
+
+class AssignCraftsmanView(APIView):
+    def post(self, request, pk):
         try:
-            job = self.get_queryset().get(pk=job_id)
+            job = JobRequest.objects.get(pk=pk)
+            craftsman_id = request.data.get('craftsman')
+            
+            if not craftsman_id:
+                return Response(
+                    {'error': 'Craftsman ID is required'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            craftsman = Craftsman.objects.get(pk=craftsman_id)
+            job.assigned_craftsman = craftsman
+            job.save()
+            
+            return Response(
+                {'message': 'Craftsman assigned successfully'}, 
+                status=status.HTTP_200_OK
+            )
         except JobRequest.DoesNotExist:
-            return Response({"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        craftsman_id = request.data.get("craftsman_id")
-        if not craftsman_id:
-            return Response({"error": "Craftsman ID required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            craftsman = Craftsman.objects.get(id=craftsman_id, is_approved=True)
+            return Response(
+                {'error': 'Job not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
         except Craftsman.DoesNotExist:
-            return Response({"error": "Craftsman not found or not approved"}, status=status.HTTP_404_NOT_FOUND)
-
-        job.craftsman = craftsman
-        job.status = "Assigned"
-        job.save()
-
-        serializer = self.get_serializer(job)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(
+                {'error': 'Craftsman not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class CraftsmanJobListView(generics.ListAPIView):

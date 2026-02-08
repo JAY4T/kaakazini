@@ -193,11 +193,23 @@ def set_auth_cookies(response, user, remember=False):
     access_max_age = 30 * 60 if not remember else 7 * 24 * 60 * 60
     refresh_max_age = 24 * 60 * 60 if not remember else 7 * 24 * 60 * 60
 
+    # ✅ DEVELOPMENT SETTINGS (for localhost)
     response.set_cookie(
-        "access_token", str(refresh.access_token),
-        httponly=True, secure=True, samesite="Strict", max_age=access_max_age, path="/"
+        "access_token", 
+        str(refresh.access_token),
+        httponly=True, 
+        secure=False,      # False for development (localhost)
+        samesite="Lax",    # Lax allows cross-port requests
+        max_age=access_max_age, 
+        path="/"
     )
     response.set_cookie(
-        "refresh_token", str(refresh), httponly=True, secure=True, samesite="Strict", max_age=refresh_max_age, path="/"
+        "refresh_token", 
+        str(refresh), 
+        httponly=True, 
+        secure=False,      # False for development (localhost)
+        samesite="Lax",    # Lax allows cross-port requests
+        max_age=refresh_max_age, 
+        path="/"
     )
     return response

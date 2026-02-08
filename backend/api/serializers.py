@@ -92,6 +92,7 @@ class CraftsmanSerializer(serializers.ModelSerializer):
             'video',
             'gallery_images',
             'is_approved',
+            'is_active',
             'reviews',
             'primary_service',
             'services',

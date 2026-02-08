@@ -4,7 +4,8 @@ from .views import (
     AdminCraftsmanListView, AdminCraftsmanApproveView, AdminCraftsmanRejectView,
     AdminProductListView, AdminProductApproveView, AdminProductRejectView,  PublicCraftsmanListView,PublicCraftsmanDetailView, ServiceListCreateView, ServiceDetailView,
    ApproveCraftsmanView,ContactMessageCreateView,JobRequestListCreateView, JobRequestDetailView,
-    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView,SubmitQuoteView
+    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView,SubmitQuoteView, AdminCraftsmanUpdateView, 
+    AdminCraftsmanToggleActiveView
 
 
 )
@@ -29,6 +30,8 @@ urlpatterns = [
     path('admin/craftsman/', AdminCraftsmanListView.as_view(), name='admin-craftsman-list'),
     path('admin/craftsman/<int:pk>/approve/', AdminCraftsmanApproveView.as_view(), name='admin-craftsman-approve'),
     path('admin/craftsman/<int:pk>/reject/', AdminCraftsmanRejectView.as_view(), name='admin-craftsman-reject'),
+    path('admin/craftsman/<int:pk>/', AdminCraftsmanUpdateView.as_view(), name='admin-craftsman-update'),  # NEW - for editing
+    path('admin/craftsman/<int:pk>/toggle-active/', AdminCraftsmanToggleActiveView.as_view(), name='admin-craftsman-toggle-active'),  # NEW - for toggle
 
     # Admin - Product
     path('admin/products/', AdminProductListView.as_view(), name='admin-product-list'),

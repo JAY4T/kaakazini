@@ -62,6 +62,8 @@ class Craftsman(models.Model):
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     is_approved = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)  # NEW FIELD - defaults to True
+
 
     slug = models.SlugField(unique=True, blank=True, null=True)
 
