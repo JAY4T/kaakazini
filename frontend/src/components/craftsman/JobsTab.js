@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { Modal, Button, Badge, Form, Row, Col, Card } from "react-bootstrap";
 import { FaPhone, FaComments } from "react-icons/fa";
-import api from "../api/axiosClient";
+import api from "../../api/axiosClient";
 
 import jsPDF from "jspdf";
 
