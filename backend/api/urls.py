@@ -85,7 +85,7 @@ urlpatterns = [
     path('job-requests/<int:pk>/pay/', InitiatePaymentView.as_view(), name='initiate_payment'),
 
     
-    path("upload-image/", UploadImageView.as_view(), name="upload-image"),
+    # path("upload-image/", UploadImageView.as_view(), name="upload-image"),
 
 
 
