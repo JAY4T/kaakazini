@@ -26,6 +26,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import NoShopPage from "./pages/NoShopPage"; 
 import OrderTrackingPage from "./pages/OrderTrackingPage";
 import ClientProfilePage from "./pages/client/ClientProfilePage";
+import Onboarding from "./pages/craftsman/Onboarding";
+
 
 function App() {
   const [cart, setCart] = useState({});
@@ -86,6 +88,8 @@ function App() {
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/no-shop" element={<NoShopPage />} />
         <Route path="/orders" element={<OrderTrackingPage />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+
 
         {/* -------------------- CLIENT PROTECTED ROUTES -------------------- */}
         <Route

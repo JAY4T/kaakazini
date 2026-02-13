@@ -6,12 +6,10 @@ from .views import (
    ApproveCraftsmanView,ContactMessageCreateView,JobRequestListCreateView, JobRequestDetailView,
     ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView,SubmitQuoteView, AdminCraftsmanUpdateView, 
     AdminCraftsmanToggleActiveView
-    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView,SubmitQuoteView, UploadImageView
-
-
 
 
 )
+
 
 urlpatterns = [
     # Craftsman
@@ -87,7 +85,7 @@ urlpatterns = [
     path('job-requests/<int:pk>/pay/', InitiatePaymentView.as_view(), name='initiate_payment'),
 
     
-    path("upload-image/", UploadImageView.as_view(), name="upload-image"),
+    # path("upload-image/", UploadImageView.as_view(), name="upload-image"),
 
 
 

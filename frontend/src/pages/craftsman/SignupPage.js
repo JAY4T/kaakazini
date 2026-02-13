@@ -71,8 +71,23 @@ const Signup = () => {
 
     try {
       setLoading(true);
-      await api.post('/google-login/', { token });
-      navigate('/dashboard');
+      const res = await api.post('/google-login/', { token, role: "craftsman" });
+      
+      // ✅ Check if user needs onboarding
+      const userData = res.data.user;
+      
+      // If user doesn't have full_name or phone_number, redirect to onboarding
+      if (!userData.full_name || !userData.phone_number) {
+        navigate('/onboarding', {
+          state: {
+            fullName: userData.full_name || '',
+            phoneNumber: userData.phone_number || ''
+          }
+        });
+      } else {
+        // User already has complete profile, go to dashboard
+        navigate('/dashboard');
+      }
     } catch (err) {
       console.error('Google signup error:', err.message);
       setApiError('Google signup failed.');
