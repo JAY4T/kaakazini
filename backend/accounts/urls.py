@@ -8,6 +8,10 @@ from .views import (
     ClientSignupView,     # Client signup
     ClientLoginView,      # Client login
     MeAPIView,            # User profile
+    OnboardingView,       # onboarding  craftsman
+    ForgotPasswordAPIView, 
+    ResetPasswordAPIView,
+
 )
 
 urlpatterns = [
@@ -16,6 +20,7 @@ urlpatterns = [
     # -------------------------------
     path("signup/", RegisterView.as_view(), name="craftsman-signup"),
     path("login/", LoginAPIView.as_view(), name="login"),
+    path('onboarding/', OnboardingView.as_view()),
 
     # -------------------------------
     # Client endpoints
@@ -38,4 +43,8 @@ urlpatterns = [
     # -------------------------------
     path("me/", MeAPIView.as_view(), name="me"),
     path("logout/", LogoutAPIView.as_view(), name="logout"),
+
+    path("password-reset/", ForgotPasswordAPIView.as_view(), name="password-reset"),
+    path("password-reset/<uidb64>/<token>/", ResetPasswordAPIView.as_view(), name="password-reset-confirm"),
 ]
+
