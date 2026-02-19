@@ -245,9 +245,7 @@ const [searchQuery, setSearchQuery] = useState('');
         className="text-muted fs-5"
         data-aos="fade-right"
       >
-        KaaKazini is a marketplace connecting skilled local craftsmen and artisans with clients who need their services. Craftsmen create profiles, post their jobs, and get hired. Artisans will also be able to sell their unique handmade products directly.
-
-
+        Empowering local craftsmen to grow, showcase their work, and reach the world.
       </p>
     </div>
 
@@ -353,8 +351,6 @@ const [searchQuery, setSearchQuery] = useState('');
   `}</style>
 </section>
 
-
-
 {/* Services Section */}
 <section className="py-5 bg-light" id="services">
   <div className="container overflow-hidden">
@@ -366,168 +362,175 @@ const [searchQuery, setSearchQuery] = useState('');
     </p>
 
     {/* ================= COVERFLOW ================= */}
-    <CoverFlow services={filteredServices} />
+    <CoverFlow />
     {/* ============================================ */}
 
     {filteredServices.length === 0 ? (
       <p className="text-center">No services found.</p>
     ) : (
-      <div className="mini-coverflow-container position-relative">
-        <button
-          className="btn btn-success position-absolute top-50 start-0 translate-middle-y"
-          onClick={() =>
-            document.getElementById("miniCoverflowTrack").scrollBy({
-              left: -320,
-              behavior: "smooth",
-            })
-          }
-        >
-          &#8249;
-        </button>
-
-        <div
-          id="miniCoverflowTrack"
-          className="d-flex gap-3 overflow-x-auto py-3 scroll-snap-x"
-        >
+      <>
+        <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
           {filteredServices.map((service, idx) => {
-            const imageUrl =
+            const fallbackImage =
               service.services?.[0]?.image ||
               service.service_image ||
-              "https://via.placeholder.com/400x250";
+              "https://via.placeholder.com/300";
+
+            const images =
+              service.images && service.images.length > 0
+                ? service.images
+                : [fallbackImage];
 
             return (
-              <div
-                key={idx}
-                className="card flex-shrink-0 mini-card scroll-snap-item"
-              >
-                <div className="position-relative">
-                  <img
-                    src={getImageUrl(imageUrl)}
-                    alt={service.primary_service}
-                    className="mini-card-img"
-                  />
-                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
-                    <h5 className="fw-bold">{service.primary_service}</h5>
+              <div key={idx} className="col d-flex justify-content-center">
+                <div className="card border-0 shadow" style={{ width: "18rem" }}>
+                  <div className="position-relative">
+
+                    {/* ===== FADE CAROUSEL ===== */}
+                    <div
+                      id={`serviceCarousel-${idx}`}
+                      className="carousel slide carousel-fade"
+                      data-bs-ride="carousel"
+                      data-bs-interval="2500"
+                      data-bs-pause="hover"
+                    >
+
+                      {/* Indicators */}
+                      {images.length > 1 && (
+                        <div className="carousel-indicators">
+                          {images.map((_, imgIndex) => (
+                            <button
+                              key={imgIndex}
+                              type="button"
+                              data-bs-target={`#serviceCarousel-${idx}`}
+                              data-bs-slide-to={imgIndex}
+                              className={imgIndex === 0 ? "active" : ""}
+                              aria-current={imgIndex === 0 ? "true" : "false"}
+                            ></button>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="carousel-inner">
+                        {images.map((img, imgIndex) => (
+                          <div
+                            key={imgIndex}
+                            className={`carousel-item ${
+                              imgIndex === 0 ? "active" : ""
+                            }`}
+                          >
+                            <img
+                              src={getImageUrl(img)}
+                              className="d-block w-100 service-carousel-img"
+                              alt={`${service.primary_service}-${imgIndex}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Controls */}
+                      {images.length > 1 && (
+                        <>
+                          <button
+                            className="carousel-control-prev"
+                            type="button"
+                            data-bs-target={`#serviceCarousel-${idx}`}
+                            data-bs-slide="prev"
+                          >
+                            <span className="carousel-control-prev-icon"></span>
+                          </button>
+                          <button
+                            className="carousel-control-next"
+                            type="button"
+                            data-bs-target={`#serviceCarousel-${idx}`}
+                            data-bs-slide="next"
+                          >
+                            <span className="carousel-control-next-icon"></span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* ===== OVERLAY ===== */}
+                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
+                      <h5 className="fw-bold">{service.primary_service}</h5>
+                    </div>
                   </div>
-                </div>
-                <div className="card-body text-center">
-                  <h5 className="fw-bold mb-1">
-                    {service.service || service.primary_service}
-                  </h5>
-                  {service.location && (
-                    <p className="mb-0">
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                          service.location
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-success fw-bold text-decoration-none"
-                      >
-                        <i className="fas fa-map-marker-alt me-1"></i>
-                        {service.location}
-                      </a>
-                    </p>
-                  )}
+
+                  <div className="card-body text-center">
+                    <h5 className="fw-bold mb-1">
+                      {service.service || service.primary_service}
+                    </h5>
+                    {service.location && (
+                      <p className="mb-0">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            service.location
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-success fw-bold text-decoration-none"
+                        >
+                          <i className="fas fa-map-marker-alt me-1"></i>{" "}
+                          {service.location}
+                        </a>
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
 
-        <button
-          className="btn btn-success position-absolute top-50 end-0 translate-middle-y"
-          onClick={() =>
-            document.getElementById("miniCoverflowTrack").scrollBy({
-              left: 320,
-              behavior: "smooth",
-            })
-          }
-        >
-          &#8250;
-        </button>
-      </div>
+        <div className="text-center mt-4">
+          <a href="/services" className="btn btn-success btn-lg fw-bold">
+            View Our Services
+          </a>
+        </div>
+      </>
     )}
-
-    <div className="text-center mt-4">
-      <a href="/services" className="btn btn-success btn-lg fw-bold">
-        View Our Services
-      </a>
-    </div>
 
     {/* ================= STYLES ================= */}
     <style>{`
-      .mini-coverflow-container {
-        position: relative;
-      }
-      .mini-coverflow-container button {
-        z-index: 10;
-      }
-      .scroll-snap-x {
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
-      }
-      .scroll-snap-item {
-        scroll-snap-align: start;
-        flex: 0 0 250px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-      }
-      .mini-card-img {
-        width: 100%;
-        height: 180px;
+      .service-carousel-img {
+        height: 300px;
         object-fit: cover;
-        border-radius: 0.75rem;
       }
+
+      /* Smooth crossfade enhancement */
+      .carousel-fade .carousel-item {
+        transition: opacity 1s ease-in-out;
+      }
+
       .overlay {
         opacity: 0;
         transition: opacity 0.4s ease;
       }
-      .mini-card:hover .overlay {
+
+      .position-relative:hover .overlay {
         opacity: 1;
       }
-      @media (max-width: 768px) {
-        .scroll-snap-item {
-          flex: 0 0 70%;
-        }
-        .mini-card-img {
-          height: 140px;
-        }
+
+      .carousel-control-prev-icon,
+      .carousel-control-next-icon {
+        background-color: rgba(0,0,0,0.6);
+        border-radius: 50%;
+        padding: 12px;
+      }
+
+      .carousel-indicators button {
+        background-color: #198754;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
       }
     `}</style>
-
-    {/* ================= ROTATION, SCALE & SHADOW SCRIPT ================= */}
-    <script>{`
-      const track = document.getElementById("miniCoverflowTrack");
-      if(track){
-        const cards = track.querySelectorAll(".scroll-snap-item");
-        const updateTransforms = () => {
-          const trackRect = track.getBoundingClientRect();
-          cards.forEach(card => {
-            const cardRect = card.getBoundingClientRect();
-            const cardCenter = cardRect.left + cardRect.width / 2;
-            const trackCenter = trackRect.left + trackRect.width / 2;
-            const offset = cardCenter - trackCenter;
-
-            // Rotate and scale
-            const rotateY = offset / 15; // rotation
-            const distance = Math.abs(offset);
-            let scale = 1 - distance / 1000; // center card slightly bigger
-            if(scale < 0.85) scale = 0.85; // minimum scale
-
-            // Shadow: more shadow for center card
-            const shadowIntensity = 0.2 + (scale - 0.85) * 2; // subtle effect
-            card.style.transform = \`rotateY(\${rotateY}deg) scale(\${scale})\`;
-            card.style.boxShadow = \`0 10px 25px rgba(0, 0, 0, \${shadowIntensity})\`;
-          });
-        };
-
-        track.addEventListener("scroll", updateTransforms);
-        window.addEventListener("resize", updateTransforms);
-        updateTransforms(); // initial call
-      }
-    `}</script>
   </div>
 </section>
+
+
+
 
 
 
