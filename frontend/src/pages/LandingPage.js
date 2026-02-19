@@ -373,11 +373,12 @@ const [searchQuery, setSearchQuery] = useState('');
       <p className="text-center">No services found.</p>
     ) : (
       <div className="mini-coverflow-container position-relative">
+        {/* Left Arrow */}
         <button
           className="btn btn-success position-absolute top-50 start-0 translate-middle-y"
           onClick={() =>
             document.getElementById("miniCoverflowTrack").scrollBy({
-              left: -320,
+              left: -300,
               behavior: "smooth",
             })
           }
@@ -385,9 +386,11 @@ const [searchQuery, setSearchQuery] = useState('');
           &#8249;
         </button>
 
+        {/* CoverFlow Track */}
         <div
           id="miniCoverflowTrack"
-          className="d-flex gap-3 overflow-x-auto py-3 scroll-snap-x"
+          className="d-flex gap-3 py-3"
+          style={{ overflow: "hidden" }} // hides scrollbar
         >
           {filteredServices.map((service, idx) => {
             const imageUrl =
@@ -398,7 +401,8 @@ const [searchQuery, setSearchQuery] = useState('');
             return (
               <div
                 key={idx}
-                className="card flex-shrink-0 mini-card scroll-snap-item"
+                className="card flex-shrink-0 mini-card"
+                style={{ scrollSnapAlign: "center" }}
               >
                 <div className="position-relative">
                   <img
@@ -435,11 +439,12 @@ const [searchQuery, setSearchQuery] = useState('');
           })}
         </div>
 
+        {/* Right Arrow */}
         <button
           className="btn btn-success position-absolute top-50 end-0 translate-middle-y"
           onClick={() =>
             document.getElementById("miniCoverflowTrack").scrollBy({
-              left: 320,
+              left: 300,
               behavior: "smooth",
             })
           }
@@ -463,12 +468,7 @@ const [searchQuery, setSearchQuery] = useState('');
       .mini-coverflow-container button {
         z-index: 10;
       }
-      .scroll-snap-x {
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
-      }
-      .scroll-snap-item {
-        scroll-snap-align: start;
+      .mini-card {
         flex: 0 0 250px;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
       }
@@ -486,7 +486,7 @@ const [searchQuery, setSearchQuery] = useState('');
         opacity: 1;
       }
       @media (max-width: 768px) {
-        .scroll-snap-item {
+        .mini-card {
           flex: 0 0 70%;
         }
         .mini-card-img {
@@ -495,11 +495,12 @@ const [searchQuery, setSearchQuery] = useState('');
       }
     `}</style>
 
-    {/* ================= ROTATION, SCALE & SHADOW SCRIPT ================= */}
+    {/* ================= ROTATION, SCALE, SHADOW & AUTO-ROTATE ================= */}
     <script>{`
       const track = document.getElementById("miniCoverflowTrack");
       if(track){
-        const cards = track.querySelectorAll(".scroll-snap-item");
+        const cards = track.querySelectorAll(".mini-card");
+
         const updateTransforms = () => {
           const trackRect = track.getBoundingClientRect();
           cards.forEach(card => {
@@ -508,26 +509,45 @@ const [searchQuery, setSearchQuery] = useState('');
             const trackCenter = trackRect.left + trackRect.width / 2;
             const offset = cardCenter - trackCenter;
 
-            // Rotate and scale
-            const rotateY = offset / 15; // rotation
-            const distance = Math.abs(offset);
-            let scale = 1 - distance / 1000; // center card slightly bigger
-            if(scale < 0.85) scale = 0.85; // minimum scale
+            // Rotation
+            const rotateY = offset / 15;
 
-            // Shadow: more shadow for center card
-            const shadowIntensity = 0.2 + (scale - 0.85) * 2; // subtle effect
+            // Scale for center card
+            let scale = 1 - Math.abs(offset) / 1000;
+            if(scale < 0.85) scale = 0.85;
+
+            // Shadow for center card
+            const shadowIntensity = 0.2 + (scale - 0.85) * 2;
             card.style.transform = \`rotateY(\${rotateY}deg) scale(\${scale})\`;
             card.style.boxShadow = \`0 10px 25px rgba(0, 0, 0, \${shadowIntensity})\`;
           });
         };
 
-        track.addEventListener("scroll", updateTransforms);
+        // Initial transform
+        updateTransforms();
         window.addEventListener("resize", updateTransforms);
-        updateTransforms(); // initial call
+
+        // Update on scroll
+        track.addEventListener("scroll", updateTransforms);
+
+        // ================= AUTO-ROTATE =================
+        let scrollAmount = 1; // px per interval
+        let direction = 1; // forward
+
+        setInterval(() => {
+          track.scrollBy({ left: scrollAmount * direction, behavior: "smooth" });
+
+          // Reverse at ends
+          if(track.scrollLeft + track.clientWidth >= track.scrollWidth - 5) direction = -1;
+          if(track.scrollLeft <= 0) direction = 1;
+
+          updateTransforms();
+        }, 40); // adjust speed (smaller interval = faster)
       }
     `}</script>
   </div>
 </section>
+
 
 
 
