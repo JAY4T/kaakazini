@@ -114,10 +114,12 @@ const [searchQuery, setSearchQuery] = useState('');
       className="display-4 fw-bold moving-text hero-title"
       style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }}
     >
-      Empowering Local Craftsmen
+      Hire Skilled Local Craftsmen & Artisans
+
     </h1>
     <p className="lead mt-3 fw-semibold hero-subtitle" style={{ fontSize: '1.4rem' }}>
-      Manage clients, showcase your work, and grow your trade — all in one platform.
+      Post your project, receive quotes, and hire trusted professionals in your area — fast, reliable, and secure.
+
     </p>
     <div className="d-flex justify-content-center align-items-center gap-3 mb-4 hero-buttons">
 
@@ -243,7 +245,9 @@ const [searchQuery, setSearchQuery] = useState('');
         className="text-muted fs-5"
         data-aos="fade-right"
       >
-        Empowering local craftsmen to grow, showcase their work, and reach the world.
+        KaaKazini is a marketplace connecting skilled local craftsmen and artisans with clients who need their services. Craftsmen create profiles, post their jobs, and get hired. Artisans will also be able to sell their unique handmade products directly.
+
+
       </p>
     </div>
 
@@ -254,7 +258,7 @@ const [searchQuery, setSearchQuery] = useState('');
         data-aos="fade-right"
       >
         <p className="fs-5 lh-lg">
-          At KaaKazini, we are passionate about supporting local craftsmen by providing
+          We are passionate about supporting local craftsmen by providing
           a platform that helps them manage projects, showcase their unique handmade
           products, and grow their business. We believe in the power of craftsmanship
           to bring one-of-a-kind creations to the world while fostering community and
@@ -350,6 +354,7 @@ const [searchQuery, setSearchQuery] = useState('');
 </section>
 
 
+
 {/* Services Section */}
 <section className="py-5 bg-light" id="services">
   <div className="container overflow-hidden">
@@ -361,81 +366,169 @@ const [searchQuery, setSearchQuery] = useState('');
     </p>
 
     {/* ================= COVERFLOW ================= */}
-    <CoverFlow />
+    <CoverFlow services={filteredServices} />
     {/* ============================================ */}
 
     {filteredServices.length === 0 ? (
       <p className="text-center">No services found.</p>
     ) : (
-      <>
-        <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+      <div className="mini-coverflow-container position-relative">
+        <button
+          className="btn btn-success position-absolute top-50 start-0 translate-middle-y"
+          onClick={() =>
+            document.getElementById("miniCoverflowTrack").scrollBy({
+              left: -320,
+              behavior: "smooth",
+            })
+          }
+        >
+          &#8249;
+        </button>
+
+        <div
+          id="miniCoverflowTrack"
+          className="d-flex gap-3 overflow-x-auto py-3 scroll-snap-x"
+        >
           {filteredServices.map((service, idx) => {
             const imageUrl =
               service.services?.[0]?.image ||
               service.service_image ||
-              "https://via.placeholder.com/300";
+              "https://via.placeholder.com/400x250";
 
             return (
-              <div key={idx} className="col d-flex justify-content-center">
-                <div className="card border-0 shadow" style={{ width: "18rem" }}>
-                  <div className="position-relative">
-                    <img
-                      src={getImageUrl(imageUrl)}
-                      alt={service.primary_service}
-                      className="card-img-top"
-                      style={{ height: "300px", objectFit: "cover" }}
-                    />
-                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
-                      <h5 className="fw-bold">{service.primary_service}</h5>
-                    </div>
+              <div
+                key={idx}
+                className="card flex-shrink-0 mini-card scroll-snap-item"
+              >
+                <div className="position-relative">
+                  <img
+                    src={getImageUrl(imageUrl)}
+                    alt={service.primary_service}
+                    className="mini-card-img"
+                  />
+                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
+                    <h5 className="fw-bold">{service.primary_service}</h5>
                   </div>
-
-                  <div className="card-body text-center">
-                    <h5 className="fw-bold mb-1">
-                      {service.service || service.primary_service}
-                    </h5>
-                    {service.location && (
-                      <p className="mb-0">
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                            service.location
-                          )}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-success fw-bold text-decoration-none"
-                        >
-                          <i className="fas fa-map-marker-alt me-1"></i>{" "}
-                          {service.location}
-                        </a>
-                      </p>
-                    )}
-                  </div>
+                </div>
+                <div className="card-body text-center">
+                  <h5 className="fw-bold mb-1">
+                    {service.service || service.primary_service}
+                  </h5>
+                  {service.location && (
+                    <p className="mb-0">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          service.location
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-success fw-bold text-decoration-none"
+                      >
+                        <i className="fas fa-map-marker-alt me-1"></i>
+                        {service.location}
+                      </a>
+                    </p>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
 
-        <div className="text-center mt-4">
-          <a href="/services" className="btn btn-success btn-lg fw-bold">
-            View Our Services
-          </a>
-        </div>
-      </>
+        <button
+          className="btn btn-success position-absolute top-50 end-0 translate-middle-y"
+          onClick={() =>
+            document.getElementById("miniCoverflowTrack").scrollBy({
+              left: 320,
+              behavior: "smooth",
+            })
+          }
+        >
+          &#8250;
+        </button>
+      </div>
     )}
+
+    <div className="text-center mt-4">
+      <a href="/services" className="btn btn-success btn-lg fw-bold">
+        View Our Services
+      </a>
+    </div>
 
     {/* ================= STYLES ================= */}
     <style>{`
+      .mini-coverflow-container {
+        position: relative;
+      }
+      .mini-coverflow-container button {
+        z-index: 10;
+      }
+      .scroll-snap-x {
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+      }
+      .scroll-snap-item {
+        scroll-snap-align: start;
+        flex: 0 0 250px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+      .mini-card-img {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 0.75rem;
+      }
       .overlay {
         opacity: 0;
         transition: opacity 0.4s ease;
       }
-      .position-relative:hover .overlay {
+      .mini-card:hover .overlay {
         opacity: 1;
       }
+      @media (max-width: 768px) {
+        .scroll-snap-item {
+          flex: 0 0 70%;
+        }
+        .mini-card-img {
+          height: 140px;
+        }
+      }
     `}</style>
+
+    {/* ================= ROTATION, SCALE & SHADOW SCRIPT ================= */}
+    <script>{`
+      const track = document.getElementById("miniCoverflowTrack");
+      if(track){
+        const cards = track.querySelectorAll(".scroll-snap-item");
+        const updateTransforms = () => {
+          const trackRect = track.getBoundingClientRect();
+          cards.forEach(card => {
+            const cardRect = card.getBoundingClientRect();
+            const cardCenter = cardRect.left + cardRect.width / 2;
+            const trackCenter = trackRect.left + trackRect.width / 2;
+            const offset = cardCenter - trackCenter;
+
+            // Rotate and scale
+            const rotateY = offset / 15; // rotation
+            const distance = Math.abs(offset);
+            let scale = 1 - distance / 1000; // center card slightly bigger
+            if(scale < 0.85) scale = 0.85; // minimum scale
+
+            // Shadow: more shadow for center card
+            const shadowIntensity = 0.2 + (scale - 0.85) * 2; // subtle effect
+            card.style.transform = \`rotateY(\${rotateY}deg) scale(\${scale})\`;
+            card.style.boxShadow = \`0 10px 25px rgba(0, 0, 0, \${shadowIntensity})\`;
+          });
+        };
+
+        track.addEventListener("scroll", updateTransforms);
+        window.addEventListener("resize", updateTransforms);
+        updateTransforms(); // initial call
+      }
+    `}</script>
   </div>
 </section>
+
 
 
      {/* How It Works Section */}
