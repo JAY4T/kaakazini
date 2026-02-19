@@ -365,32 +365,15 @@ const [searchQuery, setSearchQuery] = useState('');
       Discover skilled services offered by experienced craftsmen.
     </p>
 
-    {/* ================= COVERFLOW ================= */}
-    <CoverFlow services={filteredServices} />
-    {/* ============================================ */}
-
     {filteredServices.length === 0 ? (
       <p className="text-center">No services found.</p>
     ) : (
       <div className="mini-coverflow-container position-relative">
-        {/* Left Arrow */}
-        <button
-          className="btn btn-success position-absolute top-50 start-0 translate-middle-y"
-          onClick={() =>
-            document.getElementById("miniCoverflowTrack").scrollBy({
-              left: -300,
-              behavior: "smooth",
-            })
-          }
-        >
-          &#8249;
-        </button>
-
         {/* CoverFlow Track */}
         <div
           id="miniCoverflowTrack"
-          className="d-flex gap-3 py-3"
-          style={{ overflow: "hidden" }} // hides scrollbar
+          className="d-flex align-items-center"
+          style={{ overflow: "hidden", perspective: "1000px" }}
         >
           {filteredServices.map((service, idx) => {
             const imageUrl =
@@ -402,7 +385,7 @@ const [searchQuery, setSearchQuery] = useState('');
               <div
                 key={idx}
                 className="card flex-shrink-0 mini-card"
-                style={{ scrollSnapAlign: "center" }}
+                style={{ scrollSnapAlign: "center", margin: "0 -50px" }} // overlap
               >
                 <div className="position-relative">
                   <img
@@ -438,19 +421,6 @@ const [searchQuery, setSearchQuery] = useState('');
             );
           })}
         </div>
-
-        {/* Right Arrow */}
-        <button
-          className="btn btn-success position-absolute top-50 end-0 translate-middle-y"
-          onClick={() =>
-            document.getElementById("miniCoverflowTrack").scrollBy({
-              left: 300,
-              behavior: "smooth",
-            })
-          }
-        >
-          &#8250;
-        </button>
       </div>
     )}
 
@@ -464,13 +434,13 @@ const [searchQuery, setSearchQuery] = useState('');
     <style>{`
       .mini-coverflow-container {
         position: relative;
-      }
-      .mini-coverflow-container button {
-        z-index: 10;
+        width: 100%;
       }
       .mini-card {
         flex: 0 0 250px;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transform-origin: center center;
+        border-radius: 0.75rem;
       }
       .mini-card-img {
         width: 100%;
@@ -488,6 +458,7 @@ const [searchQuery, setSearchQuery] = useState('');
       @media (max-width: 768px) {
         .mini-card {
           flex: 0 0 70%;
+          margin: 0 -30px;
         }
         .mini-card-img {
           height: 140px;
@@ -495,7 +466,7 @@ const [searchQuery, setSearchQuery] = useState('');
       }
     `}</style>
 
-    {/* ================= ROTATION, SCALE, SHADOW & AUTO-ROTATE ================= */}
+    {/* ================= ROTATION, SCALE, SHADOW & INFINITE AUTO-ROTATE ================= */}
     <script>{`
       const track = document.getElementById("miniCoverflowTrack");
       if(track){
@@ -509,40 +480,39 @@ const [searchQuery, setSearchQuery] = useState('');
             const trackCenter = trackRect.left + trackRect.width / 2;
             const offset = cardCenter - trackCenter;
 
-            // Rotation
+            // Rotate along Y-axis for perspective
             const rotateY = offset / 15;
 
-            // Scale for center card
+            // Scale center card slightly larger
             let scale = 1 - Math.abs(offset) / 1000;
             if(scale < 0.85) scale = 0.85;
 
             // Shadow for center card
             const shadowIntensity = 0.2 + (scale - 0.85) * 2;
+
             card.style.transform = \`rotateY(\${rotateY}deg) scale(\${scale})\`;
-            card.style.boxShadow = \`0 10px 25px rgba(0, 0, 0, \${shadowIntensity})\`;
+            card.style.boxShadow = \`0 10px 25px rgba(0,0,0,\${shadowIntensity})\`;
+            card.style.zIndex = Math.round(scale * 100); // higher scale = higher z-index
           });
         };
 
-        // Initial transform
         updateTransforms();
         window.addEventListener("resize", updateTransforms);
 
-        // Update on scroll
-        track.addEventListener("scroll", updateTransforms);
+        // Infinite auto-rotate using requestAnimationFrame
+        let scrollSpeed = 0.5; // px per frame
+        const autoRotate = () => {
+          track.scrollLeft += scrollSpeed;
 
-        // ================= AUTO-ROTATE =================
-        let scrollAmount = 1; // px per interval
-        let direction = 1; // forward
-
-        setInterval(() => {
-          track.scrollBy({ left: scrollAmount * direction, behavior: "smooth" });
-
-          // Reverse at ends
-          if(track.scrollLeft + track.clientWidth >= track.scrollWidth - 5) direction = -1;
-          if(track.scrollLeft <= 0) direction = 1;
+          // seamless infinite loop
+          if(track.scrollLeft >= track.scrollWidth - track.clientWidth){
+            track.scrollLeft = 0;
+          }
 
           updateTransforms();
-        }, 40); // adjust speed (smaller interval = faster)
+          requestAnimationFrame(autoRotate);
+        };
+        requestAnimationFrame(autoRotate);
       }
     `}</script>
   </div>
