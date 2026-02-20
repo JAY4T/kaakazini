@@ -5,13 +5,11 @@ from .views import (
     AdminProductListView, AdminProductApproveView, AdminProductRejectView,  PublicCraftsmanListView,PublicCraftsmanDetailView, ServiceListCreateView, ServiceDetailView,
    ApproveCraftsmanView,ContactMessageCreateView,JobRequestListCreateView, JobRequestDetailView,
     ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView,SubmitQuoteView, AdminCraftsmanUpdateView, 
-    AdminCraftsmanToggleActiveView
-    ReviewListCreateView, CraftsmanReviewListView , AssignCraftsmanView,ServiceCreateView,ServiceUpdateDeleteView, StartJobView, InitiatePaymentView,SubmitQuoteView, UploadImageView
-
-
+    AdminCraftsmanToggleActiveView,SendQuoteView
 
 
 )
+
 
 urlpatterns = [
     # Craftsman
@@ -73,6 +71,7 @@ urlpatterns = [
 
     # submit-quote
     path('job-requests/<int:pk>/submit-quote/', SubmitQuoteView.as_view(), name='submit-quote'),
+    path('job-requests/<int:pk>/send-quote/', SendQuoteView.as_view(), name='send-quote'),  
 
     # contact us
 
@@ -87,7 +86,7 @@ urlpatterns = [
     path('job-requests/<int:pk>/pay/', InitiatePaymentView.as_view(), name='initiate_payment'),
 
     
-    path("upload-image/", UploadImageView.as_view(), name="upload-image"),
+    # path("upload-image/", UploadImageView.as_view(), name="upload-image"),
 
 
 

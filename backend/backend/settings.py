@@ -9,22 +9,22 @@ from corsheaders.defaults import default_headers
 # ============================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ---------------------------
-# ENVIRONMENT
-# ---------------------------
-ENVIRONMENT = config("ENVIRONMENT", default="staging")  # staging or production
+# ============================
+# LOCAL ENVIRONMENT
+# ============================
+ENVIRONMENT = "local"
+
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="fallback-secret")
-DEBUG = config("DJANGO_DEBUG", default=(ENVIRONMENT == "staging"), cast=bool)
 
-ALLOWED_HOSTS = config(
-    "DJANGO_ALLOWED_HOSTS",
-    default="localhost,127.0.0.1",
-    cast=lambda v: [s.strip() for s in v.split(",")]
-)
+# ✅ Force local debug ON
+DEBUG = True
 
-# ---------------------------
+# ✅ Allow all hosts locally
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+# ============================
 # APPLICATIONS
-# ---------------------------
+# ============================
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     "djoser",
     "django_rest_passwordreset",
     "django_extensions",
-    # "storages",  # DigitalOcean Spaces
 
     # Local apps
     "accounts",
@@ -48,9 +47,9 @@ INSTALLED_APPS = [
     "services",
 ]
 
-# ---------------------------
+# ============================
 # MIDDLEWARE
-# ---------------------------
+# ============================
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -81,9 +80,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backend.wsgi.application"
 
-# ---------------------------
-# DATABASE
-# ---------------------------
+# ============================
+# DATABASE (Local PostgreSQL)
+# ============================
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -95,21 +94,21 @@ DATABASES = {
     }
 }
 
-# ---------------------------
+# ============================
 # AUTHENTICATION
-# ---------------------------
+# ============================
 AUTH_USER_MODEL = "accounts.CustomUser"
 
 AUTHENTICATION_BACKENDS = [
     "accounts.authentication.EmailBackend",
 ]
 
-# ---------------------------
+# ============================
 # REST FRAMEWORK
-# ---------------------------
+# ============================
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "accounts.authentication.CookieJWTAuthentication",  # cookie JWT
+        "accounts.authentication.CookieJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -123,87 +122,65 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
 }
 
-# ---------------------------
-# CORS / CSRF / COOKIE SETTINGS
-# ---------------------------
+# ============================
+# CORS / CSRF (LOCAL SAFE)
+# ============================
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS",
-    default="https://staging.kaakazini.com,https://kaakazini.com,https://www.kaakazini.com",
-    cast=lambda v: [s.strip() for s in v.split(",")]
-)
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+
 CORS_ALLOW_HEADERS = list(default_headers) + ["authorization"]
 
-CSRF_TRUSTED_ORIGINS = config(
-    "CSRF_TRUSTED_ORIGINS",
-    default="https://staging.kaakazini.com,https://kaakazini.com,https://www.kaakazini.com",
-    cast=lambda v: [s.strip() for s in v.split(",")]
-)
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]
 
-SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=True, cast=bool)
-CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=True, cast=bool)
-SESSION_COOKIE_SAMESITE = config("SESSION_COOKIE_SAMESITE", default="None")
-CSRF_COOKIE_SAMESITE = config("CSRF_COOKIE_SAMESITE", default="None")
-SESSION_COOKIE_HTTPONLY = config("SESSION_COOKIE_HTTPONLY", default=True, cast=bool)
-CSRF_COOKIE_HTTPONLY = config("CSRF_COOKIE_HTTPONLY", default=False, cast=bool)
-SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
+# ✅ Cookies NOT secure locally (important!)
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
-SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=31536000, cast=int)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = config("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True, cast=bool)
-SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=True, cast=bool)
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
-# ---------------------------
-# DIGITALOCEAN SPACES (MEDIA)
-# ---------------------------
-# USE_SPACES = config("USE_SPACES", default=True, cast=bool)
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
 
-# if USE_SPACES:
-#     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-#     AWS_ACCESS_KEY_ID = config("DO_SPACES_KEY")
-#     AWS_SECRET_ACCESS_KEY = config("DO_SPACES_SECRET")
-#     AWS_STORAGE_BUCKET_NAME = config("DO_SPACES_BUCKET")
-#     AWS_S3_REGION_NAME = config("DO_SPACES_REGION", default="fra1")
-#     AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
-#     AWS_DEFAULT_ACL = "public-read"
-#     AWS_QUERYSTRING_AUTH = False
-#     MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
-# else:
-#     # fallback to local filesystem
-#     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-#     MEDIA_URL = "/media/"
-#     MEDIA_ROOT = BASE_DIR / "media"
+SECURE_SSL_REDIRECT = False
+SECURE_HSTS_SECONDS = 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
 
-
-
-# ---------------------------
+# ============================
 # MEDIA (LOCAL FILE STORAGE)
-# ---------------------------
+# ============================
 DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ---------------------------
+# ============================
 # STATIC
-# ---------------------------
+# ============================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# ---------------------------
+# ============================
 # SECURITY
-# ---------------------------
+# ============================
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
-# ---------------------------
+# ============================
 # OTHER
-# ---------------------------
+# ============================
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Africa/Nairobi"
 USE_I18N = True
 USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
-BREVO_API_KEY = config("BREVO_API_KEY", default="")
+FRONTEND_URL = "http://localhost:3000"
 
+BREVO_API_KEY = config("BREVO_API_KEY", default="")

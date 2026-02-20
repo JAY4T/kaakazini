@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   // Fetch logged-in user on mount using cookies
   const fetchUser = async () => {
     try {
-      const res = await api.get("/me/"); // your endpoint that returns current user
+      const res = await api.get("/me/"); 
       setUser(res.data);
     } catch (err) {
       setUser(null);
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await api.post("/logout/"); // backend logout endpoint (cookie destroy)
+      await api.post("/logout/"); 
     } catch (err) {
       console.error("Logout failed", err);
     }
