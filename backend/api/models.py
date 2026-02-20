@@ -142,6 +142,8 @@ class JobRequest(models.Model):
     STATUS_ACCEPTED = 'Accepted'
     STATUS_IN_PROGRESS = 'In Progress'
     STATUS_COMPLETED = 'Completed'
+    STATUS_QUOTE_SUBMITTED = 'Quote Submitted'  
+    STATUS_QUOTE_APPROVED = 'Quote Approved'   
     STATUS_APPROVED = 'Approved'
     STATUS_PAID = 'Paid'
     STATUS_CANCELLED = 'Cancelled'
@@ -151,6 +153,8 @@ class JobRequest(models.Model):
         (STATUS_ASSIGNED, 'Assigned'),
         (STATUS_ACCEPTED, 'Accepted'),
         (STATUS_IN_PROGRESS, 'In Progress'),
+        (STATUS_QUOTE_SUBMITTED, 'Quote Submitted'),   
+        (STATUS_QUOTE_APPROVED, 'Quote Approved'),      
         (STATUS_COMPLETED, 'Completed'),
         (STATUS_APPROVED, 'Approved'),
         (STATUS_PAID, 'Paid'),
@@ -185,6 +189,9 @@ class JobRequest(models.Model):
     company_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.0'))
     net_payment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.0'))
     quote_details = models.JSONField(blank=True, null=True)
+    quote_file = models.FileField(upload_to='quotes/', null=True, blank=True)
+    quote_approved_by_client = models.BooleanField(
+        null=True, blank=True)
 
     # --- Status & Tracking ---
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
