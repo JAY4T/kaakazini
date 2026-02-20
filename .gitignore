@@ -12,6 +12,7 @@ staticfiles/
 __pycache__/
 *.py[cod]
 *.so
+*.pyc
 
 # Node
 node_modules/
