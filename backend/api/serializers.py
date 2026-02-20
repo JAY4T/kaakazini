@@ -147,6 +147,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
     craftsman_id = serializers.IntegerField(source='craftsman.id', read_only=True)
     client = serializers.SerializerMethodField()
     quote_details = serializers.JSONField(read_only=True)
+    quote_file_url = serializers.SerializerMethodField()  
 
     class Meta:
         model = JobRequest
@@ -169,3 +170,8 @@ class JobRequestSerializer(serializers.ModelSerializer):
             'full_name': obj.client.full_name,
             'phone': obj.client.phone_number
         }
+    
+    def get_quote_file_url(self, obj):
+        if obj.quote_file:
+            return obj.quote_file.url
+        return None

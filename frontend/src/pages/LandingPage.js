@@ -114,12 +114,10 @@ const [searchQuery, setSearchQuery] = useState('');
       className="display-4 fw-bold moving-text hero-title"
       style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }}
     >
-      Hire Skilled Local Craftsmen & Artisans
-
+      Empowering Local Craftsmen
     </h1>
     <p className="lead mt-3 fw-semibold hero-subtitle" style={{ fontSize: '1.4rem' }}>
-      Post your project, receive quotes, and hire trusted professionals in your area — fast, reliable, and secure.
-
+      Manage clients, showcase your work, and grow your trade — all in one platform.
     </p>
     <div className="d-flex justify-content-center align-items-center gap-3 mb-4 hero-buttons">
 
@@ -256,7 +254,7 @@ const [searchQuery, setSearchQuery] = useState('');
         data-aos="fade-right"
       >
         <p className="fs-5 lh-lg">
-          We are passionate about supporting local craftsmen by providing
+          At KaaKazini, we are passionate about supporting local craftsmen by providing
           a platform that helps them manage projects, showcase their unique handmade
           products, and grow their business. We believe in the power of craftsmanship
           to bring one-of-a-kind creations to the world while fostering community and
@@ -351,6 +349,7 @@ const [searchQuery, setSearchQuery] = useState('');
   `}</style>
 </section>
 
+
 {/* Services Section */}
 <section className="py-5 bg-light" id="services">
   <div className="container overflow-hidden">
@@ -371,87 +370,21 @@ const [searchQuery, setSearchQuery] = useState('');
       <>
         <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
           {filteredServices.map((service, idx) => {
-            const fallbackImage =
+            const imageUrl =
               service.services?.[0]?.image ||
               service.service_image ||
               "https://via.placeholder.com/300";
-
-            const images =
-              service.images && service.images.length > 0
-                ? service.images
-                : [fallbackImage];
 
             return (
               <div key={idx} className="col d-flex justify-content-center">
                 <div className="card border-0 shadow" style={{ width: "18rem" }}>
                   <div className="position-relative">
-
-                    {/* ===== FADE CAROUSEL ===== */}
-                    <div
-                      id={`serviceCarousel-${idx}`}
-                      className="carousel slide carousel-fade"
-                      data-bs-ride="carousel"
-                      data-bs-interval="2500"
-                      data-bs-pause="hover"
-                    >
-
-                      {/* Indicators */}
-                      {images.length > 1 && (
-                        <div className="carousel-indicators">
-                          {images.map((_, imgIndex) => (
-                            <button
-                              key={imgIndex}
-                              type="button"
-                              data-bs-target={`#serviceCarousel-${idx}`}
-                              data-bs-slide-to={imgIndex}
-                              className={imgIndex === 0 ? "active" : ""}
-                              aria-current={imgIndex === 0 ? "true" : "false"}
-                            ></button>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="carousel-inner">
-                        {images.map((img, imgIndex) => (
-                          <div
-                            key={imgIndex}
-                            className={`carousel-item ${
-                              imgIndex === 0 ? "active" : ""
-                            }`}
-                          >
-                            <img
-                              src={getImageUrl(img)}
-                              className="d-block w-100 service-carousel-img"
-                              alt={`${service.primary_service}-${imgIndex}`}
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Controls */}
-                      {images.length > 1 && (
-                        <>
-                          <button
-                            className="carousel-control-prev"
-                            type="button"
-                            data-bs-target={`#serviceCarousel-${idx}`}
-                            data-bs-slide="prev"
-                          >
-                            <span className="carousel-control-prev-icon"></span>
-                          </button>
-                          <button
-                            className="carousel-control-next"
-                            type="button"
-                            data-bs-target={`#serviceCarousel-${idx}`}
-                            data-bs-slide="next"
-                          >
-                            <span className="carousel-control-next-icon"></span>
-                          </button>
-                        </>
-                      )}
-                    </div>
-
-                    {/* ===== OVERLAY ===== */}
+                    <img
+                      src={getImageUrl(imageUrl)}
+                      alt={service.primary_service}
+                      className="card-img-top"
+                      style={{ height: "300px", objectFit: "cover" }}
+                    />
                     <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
                       <h5 className="fw-bold">{service.primary_service}</h5>
                     </div>
@@ -493,45 +426,16 @@ const [searchQuery, setSearchQuery] = useState('');
 
     {/* ================= STYLES ================= */}
     <style>{`
-      .service-carousel-img {
-        height: 300px;
-        object-fit: cover;
-      }
-
-      /* Smooth crossfade enhancement */
-      .carousel-fade .carousel-item {
-        transition: opacity 1s ease-in-out;
-      }
-
       .overlay {
         opacity: 0;
         transition: opacity 0.4s ease;
       }
-
       .position-relative:hover .overlay {
         opacity: 1;
-      }
-
-      .carousel-control-prev-icon,
-      .carousel-control-next-icon {
-        background-color: rgba(0,0,0,0.6);
-        border-radius: 50%;
-        padding: 12px;
-      }
-
-      .carousel-indicators button {
-        background-color: #198754;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
       }
     `}</style>
   </div>
 </section>
-
-
-
-
 
 
      {/* How It Works Section */}

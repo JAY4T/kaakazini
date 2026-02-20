@@ -1,13 +1,13 @@
 from datetime import timezone
 import logging
-
+import json
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, viewsets, permissions, status, filters
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import RetrieveAPIView
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 
 from .models import (
@@ -36,13 +36,27 @@ logger = logging.getLogger(__name__)
 
 
 # ----------------------------
+# Helper: Detect user role
+# ----------------------------
+def is_craftsman(user):
+    """
+    Returns True only if the user has an approved/active craftsman profile.
+    Prevents clients who happen to have a craftsman row from being misrouted.
+    """
+    return (
+        hasattr(user, "craftsman") and
+        user.craftsman is not None and
+        getattr(user.craftsman, "is_approved", False)
+    )
+
+
+# ----------------------------
 # Craftsman Views
 # ----------------------------
 class CraftsmanListView(generics.ListAPIView):
     queryset = Craftsman.objects.all()
     serializer_class = CraftsmanSerializer
     permission_classes = [IsAuthenticated]
-
 
 
 class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
@@ -69,11 +83,7 @@ class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
         return Response(self.get_serializer(craftsman).data, status=status.HTTP_200_OK)
 
 
-
 class ServiceCreateView(generics.CreateAPIView):
-    """
-    Allows a craftsman to add a new service to their profile.
-    """
     serializer_class = ServiceSerializer
     permission_classes = [IsAuthenticated]
 
@@ -83,16 +93,12 @@ class ServiceCreateView(generics.CreateAPIView):
 
 
 class ServiceUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    Allows a craftsman to update or delete their own service.
-    """
     serializer_class = ServiceSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         craftsman = Craftsman.objects.get(user=self.request.user)
         return Service.objects.filter(craftsman=craftsman)
-
 
 
 # Public list
@@ -162,13 +168,7 @@ class ApproveCraftsmanView(generics.UpdateAPIView):
         return Response({'detail': 'Craftsman approved successfully'}, status=status.HTTP_200_OK)
 
 
-# ----------------------------
-# NEW: Admin Edit Craftsman View
-# ----------------------------
 class AdminCraftsmanUpdateView(generics.UpdateAPIView):
-    """
-    Allows admin to edit craftsman details (full_name, profession, description, primary_service)
-    """
     queryset = Craftsman.objects.all()
     serializer_class = CraftsmanSerializer
     permission_classes = [IsAdminUser]
@@ -177,7 +177,6 @@ class AdminCraftsmanUpdateView(generics.UpdateAPIView):
         try:
             craftsman = self.get_object()
             
-            # Update only the fields that are provided
             if 'full_name' in request.data:
                 craftsman.full_name = request.data['full_name']
             if 'profession' in request.data:
@@ -204,20 +203,12 @@ class AdminCraftsmanUpdateView(generics.UpdateAPIView):
             )
 
 
-# ----------------------------
-# NEW: Toggle Active Status View
-# ----------------------------
 class AdminCraftsmanToggleActiveView(APIView):
-    """
-    Toggles the is_active status of a craftsman
-    """
     permission_classes = [IsAdminUser]
     
     def patch(self, request, pk):
         try:
             craftsman = Craftsman.objects.get(pk=pk)
-            
-            # Toggle the is_active field
             craftsman.is_active = not craftsman.is_active
             craftsman.save()
             
@@ -322,31 +313,81 @@ class ServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
 # JobRequest Views
 # ----------------------------
 
-
-
 class JobRequestListCreateView(generics.ListCreateAPIView):
+    """
+    ✅ FIXED: Properly routes by role using explicit role check.
+
+    The bug: `hasattr(user, "craftsman")` returned True for clients
+    because CraftsmanDetailView uses get_or_create — creating a Craftsman
+    row for every user. This caused clients to be routed into the craftsman
+    branch and receive an empty list.
+
+    The fix: Only treat a user as a craftsman if their craftsman profile
+    is actually approved (is_approved=True). Otherwise fall back to client.
+
+    Also supports explicit ?role=client override for safety.
+    """
     serializer_class = JobRequestSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
+
+        # 1. Admins see everything
         if user.is_staff or user.is_superuser:
             return JobRequest.objects.all().order_by("-created_at")
-        if hasattr(user, 'craftsman'):
+
+        # 2. Allow explicit role override via query param
+        role = self.request.query_params.get("role")
+
+        if role == "client":
+            # Force client view regardless of craftsman profile
+            return JobRequest.objects.filter(client=user).order_by("-created_at")
+
+        if role == "craftsman":
+            if hasattr(user, "craftsman") and user.craftsman is not None:
+                return JobRequest.objects.filter(craftsman=user.craftsman).order_by("-created_at")
+            return JobRequest.objects.none()
+
+        # 3. Auto-detect: only treat as craftsman if profile is approved
+        if (
+            hasattr(user, "craftsman") and
+            user.craftsman is not None and
+            getattr(user.craftsman, "is_approved", False)
+        ):
             return JobRequest.objects.filter(craftsman=user.craftsman).order_by("-created_at")
+
+        # 4. Default: treat as client
         return JobRequest.objects.filter(client=user).order_by("-created_at")
-
-    def perform_create(self, serializer):
-        serializer.save(client=self.request.user)
-
 
 
 class JobRequestDetailView(generics.RetrieveUpdateAPIView):
-    queryset = JobRequest.objects.all()
+    """
+    ✅ FIXED: Clients can retrieve and update their own jobs.
+    """
     serializer_class = JobRequestSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
 
+        if user.is_staff or user.is_superuser:
+            return JobRequest.objects.all()
+
+        # Approved craftsman: see assigned jobs
+        if (
+            hasattr(user, "craftsman") and
+            user.craftsman is not None and
+            getattr(user.craftsman, "is_approved", False)
+        ):
+            # Also include jobs where user is the client (craftsman can also be a client)
+            from django.db.models import Q
+            return JobRequest.objects.filter(
+                Q(craftsman=user.craftsman) | Q(client=user)
+            )
+
+        # Default: client sees own jobs
+        return JobRequest.objects.filter(client=user)
 
 
 class AssignCraftsmanView(APIView):
@@ -362,9 +403,10 @@ class AssignCraftsmanView(APIView):
                 )
             
             craftsman = Craftsman.objects.get(pk=craftsman_id)
-            job.assigned_craftsman = craftsman
+            job.craftsman = craftsman
+            job.status = JobRequest.STATUS_ASSIGNED  
             job.save()
-            
+
             return Response(
                 {'message': 'Craftsman assigned successfully'}, 
                 status=status.HTTP_200_OK
@@ -419,8 +461,6 @@ class ContactMessageCreateView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
-
-
 class CraftsmanAcceptJobView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -439,7 +479,6 @@ class CraftsmanAcceptJobView(APIView):
         job.status = JobRequest.STATUS_ACCEPTED
         job.save()
 
-        # Serialize the full job
         serializer = JobRequestSerializer(job)
         return Response(serializer.data)
 
@@ -480,7 +519,8 @@ class CompleteJobView(APIView):
         job.save()
 
         serializer = JobRequestSerializer(job)
-        return Response(serializer.data)  # ✅ return full job object
+        return Response(serializer.data)
+
 
 class AdminApproveJobView(APIView):
     permission_classes = [IsAdminUser]
@@ -531,21 +571,13 @@ class CancelJobView(APIView):
         return Response(serializer.data)
     
 
-
-
-# Payment
-
 # ----------------------------
-# Initiate Payment View
+# Payment Views
 # ----------------------------
 class InitiatePaymentView(APIView):
-    permission_classes = [IsAuthenticated]  # craftsman or admin
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk, format=None):
-        """
-        Initiates payment to the craftsman via STK push.
-        Admins or the assigned craftsman can trigger payment.
-        """
         try:
             job = JobRequest.objects.get(pk=pk)
         except JobRequest.DoesNotExist:
@@ -553,11 +585,9 @@ class InitiatePaymentView(APIView):
 
         user = request.user
 
-        # Check permission: admin or assigned craftsman
         if not (user.is_staff or (hasattr(user, 'craftsman') and job.craftsman == user.craftsman)):
             return Response({'detail': 'Not authorized to initiate payment.'}, status=status.HTTP_403_FORBIDDEN)
 
-        # Ensure craftsman and phone number exist
         if not job.craftsman:
             return Response({'detail': 'No craftsman assigned to this job.'}, status=status.HTTP_400_BAD_REQUEST)
         if not job.craftsman.phone_number:
@@ -566,16 +596,14 @@ class InitiatePaymentView(APIView):
         amount = job.budget or 0
         phone_number = job.craftsman.phone_number
 
-        # Trigger STK Push payment
         try:
             success, response_data = send_stk_push(phone_number, amount, job.id)
         except Exception as e:
             logger.error(f"STK Push error for Job {job.id}: {e}")
             return Response({'detail': 'Payment initiation failed.', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Update job status only if payment initiated
         if success:
-            job.status = JobRequest.STATUS_PAID  # Use model constant
+            job.status = JobRequest.STATUS_PAID
             job.save()
             serializer = JobRequestSerializer(job)
             return Response({'detail': 'Payment initiated successfully.', 'job': serializer.data, 'response': response_data})
@@ -584,106 +612,101 @@ class InitiatePaymentView(APIView):
 
 
 # ----------------------------
-# Submit Quote View
+# ✅ Submit Quote View
 # ----------------------------
 class SubmitQuoteView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, pk):
-        """
-        Allows an assigned craftsman to submit a quote for a job request.
-        """
         try:
             job = JobRequest.objects.get(pk=pk)
         except JobRequest.DoesNotExist:
-            return Response({"error": "Job not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Job not found."}, status=404)
 
-        user = request.user
+        if not hasattr(request.user, "craftsman") or job.craftsman != request.user.craftsman:
+            return Response({"error": "Not authorized to submit quote."}, status=403)
 
-        # Check permission: must be the assigned craftsman
-        if not hasattr(user, 'craftsman'):
-            return Response({"error": "Not a craftsman."}, status=status.HTTP_403_FORBIDDEN)
-        if job.craftsman != user.craftsman:
-            return Response({"error": "You are not assigned to this job."}, status=status.HTTP_403_FORBIDDEN)
+        logger.info(f"SubmitQuote FILES: {list(request.FILES.keys())}")
+        logger.info(f"SubmitQuote DATA: {list(request.data.keys())}")
+
+        # ✅ quote_file is optional — save JSON details even without a file
+        quote_file = request.FILES.get("quote_file")
+        if quote_file:
+            job.quote_file = quote_file
 
         quote_data = request.data.get("quote_details")
-        if not quote_data:
-            return Response({"error": "Quote details are required."}, status=status.HTTP_400_BAD_REQUEST)
+        if quote_data and isinstance(quote_data, str):
+            try:
+                job.quote_details = json.loads(quote_data)
+            except json.JSONDecodeError:
+                logger.warning("Invalid quote_details JSON")
 
-        # Save quote and update status
-        job.quote_details = quote_data
-        job.status = JobRequest.STATUS_QUOTE_SUBMITTED  # consistent with model
+        job.status = JobRequest.STATUS_QUOTE_SUBMITTED
         job.save()
 
         serializer = JobRequestSerializer(job)
-        return Response({"detail": "Quote submitted successfully.", "job": serializer.data}, status=status.HTTP_200_OK)
+        return Response({
+            "detail": "Quote submitted successfully",
+            "job": serializer.data
+        }, status=200)
 
 
-
-
-import os
-import uuid
-import logging
-import boto3
-from botocore.exceptions import ClientError
-from django.conf import settings
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from rest_framework.parsers import MultiPartParser, FormParser
-
-logger = logging.getLogger(__name__)
-
-class UploadImageView(APIView):
+# ----------------------------
+# ✅ Send Quote View
+# ----------------------------
+class SendQuoteView(APIView):
     """
-    Staging-ready UploadImageView for DigitalOcean Spaces.
-    Full debug logging and guaranteed public URL correctness.
+    Accepts JSON or multipart — returns success so frontend
+    can handle the actual delivery (WhatsApp, download, etc.)
     """
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    def post(self, request, format=None):
-        file = request.FILES.get("file")
-        folder = request.data.get("folder", "profiles")  # default folder
-
-        if not file:
-            logger.error("[UploadImageView] No file provided in request")
-            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Generate unique filename
-        ext = os.path.splitext(file.name)[1]
-        filename = f"{folder}/{uuid.uuid4()}{ext}"
-
+    def post(self, request, pk):
         try:
-            # Save file to Spaces
-            saved_path = default_storage.save(filename, ContentFile(file.read()))
-            file_url = default_storage.url(saved_path)
+            job = JobRequest.objects.get(pk=pk)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found"}, status=404)
 
-            # Verify the file actually exists in Spaces using boto3 client
-            s3_client = boto3.client(
-                "s3",
-                region_name=settings.AWS_S3_REGION_NAME,
-                endpoint_url=settings.AWS_S3_ENDPOINT_URL,
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
-            )
+        user = request.user
+        if not hasattr(user, "craftsman") or job.craftsman != user.craftsman:
+            return Response({"error": "Not authorized"}, status=403)
 
-            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+        send_method = request.data.get('send_method', 'download')
+        
+        return Response({
+            "success": True,
+            "message": f"Quote prepared for {send_method}",
+            "quote_link": f"https://staging.kaakazini.com/quotes/{job.id}"
+        }, status=200)
 
-            try:
-                s3_client.head_object(Bucket=bucket_name, Key=saved_path)
-                logger.info(f"[UploadImageView] Successfully uploaded: {saved_path}")
-            except ClientError as e:
-                logger.error(f"[UploadImageView] File not found in Spaces after upload: {saved_path}")
-                return Response(
-                    {"error": "File upload failed. File not found in Spaces."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
 
-            return Response({"url": file_url, "path": saved_path}, status=status.HTTP_201_CREATED)
+# ----------------------------
+# Client Quote Decision View
+# ----------------------------
+class ClientQuoteDecisionView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        except Exception as e:
-            logger.exception(f"[UploadImageView] Unexpected error: {str(e)}")
-            return Response({"error": "File upload failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def post(self, request, pk):
+        try:
+            job = JobRequest.objects.get(pk=pk)
+        except JobRequest.DoesNotExist:
+            return Response({"error": "Job not found."}, status=404)
+
+        if request.user != job.client:
+            return Response({"error": "Not authorized"}, status=403)
+
+        decision = request.data.get("decision")
+        if decision not in ["approve", "reject"]:
+            return Response({"error": "Decision must be 'approve' or 'reject'."}, status=400)
+
+        job.quote_approved_by_client = True if decision == "approve" else False
+        job.status = JobRequest.STATUS_QUOTE_APPROVED if decision == "approve" else JobRequest.STATUS_PENDING
+        job.save()
+
+        serializer = JobRequestSerializer(job)
+        return Response({
+            "detail": f"Quote {decision}d successfully",
+            "job": serializer.data
+        }, status=200)
