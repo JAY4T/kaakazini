@@ -10,17 +10,26 @@ from corsheaders.defaults import default_headers
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ============================
-# LOCAL ENVIRONMENT
+# ENVIRONMENT
 # ============================
-ENVIRONMENT = "local"
+ENVIRONMENT = config("ENVIRONMENT", default="local")  # local, staging, production
 
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="fallback-secret")
 
-# ✅ Force local debug ON
-DEBUG = True
+# ============================
+# DEBUG
+# ============================
+DEBUG = ENVIRONMENT == "local"
 
-# ✅ Allow all hosts locally
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+# ============================
+# HOSTS
+# ============================
+if ENVIRONMENT == "local":
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+elif ENVIRONMENT == "staging":
+    ALLOWED_HOSTS = ["staging.kaakazini.com"]
+else:  # production
+    ALLOWED_HOSTS = ["kaakazini.com", "www.kaakazini.com"]
 
 # ============================
 # APPLICATIONS
@@ -81,7 +90,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "backend.wsgi.application"
 
 # ============================
-# DATABASE (Local PostgreSQL)
+# DATABASE (PostgreSQL)
 # ============================
 DATABASES = {
     "default": {
@@ -115,31 +124,35 @@ REST_FRAMEWORK = {
     ],
 }
 
+# ============================
+# SIMPLE JWT
+# ============================
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_COOKIE": "access_token",  # Cookie name for access token
+    "AUTH_COOKIE_REFRESH": "refresh_token",  # Cookie name for refresh token
+    "AUTH_COOKIE_SECURE": ENVIRONMENT != "local",  # HTTPS only in staging/prod
+    "AUTH_COOKIE_HTTP_ONLY": True,
+    "AUTH_COOKIE_SAMESITE": "Lax",
 }
 
 # ============================
-# CORS / CSRF (LOCAL SAFE)
+# CORS / CSRF
 # ============================
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
+if ENVIRONMENT == "local":
+    CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
+    CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"]
+else:
+    CORS_ALLOWED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
+    CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
 
-CORS_ALLOW_HEADERS = list(default_headers) + ["authorization"]
-
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-]
-
-# ✅ Cookies NOT secure locally (important!)
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = ENVIRONMENT != "local"
+CSRF_COOKIE_SECURE = ENVIRONMENT != "local"
 
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
@@ -147,13 +160,13 @@ CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
 
-SECURE_SSL_REDIRECT = False
-SECURE_HSTS_SECONDS = 0
-SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-SECURE_HSTS_PRELOAD = False
+SECURE_SSL_REDIRECT = ENVIRONMENT != "local"
+SECURE_HSTS_SECONDS = 31536000 if ENVIRONMENT != "local" else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = ENVIRONMENT != "local"
+SECURE_HSTS_PRELOAD = ENVIRONMENT != "local"
 
 # ============================
-# MEDIA (LOCAL FILE STORAGE)
+# MEDIA
 # ============================
 DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 MEDIA_URL = "/media/"
@@ -173,7 +186,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 # ============================
-# OTHER
+# OTHER SETTINGS
 # ============================
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Africa/Nairobi"
@@ -181,6 +194,6 @@ USE_I18N = True
 USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-FRONTEND_URL = "http://localhost:3000"
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
 BREVO_API_KEY = config("BREVO_API_KEY", default="")
