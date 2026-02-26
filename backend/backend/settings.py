@@ -27,9 +27,9 @@ DEBUG = ENVIRONMENT == "local"
 if ENVIRONMENT == "local":
     DJANGO_ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 elif ENVIRONMENT == "staging":
-   DJANGO_ ALLOWED_HOSTS = ["staging.kaakazini.com"]
+   DJANGO_ALLOWED_HOSTS = ["staging.kaakazini.com"]
 else:  # production
-   DJANGO_ ALLOWED_HOSTS = ["kaakazini.com", "www.kaakazini.com"]
+   DJANGO_ALLOWED_HOSTS = ["kaakazini.com", "www.kaakazini.com"]
 
 # ============================
 # APPLICATIONS
