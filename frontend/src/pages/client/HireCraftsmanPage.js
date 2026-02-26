@@ -120,7 +120,7 @@ const HireCraftsmanPage = () => {
 
   const handleQuoteDecision = async (jobId, decision) => {
     try {
-      const { data } = await api.post(`/job-requests/${jobId}/quote-decision/`, {
+      await api.post(`/job-requests/${jobId}/quote-decision/`, {
         decision: decision
       });
       alert(`✅ Quote ${decision}d successfully!`);
@@ -131,27 +131,38 @@ const HireCraftsmanPage = () => {
     }
   };
 
-  const submitReview = async (jobId, craftsmanId) => {
-    const reviewData = reviews[jobId] || {};
-    const rating = parseInt(reviewData.rating) || 0;
-    const reviewText = reviewData.review?.trim() || "";
-    if (!rating || reviewText === "") return alert("Please add both rating and review.");
-    if (!craftsmanId) return alert("Craftsman ID missing for this job.");
-    try {
-      await api.post("/reviews/", {
-        job: jobId,
-        craftsman: craftsmanId,
-        reviewer: client.full_name || client.username,
-        rating,
-        comment: reviewText,
-      });
-      alert("✅ Review submitted successfully!");
-      setReviews((prev) => ({ ...prev, [jobId]: { rating: 0, review: "" } }));
-    } catch (err) {
-      console.error("Review submission error:", err.response?.data || err.message);
-      alert("❌ Failed to submit review.");
-    }
-  };
+  const submitReview = async (jobId) => {
+  const reviewData = reviews[jobId] || {};
+  const rating = parseInt(reviewData.rating) || 0;
+  const reviewText = reviewData.review?.trim() || "";
+
+  if (!rating || reviewText === "") {
+    return alert("Please add both rating and review.");
+  }
+
+  const job = jobs.find((j) => j.id === jobId);
+  if (!job) return alert("Job not found.");
+  if (!job.location || !job.craftsman?.id) {
+    return alert("Cannot submit review: missing location or craftsman.");
+  }
+
+  try {
+    await api.post("/reviews/", {
+      rating,
+      comment: reviewText,
+      location: job.location,
+      craftsman: job.craftsman.id,
+    });
+
+    alert("✅ Review submitted successfully!");
+    setReviews((prev) => ({ ...prev, [jobId]: { rating: 0, review: "" } }));
+
+  } catch (err) {
+    console.error("Review submission error:", err.response?.data || err.message);
+    alert("❌ Failed to submit review.");
+  }
+};
+
 
   const handlePayment = async (jobId) => {
     try {
@@ -639,8 +650,13 @@ const HireCraftsmanPage = () => {
                   <table className="table table-custom">
                     <thead>
                       <tr>
-                        <th>Service</th><th>Budget</th><th>Schedule</th>
-                        <th>Status</th><th>Quote</th><th>Actions</th>
+                        <th>Service</th>
+                        <th>Budget</th>
+                        <th>Schedule</th>
+                        <th>Status</th>
+                        <th>Quote</th>
+                        <th>Proof Images</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -648,7 +664,6 @@ const HireCraftsmanPage = () => {
                         const hasQuote = !!(job.quote_file_url || job.quote_details);
                         const quoteSubmitted = job.status === "Quote Submitted";
                         const quoteApproved  = job.status === "Quote Approved";
-                        const isExpanded = selectedQuoteJob?.id === job.id;
 
                         return (
                           <tr key={job.id}>
@@ -673,48 +688,54 @@ const HireCraftsmanPage = () => {
                             <td data-label="Quote">
                               {job.quote_file_url ? (
                                 <div style={{ display:'flex', flexDirection:'column', gap:'0.4rem' }}>
-                                  <a
-                                    href={job.quote_file_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                      color: '#16a34a',
-                                      fontWeight: '600',
-                                      wordBreak: 'break-all',
-                                      textDecoration: 'underline',
-                                      fontSize: '0.8rem'
-                                    }}
-                                  >
-                                    {job.quote_file_url}
+                                  <a href={job.quote_file_url} target="_blank" rel="noopener noreferrer"
+                                    style={{ color:'#16a34a', fontWeight:'600', wordBreak:'break-all', textDecoration:'underline', fontSize:'0.8rem' }}>
+                                    {job.quote_file_url.split('/').pop()}
                                   </a>
-
                                   {job.quote_file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
                                     <img
                                       src={job.quote_file_url}
                                       alt="Quote preview"
-                                      style={{
-                                        width:'60px',
-                                        height:'60px',
-                                        objectFit:'cover',
-                                        borderRadius:'8px',
-                                        border:'2px solid #e5e7eb',
-                                        cursor:'pointer'
-                                      }}
+                                      style={{ width:'60px', height:'60px', objectFit:'cover', borderRadius:'8px', border:'2px solid #e5e7eb', cursor:'pointer' }}
                                       onClick={() => window.open(job.quote_file_url, '_blank')}
                                     />
                                   )}
                                 </div>
                               ) : job.quote_details ? (
-                                <button
-                                  className="btn-view-quote-detail"
-                                  data-bs-toggle="modal"
-                                  data-bs-target="#quoteModal"
-                                  onClick={() => setSelectedQuoteJob(job)}
-                                >
-                                  📋 View Quote
-                                </button>
+                                <button className="btn-view-quote-detail" data-bs-toggle="modal" data-bs-target="#quoteModal"
+                                  onClick={() => setSelectedQuoteJob(job)}>📋 View Quote</button>
+                              ) : <span style={{ color:'#9ca3af', fontSize:'0.85rem' }}>—</span>}
+                            </td>
+
+                            <td data-label="Proof Images">
+                              {job.proof_images && job.proof_images.length > 0 ? (
+                                <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
+                                  {job.proof_images.map((proofImg, idx) => (
+                                    <img 
+                                      key={proofImg.id || idx} 
+                                      src={proofImg.image} 
+                                      alt={`Proof ${idx+1}`}
+                                      style={{ 
+                                        width:'60px', 
+                                        height:'60px', 
+                                        objectFit:'cover', 
+                                        borderRadius:'8px', 
+                                        border:'2px solid #e5e7eb', 
+                                        cursor:'pointer' 
+                                      }}
+                                      onClick={() => window.open(proofImg.image, '_blank')}
+                                      onError={(e) => {
+                                        console.error("Failed to load image:", proofImg.image);
+                                        e.target.style.border = '2px solid #ef4444';
+                                        e.target.style.opacity = '0.5';
+                                      }}
+                                    />
+                                  ))}
+                                </div>
                               ) : (
-                                <span style={{ color:'#9ca3af', fontSize:'0.85rem' }}>—</span>
+                                <span style={{ color:'#9ca3af', fontSize:'0.85rem' }}>
+                                  {job.status === "Completed" ? "No proof images" : "—"}
+                                </span>
                               )}
                             </td>
 
@@ -723,13 +744,11 @@ const HireCraftsmanPage = () => {
                                 {quoteSubmitted && hasQuote && (
                                   <>
                                     <button className="btn btn-success-custom"
-                                      onClick={() => { if (window.confirm("Approve this quote?")) handleQuoteDecision(job.id, "approve"); }}
-                                      style={{ fontSize:'0.75rem', padding:'0.5rem 0.875rem' }}>
+                                      onClick={() => { if(window.confirm("Approve this quote?")) handleQuoteDecision(job.id, "approve"); }}>
                                       Approve Quote
                                     </button>
                                     <button className="btn btn-danger-custom"
-                                      onClick={() => { if (window.confirm("Reject this quote?")) handleQuoteDecision(job.id, "reject"); }}
-                                      style={{ fontSize:'0.75rem', padding:'0.5rem 0.875rem' }}>
+                                      onClick={() => { if(window.confirm("Reject this quote?")) handleQuoteDecision(job.id, "reject"); }}>
                                       Reject Quote
                                     </button>
                                   </>
@@ -737,13 +756,9 @@ const HireCraftsmanPage = () => {
                                 {!quoteSubmitted && (
                                   <>
                                     <button className="btn btn-success-custom"
-                                      onClick={() => updateJob(job.id, { status:"Completed" })}>
-                                      Complete
-                                    </button>
+                                      onClick={() => updateJob(job.id, { status:"Completed" })}>Complete</button>
                                     <button className="btn btn-danger-custom"
-                                      onClick={() => updateJob(job.id, { status:"Cancelled" })}>
-                                      Cancel
-                                    </button>
+                                      onClick={() => updateJob(job.id, { status:"Cancelled" })}>Cancel</button>
                                   </>
                                 )}
                                 {quoteApproved && (
@@ -798,7 +813,7 @@ const HireCraftsmanPage = () => {
                           value={reviews[job.id]?.review || ""}
                           onChange={(e) => setReviews((prev) => ({ ...prev, [job.id]: { ...prev[job.id], review:e.target.value } }))} />
                         <button className="btn btn-primary-custom"
-                          onClick={() => submitReview(job.id, job.craftsman?.id)}>
+                          onClick={() => submitReview(job.id)}>
                           Submit Review
                         </button>
                       </div>

@@ -250,6 +250,21 @@ class JobRequest(models.Model):
         if self.service == 'other' and self.custom_service:
             label = self.custom_service
         return f"{label} for {self.name} ({self.status})"
+    
+
+
+class JobProofImage(models.Model):
+    job = models.ForeignKey(
+        JobRequest,
+        related_name='proof_images',
+        on_delete=models.CASCADE
+    )
+    image = models.ImageField(upload_to='job_proofs/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Proof for Job {self.job.id}"
+
 
 
 class ContactMessage(models.Model):
