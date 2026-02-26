@@ -25,11 +25,13 @@ DEBUG = ENVIRONMENT == "local"
 # HOSTS
 # ============================
 if ENVIRONMENT == "local":
-    DJANGO_ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
-elif ENVIRONMENT == "staging":
-   DJANGO_ALLOWED_HOSTS = ["staging.kaakazini.com"]
-else:  # production
-   DJANGO_ALLOWED_HOSTS = ["kaakazini.com", "www.kaakazini.com"]
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+else:
+    ALLOWED_HOSTS = config(
+        "DJANGO_ALLOWED_HOSTS",
+        default="localhost,127.0.0.1,staging.kaakazini.com,kaakazini.com,www.kaakazini.com"
+    ).split(",")
+
 
 # ============================
 # APPLICATIONS
