@@ -38,6 +38,7 @@ else:
 # ============================
 INSTALLED_APPS = [
     "django.contrib.admin",
+    "storages",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -168,11 +169,35 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = ENVIRONMENT != "local"
 SECURE_HSTS_PRELOAD = ENVIRONMENT != "local"
 
 # ============================
-# MEDIA
+# STORAGE — Digital Ocean Spaces
 # ============================
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# ============================
+# STORAGE — DigitalOcean Spaces (Django 5+)
+# ============================
+
+AWS_ACCESS_KEY_ID        = config('DO_SPACES_KEY')
+AWS_SECRET_ACCESS_KEY    = config('DO_SPACES_SECRET')
+AWS_STORAGE_BUCKET_NAME  = config('DO_SPACES_BUCKET')
+AWS_S3_REGION_NAME       = config('DO_SPACES_REGION')
+AWS_S3_ENDPOINT_URL      = config('DO_SPACES_ENDPOINT')
+AWS_S3_CUSTOM_DOMAIN     = config('DO_SPACES_CUSTOM_DOMAIN')
+
+AWS_DEFAULT_ACL          = 'public-read'
+AWS_QUERYSTRING_AUTH     = False
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400'
+}
+
+STORAGES = {
+    "default": {
+        "BACKEND": "api.storage_backends.MediaStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
 
 # ============================
 # STATIC
@@ -196,6 +221,10 @@ USE_I18N = True
 USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
-
-BREVO_API_KEY = config("BREVO_API_KEY", default="")
+# ============================
+# APP SETTINGS
+# ============================
+FRONTEND_URL        = config('FRONTEND_URL', default='http://localhost:3000')
+BACKEND_URL         = config('BACKEND_URL',  default='http://127.0.0.1:8000')
+BREVO_API_KEY       = config('BREVO_API_KEY', default='')
+GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')
