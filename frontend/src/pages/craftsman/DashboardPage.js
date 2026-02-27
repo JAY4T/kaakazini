@@ -153,9 +153,10 @@ function DashboardPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setCraftsman(res.data);
+       setCraftsman(res.data);
+      setProfileImage(getFullImageUrl(res.data.profile_url));           
       setServiceImage(getFullImageUrl(res.data.service_image_url));
-
+      setProofDocument(getFullImageUrl(res.data.proof_document_url));   
       alert("Profile Saved Successfully! Pending Approval");
     } catch (err) {
       console.error(err);

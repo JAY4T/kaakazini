@@ -21,3 +21,4 @@ node_modules/
 
 # Django media files
 media/
+upload_to_spaces.py
