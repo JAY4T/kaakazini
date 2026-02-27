@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework import serializers
 
 from .models import (
     Craftsman,
@@ -80,10 +81,10 @@ class CraftsmanListView(generics.ListAPIView):
 
 
 class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
-    serializer_class = CraftsmanSerializer
+    serializer_class   = CraftsmanSerializer
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
-    lookup_field = "slug"
+    parser_classes     = [MultiPartParser, FormParser]
+    lookup_field       = "slug"
 
     def get_object(self):
         craftsman, _ = Craftsman.objects.get_or_create(user=self.request.user)
@@ -93,14 +94,11 @@ class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
         craftsman = self.get_object()
         serializer = self.get_serializer(craftsman, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-
-        if "service_image" in request.FILES:
-            craftsman.service_image = request.FILES["service_image"]
-            craftsman.save()
-
-        return Response(self.get_serializer(craftsman).data, status=status.HTTP_200_OK)
-
+        serializer.save()  
+        return Response(
+            self.get_serializer(craftsman).data,
+            status=status.HTTP_200_OK
+        )
 
 class PublicCraftsmanListView(generics.ListAPIView):
     queryset = Craftsman.objects.filter(is_approved=True)

@@ -6,6 +6,8 @@ from datetime import timedelta
 import requests
 
 from django.utils.text import slugify
+from django.conf import settings
+
 
 
 
@@ -46,6 +48,8 @@ class Craftsman(models.Model):
     member_since = models.DateField(null=True, blank=True)
     location = models.CharField(max_length=255, blank=True, null=True)
     skills = models.TextField(blank=True, null=True)
+    proof_document   = models.FileField(upload_to='proof_documents/', blank=True, null=True)
+
 
 
 
@@ -75,7 +79,7 @@ class Craftsman(models.Model):
     
 
     def __str__(self):
-        return self.full_name
+        return self.full_name or str(self.user)
 
 
 
@@ -199,7 +203,7 @@ class JobRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # --- Configurations ---
-    GOOGLE_MAPS_API_KEY = 'AIzaSyAyK27SEcCyyAGSZOkg7M-zKoMfWnpLJnY'
+    GOOGLE_MAPS_API_KEY = getattr(settings, 'GOOGLE_MAPS_API_KEY', '')
     DEFAULT_JOB_DURATION_HOURS = 2
     COMPANY_FEE_PERCENT = Decimal('10.0')
 
@@ -261,6 +265,7 @@ class JobProofImage(models.Model):
     )
     image = models.ImageField(upload_to='job_proofs/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    
 
     def __str__(self):
         return f"Proof for Job {self.job.id}"
@@ -268,7 +273,8 @@ class JobProofImage(models.Model):
 
 
 class ContactMessage(models.Model):
-    name = models.CharField(max_length=255)
-    email = models.EmailField()
+    name = models.CharField(max_length=255, blank=True,default='')
+    email = models.EmailField(blank=True,default='')
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+
