@@ -38,7 +38,6 @@ else:
 # ============================
 INSTALLED_APPS = [
     "django.contrib.admin",
-    "storages",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
