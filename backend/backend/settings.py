@@ -9,17 +9,9 @@ from corsheaders.defaults import default_headers
 # ============================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ============================
-# LOCAL ENVIRONMENT
-# ============================
 ENVIRONMENT = "local"
-
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="fallback-secret")
-
-# ✅ Force local debug ON
 DEBUG = True
-
-# ✅ Allow all hosts locally
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # ============================
@@ -32,16 +24,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
-    # Third-party
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "djoser",
     "django_rest_passwordreset",
     "django_extensions",
-
-    # Local apps
+    "storages",
     "accounts",
     "api",
     "services",
@@ -81,16 +70,16 @@ TEMPLATES = [
 WSGI_APPLICATION = "backend.wsgi.application"
 
 # ============================
-# DATABASE (Local PostgreSQL)
+# DATABASE
 # ============================
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME"),
-        "USER": config("DB_USER"),
+        "NAME":     config("DB_NAME"),
+        "USER":     config("DB_USER"),
         "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
+        "HOST":     config("DB_HOST", default="localhost"),
+        "PORT":     config("DB_PORT", default="5432"),
     }
 }
 
@@ -98,10 +87,7 @@ DATABASES = {
 # AUTHENTICATION
 # ============================
 AUTH_USER_MODEL = "accounts.CustomUser"
-
-AUTHENTICATION_BACKENDS = [
-    "accounts.authentication.EmailBackend",
-]
+AUTHENTICATION_BACKENDS = ["accounts.authentication.EmailBackend"]
 
 # ============================
 # REST FRAMEWORK
@@ -116,71 +102,87 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": True,
+    "ACCESS_TOKEN_LIFETIME":    timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME":   timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS":    True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
 
 # ============================
-# CORS / CSRF (LOCAL SAFE)
+# CORS / CSRF
 # ============================
-CORS_ALLOW_CREDENTIALS = True
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
-
-CORS_ALLOW_HEADERS = list(default_headers) + ["authorization"]
-
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-]
-
-# ✅ Cookies NOT secure locally (important!)
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
-
+CORS_ALLOW_CREDENTIALS  = True
+CORS_ALLOWED_ORIGINS    = ["http://localhost:3000"]
+CORS_ALLOW_HEADERS      = list(default_headers) + ["authorization"]
+CSRF_TRUSTED_ORIGINS    = ["http://localhost:3000"]
+SESSION_COOKIE_SECURE   = False
+CSRF_COOKIE_SECURE      = False
 SESSION_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SAMESITE = "Lax"
-
+CSRF_COOKIE_SAMESITE    = "Lax"
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = False
-
-SECURE_SSL_REDIRECT = False
-SECURE_HSTS_SECONDS = 0
+CSRF_COOKIE_HTTPONLY    = False
+SECURE_SSL_REDIRECT     = False
+SECURE_HSTS_SECONDS     = 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-SECURE_HSTS_PRELOAD = False
+SECURE_HSTS_PRELOAD     = False
 
 # ============================
-# MEDIA (LOCAL FILE STORAGE)
+# STORAGE — Digital Ocean Spaces
 # ============================
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# ============================
+# STORAGE — DigitalOcean Spaces (Django 5+)
+# ============================
+
+AWS_ACCESS_KEY_ID        = config('DO_SPACES_KEY')
+AWS_SECRET_ACCESS_KEY    = config('DO_SPACES_SECRET')
+AWS_STORAGE_BUCKET_NAME  = config('DO_SPACES_BUCKET')
+AWS_S3_REGION_NAME       = config('DO_SPACES_REGION')
+AWS_S3_ENDPOINT_URL      = config('DO_SPACES_ENDPOINT')
+AWS_S3_CUSTOM_DOMAIN     = config('DO_SPACES_CUSTOM_DOMAIN')
+
+AWS_DEFAULT_ACL          = 'public-read'
+AWS_QUERYSTRING_AUTH     = False
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400'
+}
+
+STORAGES = {
+    "default": {
+        "BACKEND": "api.storage_backends.MediaStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
 
 # ============================
 # STATIC
 # ============================
-STATIC_URL = "/static/"
+STATIC_URL  = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # ============================
 # SECURITY
 # ============================
-SECURE_BROWSER_XSS_FILTER = True
+SECURE_BROWSER_XSS_FILTER   = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 # ============================
 # OTHER
 # ============================
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "Africa/Nairobi"
-USE_I18N = True
-USE_TZ = True
+LANGUAGE_CODE      = "en-us"
+TIME_ZONE          = "Africa/Nairobi"
+USE_I18N           = True
+USE_TZ             = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-FRONTEND_URL = "http://localhost:3000"
-
-BREVO_API_KEY = config("BREVO_API_KEY", default="")
+# ============================
+# APP SETTINGS
+# ============================
+FRONTEND_URL        = config('FRONTEND_URL', default='http://localhost:3000')
+BACKEND_URL         = config('BACKEND_URL',  default='http://127.0.0.1:8000')
+BREVO_API_KEY       = config('BREVO_API_KEY', default='')
+GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')
