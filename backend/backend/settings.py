@@ -9,10 +9,29 @@ from corsheaders.defaults import default_headers
 # ============================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-ENVIRONMENT = "local"
+# ============================
+# ENVIRONMENT
+# ============================
+ENVIRONMENT = config("ENVIRONMENT", default="local")  
+
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="fallback-secret")
-DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+# ============================
+# DEBUG
+# ============================
+DEBUG = ENVIRONMENT == "local"
+
+# ============================
+# HOSTS
+# ============================
+if ENVIRONMENT == "local":
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+else:
+    ALLOWED_HOSTS = config(
+        "DJANGO_ALLOWED_HOSTS",
+        default="localhost,127.0.0.1,staging.kaakazini.com,kaakazini.com,www.kaakazini.com"
+    ).split(",")
+
 
 # ============================
 # APPLICATIONS
@@ -70,7 +89,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "backend.wsgi.application"
 
 # ============================
-# DATABASE
+# DATABASE (PostgreSQL)
 # ============================
 DATABASES = {
     "default": {
@@ -101,11 +120,19 @@ REST_FRAMEWORK = {
     ],
 }
 
+# ============================
+# SIMPLE JWT
+# ============================
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME":    timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME":   timedelta(days=1),
     "ROTATE_REFRESH_TOKENS":    True,
     "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_COOKIE": "access_token",  # Cookie name for access token
+    "AUTH_COOKIE_REFRESH": "refresh_token",  # Cookie name for refresh token
+    "AUTH_COOKIE_SECURE": ENVIRONMENT != "local",  # HTTPS only in staging/prod
+    "AUTH_COOKIE_HTTP_ONLY": True,
+    "AUTH_COOKIE_SAMESITE": "Lax",
 }
 
 # ============================
@@ -117,6 +144,18 @@ CORS_ALLOW_HEADERS      = list(default_headers) + ["authorization"]
 CSRF_TRUSTED_ORIGINS    = ["http://localhost:3000"]
 SESSION_COOKIE_SECURE   = False
 CSRF_COOKIE_SECURE      = False
+CORS_ALLOW_CREDENTIALS = True
+
+if ENVIRONMENT == "local":
+    CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
+    CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"]
+else:
+    CORS_ALLOWED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
+    CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
+
+SESSION_COOKIE_SECURE = ENVIRONMENT != "local"
+CSRF_COOKIE_SECURE = ENVIRONMENT != "local"
+
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE    = "Lax"
 SESSION_COOKIE_HTTPONLY = True
@@ -171,7 +210,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 # ============================
-# OTHER
+# OTHER SETTINGS
 # ============================
 LANGUAGE_CODE      = "en-us"
 TIME_ZONE          = "Africa/Nairobi"
@@ -186,3 +225,6 @@ FRONTEND_URL        = config('FRONTEND_URL', default='http://localhost:3000')
 BACKEND_URL         = config('BACKEND_URL',  default='http://127.0.0.1:8000')
 BREVO_API_KEY       = config('BREVO_API_KEY', default='')
 GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
+
+BREVO_API_KEY = config("BREVO_API_KEY", default="")
