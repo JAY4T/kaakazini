@@ -639,9 +639,11 @@ function CraftsmanProfile() {
             <h2 className="section-title">Skills & Expertise</h2>
             {craftsman.skills ? (
               <div className="skills-container">
-                {craftsman.skills.split(',').map((skill, index) => (
-                  <span key={index} className="skill-badge">{skill.trim()}</span>
-                ))}
+                {Array.isArray(craftsman.skills) &&
+                craftsman.skills.map((skill) => (
+               <span key={skill}>{skill}</span>
+               ))}
+
               </div>
             ) : (
               <div className="empty-state">No skills listed</div>

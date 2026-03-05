@@ -114,6 +114,8 @@ class CraftsmanSerializer(serializers.ModelSerializer):
     profile_url        = serializers.SerializerMethodField()
     service_image_url  = serializers.SerializerMethodField()
     proof_document_url = serializers.SerializerMethodField()  
+    skills = serializers.CharField(required=False, allow_blank=True)
+
 
     class Meta:
         model  = Craftsman
