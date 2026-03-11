@@ -9,9 +9,6 @@ from django.utils.text import slugify
 from django.conf import settings
 
 
-
-
-
 User = get_user_model()
 
 # Reusable service choices
@@ -31,6 +28,20 @@ PRIMARY_SERVICE_CHOICES = [
     ('Auto Repair', 'Auto Repair'),
 ]
 
+RATE_UNIT_CHOICES = [
+    ('fixed', 'Fixed Price'),
+    ('hour', 'Per Hour'),
+    ('day', 'Per Day'),
+    ('sqm', 'Per m²'),
+]
+
+EXPERIENCE_LEVEL_CHOICES = [
+    ('1-2 years', '1-2 years'),
+    ('3-5 years', '3-5 years'),
+    ('5-10 years', '5-10 years'),
+    ('10+ years', '10+ years'),
+]
+
 
 class Craftsman(models.Model):
     STATUS_CHOICES = [
@@ -41,33 +52,44 @@ class Craftsman(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     profile = models.ImageField(upload_to='profiles/', blank=True, null=True)
-    full_name = models.CharField(max_length=255, blank=True, null=True)  
+    full_name = models.CharField(max_length=255, blank=True, null=True)
 
     profession = models.CharField(max_length=100, blank=True, null=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
     member_since = models.DateField(null=True, blank=True)
     location = models.CharField(max_length=255, blank=True, null=True)
+
+    # Skills stored as comma-separated string internally; the API layer
+    # converts between list ↔ string so the frontend always sees a list.
     skills = models.TextField(blank=True, null=True)
-    proof_document   = models.FileField(upload_to='proof_documents/', blank=True, null=True)
 
+    # ── NEW ──────────────────────────────────────────────────────────
+    experience_level = models.CharField(
+        max_length=50, choices=EXPERIENCE_LEVEL_CHOICES, blank=True, null=True
+    )
+    # ─────────────────────────────────────────────────────────────────
 
+    proof_document = models.FileField(upload_to='proof_documents/', blank=True, null=True)
 
-
-
+    # Legacy single-service fields (kept for backward-compat; new code uses
+    # the related Service model instead)
     primary_service = models.CharField(
         max_length=255, choices=PRIMARY_SERVICE_CHOICES, blank=True, null=True
     )
     video = models.URLField(blank=True, null=True)
     service_image = models.ImageField(upload_to='services/', blank=True, null=True)
 
-
-
-    description = models.TextField(default="No description provided")  
+    description = models.TextField(default="No description provided")
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     is_approved = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)  # NEW FIELD - defaults to True
+    is_active = models.BooleanField(default=True)
 
+    account_type = models.CharField(
+        max_length=20,
+        choices=[('Individual', 'Individual'), ('Company', 'Company')],
+        default='Individual',
+    )
 
     slug = models.SlugField(unique=True, blank=True, null=True)
 
@@ -76,24 +98,45 @@ class Craftsman(models.Model):
             self.slug = slugify(self.user.full_name)
         super().save(*args, **kwargs)
 
-    
-
     def __str__(self):
         return self.full_name or str(self.user)
 
 
-
 class Service(models.Model):
-    craftsman = models.ForeignKey(Craftsman, on_delete=models.CASCADE, related_name='services')
-    service_name = models.CharField(max_length=255, choices=PRIMARY_SERVICE_CHOICES)
-    custom_service_name = models.CharField(max_length=255, blank=True, null=True)
+    """
+    Each craftsman can have multiple services, each with an optional rate.
+    `service_name` is used when the name matches a known choice; otherwise
+    `custom_name` holds the free-text value supplied by the craftsman.
+    """
+    craftsman = models.ForeignKey(
+        Craftsman, on_delete=models.CASCADE, related_name='services'
+    )
+    # Allow blank so we can accommodate custom free-text names
+    service_name = models.CharField(
+        max_length=255, choices=PRIMARY_SERVICE_CHOICES, blank=True, null=True
+    )
+    # ── NEW ──────────────────────────────────────────────────────────
+    custom_name = models.CharField(
+        max_length=255, blank=True, null=True,
+        help_text='Free-text name when not in the standard choices list',
+    )
+    rate = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    unit = models.CharField(
+        max_length=20, choices=RATE_UNIT_CHOICES, default='fixed', blank=True, null=True
+    )
+    # ─────────────────────────────────────────────────────────────────
     image = models.ImageField(upload_to='services/', blank=True, null=True)
     is_approved = models.BooleanField(default=False)
 
+    # Keep legacy field for backward compat
+    custom_service_name = models.CharField(max_length=255, blank=True, null=True)
+
+    def get_display_name(self):
+        """Returns the best human-readable name for this service."""
+        return self.custom_name or self.custom_service_name or self.service_name or ''
+
     def __str__(self):
-        return self.custom_service_name or self.service_name
-
-
+        return self.get_display_name()
 
 
 class ServiceVideo(models.Model):
@@ -108,16 +151,20 @@ class Product(models.Model):
     craftsman = models.ForeignKey(Craftsman, on_delete=models.CASCADE)
     name = models.CharField(max_length=100, default='Unnamed Product')
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField(default="No description provided")   # ✅ FIX HERE
-
+    description = models.TextField(default="No description provided")
     image = models.ImageField(upload_to='products/', null=True, blank=True)
     status = models.CharField(max_length=20, default='pending')
     is_approved = models.BooleanField(default=False)
 
 
 class GalleryImage(models.Model):
-    craftsman = models.ForeignKey(Craftsman, related_name='gallery_images', on_delete=models.CASCADE)
+    craftsman = models.ForeignKey(
+        Craftsman, related_name='gallery_images', on_delete=models.CASCADE
+    )
     image = models.ImageField(upload_to='craftsmen/gallery/')
+
+    def __str__(self):
+        return f"GalleryImage #{self.pk} for {self.craftsman}"
 
 
 class Review(models.Model):
@@ -131,14 +178,6 @@ class Review(models.Model):
         return f"Review by {self.reviewer} for {self.craftsman.full_name}"
 
 
-# class Client(models.Model):
-#     user = models.OneToOneField(User, on_delete=models.CASCADE)
-#     phone = models.CharField(max_length=20)
-
-#     def __str__(self):
-#         return f"{self.user.first_name} {self.user.last_name}"
-
-
 class JobRequest(models.Model):
 
     STATUS_PENDING = 'Pending'
@@ -146,8 +185,8 @@ class JobRequest(models.Model):
     STATUS_ACCEPTED = 'Accepted'
     STATUS_IN_PROGRESS = 'In Progress'
     STATUS_COMPLETED = 'Completed'
-    STATUS_QUOTE_SUBMITTED = 'Quote Submitted'  
-    STATUS_QUOTE_APPROVED = 'Quote Approved'   
+    STATUS_QUOTE_SUBMITTED = 'Quote Submitted'
+    STATUS_QUOTE_APPROVED = 'Quote Approved'
     STATUS_APPROVED = 'Approved'
     STATUS_PAID = 'Paid'
     STATUS_CANCELLED = 'Cancelled'
@@ -157,19 +196,19 @@ class JobRequest(models.Model):
         (STATUS_ASSIGNED, 'Assigned'),
         (STATUS_ACCEPTED, 'Accepted'),
         (STATUS_IN_PROGRESS, 'In Progress'),
-        (STATUS_QUOTE_SUBMITTED, 'Quote Submitted'),   
-        (STATUS_QUOTE_APPROVED, 'Quote Approved'),      
+        (STATUS_QUOTE_SUBMITTED, 'Quote Submitted'),
+        (STATUS_QUOTE_APPROVED, 'Quote Approved'),
         (STATUS_COMPLETED, 'Completed'),
         (STATUS_APPROVED, 'Approved'),
         (STATUS_PAID, 'Paid'),
         (STATUS_CANCELLED, 'Cancelled'),
     ]
 
-    # --- Foreign Keys ---
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='jobs')
-    craftsman = models.ForeignKey(Craftsman, on_delete=models.SET_NULL, null=True, blank=True, related_name='jobs')
+    craftsman = models.ForeignKey(
+        Craftsman, on_delete=models.SET_NULL, null=True, blank=True, related_name='jobs'
+    )
 
-    # --- Job Details ---
     name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
     service = models.CharField(max_length=50, choices=PRIMARY_SERVICE_CHOICES)
@@ -181,7 +220,6 @@ class JobRequest(models.Model):
     description = models.TextField(default="No description provided")
     media = models.FileField(upload_to='uploads/', blank=True, null=True)
 
-    # --- System Fields ---
     budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     distance_km = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
     start_time = models.DateTimeField(null=True, blank=True)
@@ -194,15 +232,12 @@ class JobRequest(models.Model):
     net_payment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.0'))
     quote_details = models.JSONField(blank=True, null=True)
     quote_file = models.FileField(upload_to='quotes/', null=True, blank=True)
-    quote_approved_by_client = models.BooleanField(
-        null=True, blank=True)
+    quote_approved_by_client = models.BooleanField(null=True, blank=True)
 
-    # --- Status & Tracking ---
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     review = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # --- Configurations ---
     GOOGLE_MAPS_API_KEY = getattr(settings, 'GOOGLE_MAPS_API_KEY', '')
     DEFAULT_JOB_DURATION_HOURS = 2
     COMPANY_FEE_PERCENT = Decimal('10.0')
@@ -222,16 +257,13 @@ class JobRequest(models.Model):
             return None
 
     def save(self, *args, **kwargs):
-        # Set expected end if missing
         if not self.expected_end and self.schedule:
             self.expected_end = self.schedule + timedelta(hours=self.DEFAULT_JOB_DURATION_HOURS)
 
-        # Calculate distance
         new_distance = self.calculate_distance()
         if new_distance:
             self.distance_km = new_distance
 
-        # Duration and overtime
         if self.start_time and self.end_time:
             diff_hours = (self.end_time - self.start_time).total_seconds() / 3600
             self.duration_hours = Decimal(diff_hours).quantize(Decimal('0.01'))
@@ -241,7 +273,6 @@ class JobRequest(models.Model):
             else:
                 self.overtime_hours = Decimal('0.0')
 
-        # Payment calculations
         if self.budget is not None:
             self.total_payment = (self.budget + self.overtime_hours).quantize(Decimal('0.01'))
             self.company_fee = (self.total_payment * self.COMPANY_FEE_PERCENT / 100).quantize(Decimal('0.01'))
@@ -254,27 +285,19 @@ class JobRequest(models.Model):
         if self.service == 'other' and self.custom_service:
             label = self.custom_service
         return f"{label} for {self.name} ({self.status})"
-    
 
 
 class JobProofImage(models.Model):
-    job = models.ForeignKey(
-        JobRequest,
-        related_name='proof_images',
-        on_delete=models.CASCADE
-    )
+    job = models.ForeignKey(JobRequest, related_name='proof_images', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='job_proofs/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    
 
     def __str__(self):
         return f"Proof for Job {self.job.id}"
 
 
-
 class ContactMessage(models.Model):
-    name = models.CharField(max_length=255, blank=True,default='')
-    email = models.EmailField(blank=True,default='')
+    name = models.CharField(max_length=255, blank=True, default='')
+    email = models.EmailField(blank=True, default='')
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-

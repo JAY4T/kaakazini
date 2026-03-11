@@ -1,100 +1,169 @@
-import React, { useState, useEffect } from "react";
+// ════════════════════════════════════════════════════════════════════
+//  DashboardPage.jsx
+// ════════════════════════════════════════════════════════════════════
+
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import api from "../../api/axiosClient"; 
+import api from "../../api/axiosClient";
 
 import DashboardSidebar from "../../components/craftsman/DashboardSidebar";
-import ProfileTab from "../../components/craftsman/ProfileTab";
-import JobsTab from "../../components/craftsman/JobsTab";
+import DashboardTab     from "../../components/craftsman/DashboardTab";
+import AnalyticsTab     from "../../components/craftsman/AnalyticsTab";
+import ProfileTab       from "../../components/craftsman/ProfileTab";
+import JobsTab          from "../../components/craftsman/JobsTab";
+import MembersTab       from "../../components/craftsman/MembersTab";
+import SettingsTab      from "../../components/craftsman/SettingsTab";
 
 import { getFullImageUrl } from "../../utils/getFullImageUrl";
 
+// ─── Toast system ─────────────────────────────────────────────────────────────
+const TOAST_ICONS  = { success:"✅", error:"❌", warning:"⚠️", info:"ℹ️" };
+const TOAST_STYLES = {
+  success: { bg:"#f0fdf4", border:"#86efac", color:"#15803d", bar:"#22c55e" },
+  error:   { bg:"#fef2f2", border:"#fca5a5", color:"#991b1b", bar:"#ef4444" },
+  warning: { bg:"#fffbeb", border:"#fde68a", color:"#92400e", bar:"#f59e0b" },
+  info:    { bg:"#f0fdf4", border:"#86efac", color:"#15803d", bar:"#22c55e" },
+};
+
+function ToastContainer({ toasts, removeToast }) {
+  return (
+    <>
+      <style>{`
+        .toast-container { position:fixed; top:1.5rem; right:1.5rem; z-index:9999; display:flex; flex-direction:column; gap:.75rem; max-width:380px; width:calc(100vw - 3rem); pointer-events:none; }
+        .toast-item { pointer-events:all; border-radius:14px; padding:1rem 1.25rem; display:flex; align-items:flex-start; gap:10px; box-shadow:0 8px 32px rgba(0,0,0,.12); border:2px solid; position:relative; overflow:hidden; animation:toastIn .35s cubic-bezier(.34,1.56,.64,1) forwards; font-family:'Outfit',sans-serif; }
+        .toast-item.removing { animation:toastOut .25s ease-in forwards; }
+        @keyframes toastIn  { from{opacity:0;transform:translateX(60px) scale(.92)} to{opacity:1;transform:translateX(0) scale(1)} }
+        @keyframes toastOut { from{opacity:1;transform:translateX(0) scale(1);max-height:200px} to{opacity:0;transform:translateX(60px) scale(.9);max-height:0;padding:0;margin:0} }
+        .toast-icon  { font-size:1.25rem; flex-shrink:0; line-height:1.3; }
+        .toast-body  { flex-grow:1; }
+        .toast-title { font-weight:800; font-size:.9rem; margin-bottom:2px; }
+        .toast-msg   { font-size:.85rem; font-weight:500; opacity:.9; line-height:1.4; }
+        .toast-close { background:none; border:none; cursor:pointer; font-size:1.1rem; line-height:1; padding:0; flex-shrink:0; opacity:.6; transition:opacity .2s; margin-top:-2px; }
+        .toast-close:hover { opacity:1; }
+        .toast-bar   { position:absolute; bottom:0; left:0; height:3px; border-radius:0 0 14px 14px; animation:toastBar var(--duration,4s) linear forwards; }
+        @keyframes toastBar { from{width:100%} to{width:0%} }
+        @media (max-width:480px) { .toast-container { top:1rem; right:1rem; left:1rem; width:auto; } }
+      `}</style>
+      <div className="toast-container">
+        {toasts.map(t => {
+          const s = TOAST_STYLES[t.type] || TOAST_STYLES.info;
+          return (
+            <div key={t.id} className={`toast-item ${t.removing ? "removing" : ""}`}
+              style={{background:s.bg, borderColor:s.border, color:s.color, "--duration":`${t.duration/1000}s`}}>
+              <span className="toast-icon">{TOAST_ICONS[t.type]}</span>
+              <div className="toast-body">
+                {t.title && <div className="toast-title">{t.title}</div>}
+                <div className="toast-msg">{t.message}</div>
+              </div>
+              <button className="toast-close" onClick={() => removeToast(t.id)} style={{color:s.color}}>×</button>
+              <div className="toast-bar" style={{background:s.bar}}/>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function useToast() {
+  const [toasts, setToasts] = useState([]);
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.map(t => t.id === id ? {...t, removing:true} : t));
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 280);
+  }, []);
+  const addToast = useCallback((message, type="info", title="", duration=4000) => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, {id, message, type, title, duration, removing:false}]);
+    setTimeout(() => removeToast(id), duration);
+  }, [removeToast]);
+  return { toasts, addToast, removeToast };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 function DashboardPage() {
   const navigate = useNavigate();
-  const [craftsman, setCraftsman] = useState({});
+  const { toasts, addToast, removeToast } = useToast();
+
+  const [craftsman,   setCraftsman]   = useState({});
   const [profileData, setProfileData] = useState({
-    description: "",
-    profession: "",
-    location: "",
-    company_name: "",
-    skills: [],
-    primary_service: "",
+    description: "", profession: "", experience_level: "",
+    location: "", company_name: "", skills: [], services: [],
     account_type: "Individual",
   });
 
-  const [profileImage, setProfileImage] = useState(null);
-  const [profileImageFile, setProfileImageFile] = useState(null);
-
+  // profileImage / proofDocument hold either:
+  //   • a string URL  (loaded from server — shown as preview, NOT re-uploaded)
+  //   • a File object (newly chosen by user — will be uploaded)
+  //   • null
+  const [profileImage,  setProfileImage]  = useState(null);
   const [proofDocument, setProofDocument] = useState(null);
-  const [proofDocumentFile, setProofDocumentFile] = useState(null);
 
-  const [serviceImage, setServiceImage] = useState(null);
-  const [serviceImageFile, setServiceImageFile] = useState(null);
+  // portfolioImages is the single source of truth for the gallery grid.
+  // Each entry: { id, file?, preview, url?, isExisting? }
+  //   - Existing server images:  { id: 42, url: "https://…", preview: "https://…", isExisting: true }
+  //   - Newly picked by user:    { id: 1700000.1, file: File, preview: "blob:…" }
+  const [portfolioImages,      setPortfolioImages]      = useState([]);
+  // IDs of server-side GalleryImage rows the user has deleted — sent to backend
+  const [portfolioIdsToRemove, setPortfolioIdsToRemove] = useState([]);
 
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("Profile");
+  const [jobs,      setJobs]      = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [saving,    setSaving]    = useState(false);
+  const [activeTab, setActiveTab] = useState("Dashboard");
 
-  const professionOptions = [
-    "Electrician",
-    "Plumber",
-    "Carpenter",
-    "Welder",
-    "Painter",
-    "Mechanic",
-    "WoodMaker",
-  ];
+  const accountType = profileData.account_type || craftsman.account_type || "Individual";
 
-  const skillOptions = [
-    "Wiring",
-    "Pipe Fitting",
-    "Roofing",
-    "Furniture Making",
-    "Auto Repair",
-  ];
+  const professionOptions = ["Electrician","Plumber","Carpenter","Welder","Painter","Mechanic","WoodMaker","Mason","Tiler","Roofer","AC Technician","Landscaper"];
+  const skillOptions      = ["Wiring","Pipe Fitting","Roofing","Furniture Making","Auto Repair","Welding","Tiling","Plastering","Painting"];
+  const serviceOptions    = ["Plumbing","Electrical","Carpentry","Painting","Roofing","Welding","Tiling","Interior Design","Landscaping","Masonry","AC Repair","Woodwork","Auto Repair","Tarmacking","Fencing","Borehole Drilling"];
 
-  const serviceOptions = [
-    "Plumbing",
-    "Electrical",
-    "Carpentry",
-    "Painting",
-    "Roofing",
-    "Welding",
-    "Tiling",
-    "Interior Design",
-    "Landscaping",
-    "Masonry",
-    "AC Repair",
-    "Woodwork",
-    "Auto Repair",
-  ];
+  useEffect(() => { fetchCraftsmanData(); fetchAssignedJobs(); }, []);
 
-  useEffect(() => {
-    fetchCraftsmanData();
-    fetchAssignedJobs();
-  }, []);
-
+  // ── Load profile from API ────────────────────────────────────────────────
   const fetchCraftsmanData = async () => {
     try {
-      const res = await api.get("/craftsman/");
-      const data = res.data;
-
+      const { data } = await api.get("/craftsman/");
       setCraftsman(data);
+
       setProfileData({
-        description: data.description || "",
-        profession: data.profession || "",
-        location: data.location || "",
-        company_name: data.company_name || "",
+        description:      data.description      || "",
+        profession:       data.profession        || "",
+        experience_level: data.experience_level  || "",
+        location:         data.location          || "",
+        company_name:     data.company_name      || "",
+        account_type:     data.account_type      || "Individual",
+        // skills comes back as an array from the serializer's get_skills()
         skills: Array.isArray(data.skills) ? data.skills : [],
-        primary_service: data.primary_service || "",
-        account_type: data.account_type || "Individual",
+        // services: each has { id, name, rate, unit } from ServiceSerializer
+        services: Array.isArray(data.services)
+          ? data.services.map(s => ({
+              id:   s.id,
+              name: s.name,
+              rate: s.rate   ? parseFloat(s.rate) : null,
+              unit: s.unit   || "fixed",
+            }))
+          : [],
       });
 
-      setProfileImage(getFullImageUrl(data.profile_url));
-      setServiceImage(getFullImageUrl(data.service_image_url));
-      setProofDocument(getFullImageUrl(data.proof_document_url));
+      // Store as URL strings — FileInput shows them as existing previews
+      setProfileImage(data.profile_url   ? getFullImageUrl(data.profile_url)        : null);
+      setProofDocument(data.proof_document_url ? getFullImageUrl(data.proof_document_url) : null);
+
+      // gallery_images comes from GalleryImageSerializer: [{ id, image_url }]
+      if (Array.isArray(data.gallery_images)) {
+        setPortfolioImages(
+          data.gallery_images.map(img => ({
+            id:         img.id,
+            url:        img.image_url,
+            preview:    getFullImageUrl(img.image_url),
+            isExisting: true,
+          }))
+        );
+      }
     } catch (err) {
-      console.error("Error fetching craftsman data", err);
+      console.error("fetchCraftsmanData error:", err);
+      addToast("Failed to load your profile. Please refresh.", "error", "Load Error");
     } finally {
       setLoading(false);
     }
@@ -102,362 +171,201 @@ function DashboardPage() {
 
   const fetchAssignedJobs = async () => {
     try {
-      const res = await api.get("/job-requests/");
-      setJobs(res.data || []);
+      const { data } = await api.get("/job-requests/");
+      setJobs(data || []);
     } catch (err) {
-      console.error("Error fetching jobs", err);
+      console.error("fetchAssignedJobs error:", err);
     }
   };
 
+  // ── File handlers ────────────────────────────────────────────────────────
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    setProfileImageFile(file);
-    setProfileImage(URL.createObjectURL(file));
+    // Store the File object — buildFormData will detect instanceof File and upload it
+    setProfileImage(file);
   };
 
   const handleProofDocumentChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    setProofDocumentFile(file);
-    setProofDocument(URL.createObjectURL(file));
+    setProofDocument(file);
   };
 
-  const handleServiceImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setServiceImageFile(file);
-    setServiceImage(URL.createObjectURL(file));
+  // ── Portfolio handlers ───────────────────────────────────────────────────
+  const handlePortfolioAdd = (imgObj) => {
+    // imgObj = { id: Date.now()+Math.random(), file: File, preview: "blob:…" }
+    setPortfolioImages(prev => [...prev, imgObj]);
   };
 
-  const saveProfile = async () => {
-    try {
-      const formData = new FormData();
-
-      Object.entries(profileData).forEach(([k, v]) => {
-        if (Array.isArray(v)) {
-          v.forEach((item) => formData.append(`${k}[]`, item));
-        } else {
-          formData.append(k, v);
-        }
-      });
-
-      if (profileImageFile) formData.append("profile", profileImageFile);
-      if (proofDocumentFile) formData.append("proof_document", proofDocumentFile);
-      if (serviceImageFile) formData.append("service_image", serviceImageFile);
-
-      const res = await api.patch("/craftsman/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-       setCraftsman(res.data);
-      setProfileImage(getFullImageUrl(res.data.profile_url));           
-      setServiceImage(getFullImageUrl(res.data.service_image_url));
-      setProofDocument(getFullImageUrl(res.data.proof_document_url));   
-      alert("Profile Saved Successfully! Pending Approval");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save profile.");
+  const handlePortfolioRemove = (id) => {
+    const img = portfolioImages.find(i => (i.id ?? i) === id);
+    // Remove from display list
+    setPortfolioImages(prev => prev.filter(i => (i.id ?? i) !== id));
+    // If it was a server-side image, queue its ID for deletion
+    if (img?.isExisting && typeof img.id === "number") {
+      setPortfolioIdsToRemove(prev => [...prev, img.id]);
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #fbbf24 0%, #22c55e 100%)'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner-border text-light" role="status" style={{ width: '4rem', height: '4rem' }}>
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="mt-3 text-light fw-bold" style={{ fontSize: '1.1rem', letterSpacing: '0.5px' }}>Loading your dashboard...</p>
-        </div>
+  // ── Logout ───────────────────────────────────────────────────────────────
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
+  // ── Save Profile ─────────────────────────────────────────────────────────
+  // ProfileTab calls this with a ready FormData object built by buildFormData().
+  // We just send it to the API.
+  const saveProfile = async (formData) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      // Do NOT set Content-Type header — axios sets multipart/form-data with
+      // the correct boundary automatically when body is FormData.
+      const { data } = await api.patch("/craftsman/", formData);
+
+      // Sync all state back from the server response so IDs are correct
+      setCraftsman(data);
+      setProfileImage(data.profile_url ? getFullImageUrl(data.profile_url) : null);
+      setProofDocument(data.proof_document_url ? getFullImageUrl(data.proof_document_url) : null);
+
+      if (Array.isArray(data.gallery_images)) {
+        setPortfolioImages(
+          data.gallery_images.map(img => ({
+            id:         img.id,
+            url:        img.image_url,
+            preview:    getFullImageUrl(img.image_url),
+            isExisting: true,
+          }))
+        );
+      }
+
+      // Re-sync profileData from response so services/skills IDs are fresh
+      setProfileData(prev => ({
+        ...prev,
+        skills: Array.isArray(data.skills) ? data.skills : prev.skills,
+        services: Array.isArray(data.services)
+          ? data.services.map(s => ({
+              id:   s.id,
+              name: s.name,
+              rate: s.rate ? parseFloat(s.rate) : null,
+              unit: s.unit || "fixed",
+            }))
+          : prev.services,
+        experience_level: data.experience_level || prev.experience_level,
+      }));
+
+      // Clear pending removes — they've been processed
+      setPortfolioIdsToRemove([]);
+
+      addToast("Profile saved! .", "success", "Profile Saved!", 5000);
+    } catch (err) {
+      console.error("saveProfile error:", err.response?.data || err);
+      const msg = err.response?.data?.detail
+        || Object.values(err.response?.data || {})[0]
+        || "Something went wrong. Please try again.";
+      addToast(typeof msg === "string" ? msg : JSON.stringify(msg), "error", "Save Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Loading screen ───────────────────────────────────────────────────────
+  if (loading) return (
+    <div style={{minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#fbbf24,#22c55e)"}}>
+      <div style={{textAlign:"center"}}>
+        <div className="spinner-border text-light" role="status" style={{width:"4rem",height:"4rem"}}/>
+        <p className="mt-3 text-light fw-bold">Loading your dashboard…</p>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        .dashboard-container { min-height:100vh; background:white; display:flex; font-family:'Outfit',sans-serif; }
+        .main-content { flex-grow:1; padding:2.5rem; background:#f8fafc; min-height:100vh; }
 
-        /* Global Styles */
-        .dashboard-container {
-          min-height: 100vh;
-          background: white;
-          display: flex;
-          font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-
-        .main-content {
-          flex-grow: 1;
-          padding: 2.5rem;
-          background: transparent;
-          min-height: 100vh;
-        }
-
-        /* Tab Header - Yellow/Green Gradient */
         .tab-header {
-          background: linear-gradient(135deg, #fbbf24 0%, #22c55e 100%);
-          color: #1f2937;
-          padding: 2.5rem;
-          border-radius: 20px;
-          margin-bottom: 2rem;
-          box-shadow: 0 20px 50px rgba(251, 191, 36, 0.25);
-          position: relative;
-          overflow: hidden;
-          border: 2px solid rgba(255, 255, 255, 0.4);
+          background:linear-gradient(135deg,#fbbf24 0%,#22c55e 100%);
+          color:#1f2937; padding:2.5rem; border-radius:20px; margin-bottom:2rem;
+          box-shadow:0 20px 50px rgba(251,191,36,.2);
+          position:relative; overflow:hidden; border:2px solid rgba(255,255,255,.4);
         }
+        .tab-header h2 { font-size:2.25rem; font-weight:800; margin:0; }
+        .tab-header p  { margin:.75rem 0 0; opacity:.85; font-size:1.05rem; font-weight:500; }
 
-        .tab-header::before {
-          content: '';
-          position: absolute;
-          top: -50%;
-          right: -20%;
-          width: 120%;
-          height: 120%;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
-          border-radius: 50%;
-          animation: float 6s ease-in-out infinite;
-        }
+        .tab-header.dark { background:linear-gradient(135deg,#0d1520,#141f2e); color:#f1f5f9; border-color:rgba(34,197,94,.15); box-shadow:0 20px 50px rgba(0,0,0,.2); }
+        .tab-header.dark h2 { color:#f1f5f9; }
+        .tab-header.dark p  { color:#64748b; }
 
-        @keyframes float {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(-20px, -20px) rotate(5deg); }
-        }
-
-        .tab-header h2 {
-          font-size: 2.25rem;
-          font-weight: 800;
-          margin: 0;
-          position: relative;
-          z-index: 1;
-          letter-spacing: -0.5px;
-        }
-
-        .tab-header p {
-          margin: 0.75rem 0 0 0;
-          opacity: 0.85;
-          font-size: 1.05rem;
-          position: relative;
-          z-index: 1;
-          font-weight: 500;
-        }
-
-        /* Content Card */
         .content-card {
-          background: white;
-          border-radius: 20px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
-          padding: 2.5rem;
-          margin-bottom: 2rem;
-          border: 2px solid rgba(251, 191, 36, 0.15);
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          overflow: hidden;
+          background:white; border-radius:20px;
+          box-shadow:0 10px 40px rgba(0,0,0,.06);
+          padding:2.5rem; margin-bottom:2rem;
+          border:2px solid rgba(251,191,36,.1);
+          position:relative; overflow:hidden;
         }
+        .content-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#fbbf24,#22c55e); }
+        .content-card.dark    { background:transparent; box-shadow:none; padding:0; border:none; }
+        .content-card.dark::before { display:none; }
 
-        .content-card::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: linear-gradient(90deg, #fbbf24 0%, #22c55e 100%);
-        }
-
-        .content-card:hover {
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-          transform: translateY(-4px);
-          border-color: rgba(34, 197, 94, 0.3);
-        }
-
-        /* Settings Placeholder */
-        .settings-placeholder {
-          text-align: center;
-          padding: 5rem 2rem;
-          background: white;
-          border-radius: 20px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
-          border: 2px solid rgba(251, 191, 36, 0.15);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .settings-placeholder::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: linear-gradient(90deg, #fbbf24 0%, #22c55e 100%);
-        }
-
-        .settings-placeholder svg {
-          width: 140px;
-          height: 140px;
-          margin-bottom: 2rem;
-          opacity: 0.2;
-          color: #fbbf24;
-          animation: pulse 3s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 0.2; transform: scale(1); }
-          50% { opacity: 0.3; transform: scale(1.05); }
-        }
-
-        .settings-placeholder h3 {
-          background: linear-gradient(135deg, #fbbf24 0%, #22c55e 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          font-weight: 800;
-          margin-bottom: 0.75rem;
-          font-size: 1.75rem;
-          letter-spacing: -0.5px;
-        }
-
-        .settings-placeholder p {
-          color: #6b7280;
-          font-size: 1.05rem;
-          font-weight: 500;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-          .main-content {
-            padding: 1.25rem;
-          }
-
-          .tab-header {
-            padding: 2rem;
-            border-radius: 16px;
-          }
-
-          .tab-header h2 {
-            font-size: 1.75rem;
-          }
-
-          .content-card {
-            padding: 1.75rem;
-            border-radius: 16px;
-          }
-
-          .settings-placeholder {
-            padding: 3rem 1.5rem;
-          }
-        }
-
-        @media (max-width: 576px) {
-          .main-content {
-            padding: 1rem;
-          }
-
-          .tab-header {
-            padding: 1.5rem;
-            border-radius: 12px;
-          }
-
-          .tab-header h2 {
-            font-size: 1.5rem;
-          }
-
-          .tab-header p {
-            font-size: 0.95rem;
-          }
-
-          .content-card {
-            padding: 1.25rem;
-            border-radius: 12px;
-          }
-
-          .settings-placeholder svg {
-            width: 100px;
-            height: 100px;
-          }
-
-          .settings-placeholder h3 {
-            font-size: 1.5rem;
-          }
-        }
-
-        /* Status Badge */
-        .status-badge {
-          display: inline-block;
-          padding: 0.6rem 1.25rem;
-          border-radius: 50px;
-          font-weight: 700;
-          font-size: 0.875rem;
-          margin-top: 1rem;
-          letter-spacing: 0.3px;
-          text-transform: uppercase;
-          border: 2px solid rgba(255, 255, 255, 0.5);
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-        }
-
-        .status-pending {
-          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-          color: #92400e;
-        }
-
-        .status-approved {
-          background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-          color: #065f46;
-        }
-
-        .status-rejected {
-          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-          color: #991b1b;
-        }
-
-        /* Animation */
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .content-card,
-        .settings-placeholder {
-          animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .tab-header {
-          animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        @media (max-width:768px) {
+          .main-content  { padding:1rem; }
+          .tab-header    { padding:1.5rem; border-radius:14px; }
+          .tab-header h2 { font-size:1.5rem; }
+          .content-card  { padding:1.25rem; border-radius:14px; }
         }
       `}</style>
 
+      <ToastContainer toasts={toasts} removeToast={removeToast}/>
+
       <div className="dashboard-container">
-        <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <DashboardSidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          handleLogout={handleLogout}
+          accountType={accountType}
+        />
 
         <div className="main-content">
+
+          {/* ── Dashboard ── */}
+          {activeTab === "Dashboard" && (
+            <>
+              <div className="tab-header">
+                <h2>Dashboard</h2>
+                <p>Your performance overview and recent activity</p>
+              </div>
+              <div className="content-card">
+                <DashboardTab craftsman={craftsman} jobs={jobs}/>
+              </div>
+            </>
+          )}
+
+          {/* ── Analytics ── */}
+          {activeTab === "Analytics" && (
+            <>
+              <div className="tab-header dark">
+                <h2>Analytics</h2>
+                <p>Deep-dive into your earnings, job trends and service performance</p>
+              </div>
+              <div className="content-card dark">
+                <AnalyticsTab craftsman={craftsman} jobs={jobs}/>
+              </div>
+            </>
+          )}
+
+          {/* ── Profile ── */}
           {activeTab === "Profile" && (
             <>
               <div className="tab-header">
-                <h2>👤 My Profile</h2>
-                <p>Manage your professional information and showcase your skills</p>
-                {craftsman.status && (
-                  <span className={`status-badge status-${craftsman.status}`}>
-                    {craftsman.status}
-                  </span>
-                )}
+                <h2>My Profile</h2>
+                <p>Manage your professional information, services and work portfolio</p>
               </div>
-              
               <div className="content-card">
                 <ProfileTab
                   craftsman={craftsman}
@@ -470,44 +378,62 @@ function DashboardPage() {
                   professionOptions={professionOptions}
                   skillOptions={skillOptions}
                   serviceOptions={serviceOptions}
-                  serviceImage={serviceImage}
-                  handleServiceImageChange={handleServiceImageChange}
+                  portfolioImages={portfolioImages}
+                  onPortfolioAdd={handlePortfolioAdd}
+                  onPortfolioRemove={handlePortfolioRemove}
+                  portfolioRemoveIds={portfolioIdsToRemove}
                   saveProfile={saveProfile}
+                  saving={saving}
+                  addToast={addToast}
                 />
               </div>
             </>
           )}
 
+          {/* ── Jobs ── */}
           {activeTab === "Jobs" && (
             <>
               <div className="tab-header">
-                <h2>💼 My Jobs</h2>
+                <h2>My Jobs</h2>
                 <p>View and manage your assigned job requests</p>
               </div>
-              
               <div className="content-card">
-                <JobsTab jobs={jobs} setJobs={setJobs} userRole="craftsman" />
+                <JobsTab jobs={jobs} setJobs={setJobs} userRole="craftsman" addToast={addToast}/>
               </div>
             </>
           )}
 
-          {activeTab === "Settings" && (
+          {/* ── Team Members (Company only) ── */}
+          {activeTab === "Members" && accountType === "Company" && (
             <>
               <div className="tab-header">
-                <h2>⚙️ Settings</h2>
-                <p>Configure your account preferences and privacy settings</p>
+                <h2>Team Members</h2>
+                <p>Invite helpers and foremen to collaborate on your jobs</p>
+                {craftsman.company_name && (
+                  <span style={{display:"inline-block",marginTop:".75rem",background:"rgba(255,255,255,.25)",color:"#1f2937",padding:"4px 14px",borderRadius:"50px",fontSize:".8rem",fontWeight:700,border:"1.5px solid rgba(255,255,255,.4)"}}>
+                    {craftsman.company_name}
+                  </span>
+                )}
               </div>
-              
-              <div className="settings-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <h3>Settings Coming Soon</h3>
-                <p>We're working on bringing you powerful settings to customize your experience.</p>
+              <div className="content-card">
+                <MembersTab craftsman={craftsman} addToast={addToast}/>
               </div>
             </>
           )}
+
+          {/* ── Settings ── */}
+          {activeTab === "Settings" && (
+            <>
+              <div className="tab-header">
+                <h2>Settings</h2>
+                <p>Manage your account, notifications, security and appearance</p>
+              </div>
+              <div className="content-card">
+                <SettingsTab craftsman={craftsman} addToast={addToast}/>
+              </div>
+            </>
+          )}
+
         </div>
       </div>
     </>

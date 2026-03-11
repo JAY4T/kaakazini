@@ -577,25 +577,23 @@ function CraftsmanProfile() {
           {/* Portfolio/Gallery Section */}
           <div className="section-card">
             <h2 className="section-title">Portfolio & Work Gallery</h2>
-            {services.length > 0 ? (
-              <div className="gallery-scroll">
-                {services.map((service, index) => {
-                  const imageUrl = getFullImageUrl(service.service_image_url);
-                  return (
-                    <div key={index} className="gallery-item">
-                      <img
-                        src={imageUrl}
-                        alt={`Project ${index + 1}`}
-                        className="gallery-image"
-                        onError={(e) => (e.target.src = 'https://via.placeholder.com/180')}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="empty-state">No portfolio images available yet</div>
-            )}
+            {craftsman.gallery_images?.length > 0 ? (
+  <div className="gallery-scroll">
+    {craftsman.gallery_images.map((img, index) => (
+      <div key={img.id || index} className="gallery-item">
+        <img
+          src={getFullImageUrl(img.image_url)}
+          alt={`Project ${index + 1}`}
+          className="gallery-image"
+          onError={(e) => (e.target.src = 'https://via.placeholder.com/180')}
+        />
+      </div>
+    ))}
+  </div>
+) : (
+  <div className="empty-state">No portfolio images available yet</div>
+)}
+
           </div>
 
           {/* Shop Section */}

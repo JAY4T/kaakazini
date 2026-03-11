@@ -1,623 +1,322 @@
 import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
-import { Modal, Button, Badge, Form, Row, Col, Card, Alert, ProgressBar } from "react-bootstrap";
-import { 
+import { Modal, Form, Row, Col } from "react-bootstrap";
+import {
   FaPhone, FaComments, FaClock, FaCheckCircle, FaTimesCircle,
-  FaFileAlt, FaCamera, FaMoneyBillWave, FaStar, FaEnvelope, FaSms, FaWhatsapp, FaDownload,
-  FaPlus, FaTrash, FaEdit, FaMapMarkerAlt, FaCalendarAlt, FaExclamationTriangle, FaInfoCircle
+  FaFileAlt, FaCamera, FaMoneyBillWave, FaStar, FaEnvelope,
+  FaSms, FaWhatsapp, FaDownload, FaPlus, FaTrash, FaEdit,
+  FaMapMarkerAlt, FaCalendarAlt, FaExclamationTriangle, FaInfoCircle,
+  FaBriefcase, FaArrowRight, FaTools, FaHardHat,
 } from "react-icons/fa";
 import api from "../../api/axiosClient";
 import jsPDF from "jspdf";
 
-const COMPANY_FEE_PERCENT = 10;
-
-function JobsTab({ jobs: initialJobs = [], setJobs }) {
-  const [jobs, setLocalJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [proofFiles, setProofFiles] = useState([]);
-  const [progressPhotos, setProgressPhotos] = useState([]);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [showQuoteForm, setShowQuoteForm] = useState(false);
-  const [showSendQuote, setShowSendQuote] = useState(false);
-  const [sendMethod, setSendMethod] = useState("email");
-  const [quoteDetails, setQuoteDetails] = useState({
-    plumberName: "",
-    items: [{ desc: "", qty: 1, price: 0 }],
-    workType: "",
-    duration: "",
-    startDate: "",
-    completionDate: "",
-    paymentTerms: "50% Deposit, 50% on Completion",
-    notes: "",
-    user: null,
-    client: null,
-  });
-
-  const timerRef = useRef(null);
-
-  useEffect(() => {
-    setLocalJobs(initialJobs || []);
-  }, [initialJobs]);
-
-  useEffect(() => {
-    if (!selectedJob) return clearTimer();
-    const status = normalizedStatus(selectedJob.status);
-    if (["inprogress"].includes(status)) {
-      startTimerFrom(selectedJob.start_time);
-    } else {
-      clearTimer();
-    }
-    return () => clearTimer();
-  }, [selectedJob]);
-
-  const normalizedStatus = (status) =>
-    (status || "").toString().toLowerCase().replace(/[_\s]/g, "");
-
-  const clearTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
-    setElapsed(0);
-  };
-
-  const startTimerFrom = (startISO) => {
-    clearTimer();
-    const start = startISO ? new Date(startISO) : new Date();
-    const update = () =>
-      setElapsed(Math.floor(Math.max(0, new Date() - start) / 1000));
-    update();
-    timerRef.current = setInterval(update, 1000);
-  };
-
-  const formatTime = (seconds) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleViewJob = (job) => {
-    setSelectedJob(job);
-    setProofFiles([]);
-    setProgressPhotos([]);
-    setShowQuoteForm(false);
-    setShowSendQuote(false);
-    
-    // Load existing quote details if available
-    const existingQuote = job.quote_details ? (typeof job.quote_details === 'string' ? JSON.parse(job.quote_details) : job.quote_details) : null;
-    
-    setQuoteDetails(existingQuote || {
-      plumberName: job.craftsman?.full_name || "",
-      items: [{ desc: job.service || "", qty: 1, price: job.budget || 0 }],
-      workType: "",
-      duration: "",
-      startDate: "",
-      completionDate: "",
-      paymentTerms: "50% Deposit, 50% on Completion",
-      notes: "",
-      user: job.craftsman || null,
-      client: job.client || null,
-    });
-  };
-
-  const handleClose = () => {
-    setSelectedJob(null);
-    setProofFiles([]);
-    setProgressPhotos([]);
-    setActionLoading(false);
-    setShowQuoteForm(false);
-    setShowSendQuote(false);
-    clearTimer();
-  };
-
-  const updateJobStatus = async (jobId, action, payload = null) => {
-  try {
-    setActionLoading(true);
-
-    if (action === "accept") {
-      await api.post(`/job-requests/${jobId}/accept/`);
-    }
-
-    else if (action === "reject") {
-      await api.post(`/job-requests/${jobId}/reject/`);
-    }
-
-    else if (action === "start") {
-      await api.post(`/job-requests/${jobId}/start/`);
-    }
-
-    else if (action === "complete") {
-      const formData = new FormData();
-
-      if (payload?.files) {
-        Array.from(payload.files).forEach((file) =>
-          formData.append("proof_files", file)
-        );
-      }
-
-      await api.post(`/job-requests/${jobId}/complete/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
-    }
-
-    else if (action === "confirm-received") {
-      await api.post(`/job-requests/${jobId}/confirm-payment/`);
-    }
-
-    else if (action === "submit-quote") {
-      const formData = new FormData();
-      formData.append("quote_details", JSON.stringify(payload.quote));
-
-      await api.post(
-        `/job-requests/${jobId}/submit-quote/`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-    }
-
-    const { data } = await api.get(`/job-requests/${jobId}/`);
-    applyUpdatedJob(data);
-
-    alert(`✅ Job ${action} successful!`);
-
-  } catch (err) {
-    console.error(err.response?.data);
-    alert(`❌ Failed to ${action} job.`);
-  } finally {
-    setActionLoading(false);
-  }
+// ─── Status config — source of truth ────────────────────────────────────────
+const STATUS = {
+  pending:        { label:"Pending",               color:"#78716c", bg:"#f5f5f4", dot:"#a8a29e",  step:1  },
+  assigned:       { label:"Assigned to You",       color:"#1d4ed8", bg:"#eff6ff", dot:"#3b82f6",  step:2  },
+  accepted:       { label:"Accepted",              color:"#15803d", bg:"#f0fdf4", dot:"#22c55e",  step:3  },
+  quotesubmitted: { label:"Quote Submitted",       color:"#b45309", bg:"#fffbeb", dot:"#f59e0b",  step:4  },
+  quoteapproved:  { label:"Quote Approved",        color:"#0f766e", bg:"#f0fdfa", dot:"#14b8a6",  step:5  },
+  inprogress:     { label:"In Progress",           color:"#9a3412", bg:"#fff7ed", dot:"#f97316",  step:6  },
+  completed:      { label:"Awaiting Confirmation", color:"#1e40af", bg:"#eff6ff", dot:"#3b82f6",  step:7  },
+  paymentpending: { label:"Payment Pending",       color:"#92400e", bg:"#fffbeb", dot:"#f59e0b",  step:8  },
+  paid:           { label:"Paid & Closed",         color:"#166534", bg:"#f0fdf4", dot:"#16a34a",  step:9  },
+  rejected:       { label:"Rejected",              color:"#991b1b", bg:"#fef2f2", dot:"#ef4444",  step:0  },
 };
 
-  const applyUpdatedJob = (updatedJob) => {
-    setJobs?.((prev) =>
-      Array.isArray(prev)
-        ? prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
-        : prev
-    );
+const norm = s => (s || "").toLowerCase().replace(/[_\s]/g, "");
+const getStatus = s => STATUS[norm(s)] || { label: s, color:"#6b7280", bg:"#f9fafb", dot:"#9ca3af", step:0 };
 
-    setLocalJobs((prev) =>
-      Array.isArray(prev)
-        ? prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
-        : prev
-    );
+function JobsTab({ jobs: initialJobs = [], setJobs, addToast }) {
+  const [jobs, setLocalJobs]       = useState([]);
+  const [selected, setSelected]    = useState(null);
+  const [proofFiles, setProofFiles]= useState([]);
+  const [actionLoading, setAction] = useState(false);
+  const [elapsed, setElapsed]      = useState(0);
+  const [showQuote, setShowQuote]  = useState(false);
+  const [showSend, setShowSend]    = useState(false);
+  const [sendMethod, setSend]      = useState("email");
+  const [filter, setFilter]        = useState("all");
+  const [quoteDetails, setQuote]   = useState({
+    plumberName:"", items:[{ desc:"", qty:1, price:0 }],
+    workType:"", duration:"", startDate:"", completionDate:"",
+    paymentTerms:"50% Deposit, 50% on Completion", notes:"",
+    user:null, client:null,
+  });
+  const timerRef = useRef(null);
 
-    setSelectedJob(updatedJob);
+  useEffect(() => { setLocalJobs(initialJobs || []); }, [initialJobs]);
+
+  useEffect(() => {
+    if (!selected) return clearTimer();
+    if (norm(selected.status) === "inprogress") startTimerFrom(selected.start_time);
+    else clearTimer();
+    return clearTimer;
+  }, [selected]);
+
+  const clearTimer = () => { clearInterval(timerRef.current); timerRef.current = null; setElapsed(0); };
+  const startTimerFrom = (iso) => {
+    clearTimer();
+    const start = iso ? new Date(iso) : new Date();
+    const tick = () => setElapsed(Math.floor(Math.max(0, new Date() - start) / 1000));
+    tick(); timerRef.current = setInterval(tick, 1000);
+  };
+  const fmt = (s) => `${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+
+  const openJob = (job) => {
+    setSelected(job); setProofFiles([]); setShowQuote(false); setShowSend(false);
+    const eq = job.quote_details ? (typeof job.quote_details==="string" ? JSON.parse(job.quote_details) : job.quote_details) : null;
+    setQuote(eq || { plumberName: job.craftsman?.full_name||"", items:[{desc:job.service||"",qty:1,price:job.budget||0}], workType:"", duration:"", startDate:"", completionDate:"", paymentTerms:"50% Deposit, 50% on Completion", notes:"", user:job.craftsman||null, client:job.client||null });
+  };
+  const closeJob = () => { setSelected(null); setProofFiles([]); setAction(false); setShowQuote(false); setShowSend(false); clearTimer(); };
+
+  const doAction = async (jobId, action, payload=null) => {
+    try {
+      setAction(true);
+      if (action==="accept")            await api.post(`/job-requests/${jobId}/accept/`);
+      else if (action==="reject")       await api.post(`/job-requests/${jobId}/reject/`);
+      else if (action==="start")        await api.post(`/job-requests/${jobId}/start/`);
+      else if (action==="complete") {
+        const fd = new FormData();
+        if (payload?.files) Array.from(payload.files).forEach(f => fd.append("proof_files",f));
+        await api.post(`/job-requests/${jobId}/complete/`, fd, { headers:{"Content-Type":"multipart/form-data"} });
+      }
+      else if (action==="confirm-received") await api.post(`/job-requests/${jobId}/confirm-payment/`);
+      else if (action==="submit-quote") {
+        const fd = new FormData();
+        fd.append("quote_details", JSON.stringify(payload.quote));
+        await api.post(`/job-requests/${jobId}/submit-quote/`, fd, { headers:{"Content-Type":"multipart/form-data"} });
+      }
+      const { data } = await api.get(`/job-requests/${jobId}/`);
+      const update = prev => Array.isArray(prev) ? prev.map(j => j.id===data.id ? data : j) : prev;
+      setJobs?.(update); setLocalJobs(update); setSelected(data);
+      const msgs = {
+        accept:            ["Job accepted! Get in touch with the client.", "success","Accepted"],
+        reject:            ["Job declined.",                               "warning","Declined"],
+        start:             ["Job started — timer running.",               "info",   "Started"],
+        complete:          ["Marked complete. Awaiting client sign-off.", "success","Complete"],
+        "confirm-received":["Payment confirmed. Job closed.",             "success","Paid"],
+        "submit-quote":    ["Quote submitted.",                           "success","Quote Sent"],
+      };
+      const m = msgs[action]||["Done","success","Done"];
+      addToast?.(m[0], m[1], m[2], 5000);
+    } catch(e) {
+      addToast?.(`Failed to ${action}. Try again.`, "error", "Error");
+    } finally { setAction(false); }
   };
 
-  const addQuoteItem = () => {
-    setQuoteDetails({
-      ...quoteDetails,
-      items: [...quoteDetails.items, { desc: "", qty: 1, price: 0 }]
-    });
+  const calcTotal = () => quoteDetails.items.reduce((s,i) => s + i.qty*i.price, 0);
+  const addItem   = () => setQuote({...quoteDetails, items:[...quoteDetails.items,{desc:"",qty:1,price:0}]});
+  const removeItem= (i)=> setQuote({...quoteDetails, items:quoteDetails.items.filter((_,idx)=>idx!==i)});
+  const updateItem= (i,f,v)=>{ const it=[...quoteDetails.items]; it[i][f]=v; setQuote({...quoteDetails,items:it}); };
+
+  const submitQuote = async () => {
+    if (quoteDetails.items.some(i=>!i.desc||!i.price)) { addToast?.("Fill all item descriptions and prices.","warning","Incomplete"); return; }
+    await doAction(selected.id,"submit-quote",{ quote:{...quoteDetails,total:calcTotal(),quoteNumber:`QTN-${selected.id}-${Date.now()}`,date:new Date().toLocaleDateString()} });
+    setShowQuote(false); setTimeout(()=>setShowSend(true),500);
   };
 
-  const updateQuoteItem = (index, field, value) => {
-    const newItems = [...quoteDetails.items];
-    newItems[index][field] = value;
-    setQuoteDetails({ ...quoteDetails, items: newItems });
-  };
-
-  const removeQuoteItem = (index) => {
-    const newItems = quoteDetails.items.filter((_, i) => i !== index);
-    setQuoteDetails({ ...quoteDetails, items: newItems });
-  };
-
-  const calculateTotal = () => {
-    return quoteDetails.items.reduce((sum, item) => {
-      return sum + (item.qty * item.price);
-    }, 0);
-  };
-
-  const handleSubmitQuote = async () => {
-    if (quoteDetails.items.some(item => !item.desc || !item.price)) {
-      return alert("Please fill all item details");
-    }
-
-    const quotePayload = {
-      ...quoteDetails,
-      total: calculateTotal(),
-      quoteNumber: `QTN-${selectedJob.id}-${Date.now()}`,
-      date: new Date().toLocaleDateString(),
-    };
-
-    await updateJobStatus(selectedJob.id, "submit-quote", { quote: quotePayload });
-    setShowQuoteForm(false);
-    
-    setTimeout(() => {
-      setShowSendQuote(true);
-    }, 500);
-  };
-
-  const generateQuotePDF = () => {
-    const doc = new jsPDF();
-    const lineHeight = 8;
-    let y = 20;
-
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text("QUOTATION", 105, y, { align: "center" });
-    
-    y += 15;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    
-    doc.setFont("helvetica", "bold");
-    doc.text("FROM:", 14, y);
-    doc.setFont("helvetica", "normal");
-    y += lineHeight;
-    doc.text(quoteDetails.plumberName || "Craftsman Name", 14, y);
-    y += lineHeight;
-    doc.text(`Phone: ${quoteDetails.user?.phone || "N/A"}`, 14, y);
-    y += lineHeight;
-    doc.text(`Email: ${quoteDetails.user?.email || "N/A"}`, 14, y);
-    
-    y += lineHeight * 2;
-    doc.setFont("helvetica", "bold");
-    doc.text("TO:", 14, y);
-    doc.setFont("helvetica", "normal");
-    y += lineHeight;
-    doc.text(quoteDetails.client?.full_name || "Client Name", 14, y);
-    y += lineHeight;
-    doc.text(`Phone: ${quoteDetails.client?.phone || "N/A"}`, 14, y);
-    
-    y += lineHeight * 2;
-    doc.text(`Quote Number: QTN-${selectedJob.id}`, 14, y);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 120, y);
-    
-    y += lineHeight * 2;
-    
-    doc.setFont("helvetica", "bold");
-    doc.setFillColor(34, 197, 94);
-    doc.rect(14, y - 5, 182, 8, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.text("Description", 16, y);
-    doc.text("Qty", 120, y);
-    doc.text("Unit Price", 140, y);
-    doc.text("Total", 170, y);
-    
-    y += lineHeight;
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 0, 0);
-    
-    let subtotal = 0;
-    quoteDetails.items.forEach((item) => {
-      const total = item.qty * item.price;
-      subtotal += total;
-      
-      doc.text(item.desc, 16, y);
-      doc.text(item.qty.toString(), 120, y);
-      doc.text(`KSh ${item.price.toLocaleString()}`, 140, y);
-      doc.text(`KSh ${total.toLocaleString()}`, 170, y);
-      y += lineHeight;
-    });
-    
-    y += lineHeight;
-    doc.setFont("helvetica", "bold");
-    doc.text(`TOTAL: KSh ${subtotal.toLocaleString()}`, 140, y);
-    
-    y += lineHeight * 2;
-    doc.setFont("helvetica", "normal");
-    doc.text(`Payment Terms: ${quoteDetails.paymentTerms}`, 14, y);
-    y += lineHeight;
-    doc.text(`Work Type: ${quoteDetails.workType}`, 14, y);
-    y += lineHeight;
-    doc.text(`Estimated Duration: ${quoteDetails.duration}`, 14, y);
-    
-    if (quoteDetails.notes) {
-      y += lineHeight * 2;
-      doc.text(`Notes: ${quoteDetails.notes}`, 14, y);
-    }
-    
+  const buildPDF = () => {
+    const doc=new jsPDF(); let y=20; const lh=8;
+    doc.setFontSize(20); doc.setFont("helvetica","bold"); doc.text("QUOTATION",105,y,{align:"center"});
+    y+=15; doc.setFontSize(10); doc.setFont("helvetica","normal");
+    doc.setFont("helvetica","bold"); doc.text("FROM:",14,y);
+    doc.setFont("helvetica","normal"); y+=lh; doc.text(quoteDetails.plumberName||"Craftsman",14,y);
+    y+=lh*2; doc.setFont("helvetica","bold"); doc.text("TO:",14,y);
+    doc.setFont("helvetica","normal"); y+=lh; doc.text(quoteDetails.client?.full_name||"Client",14,y);
+    y+=lh*2; doc.text(`Quote: QTN-${selected.id}`,14,y); doc.text(`Date: ${new Date().toLocaleDateString()}`,120,y); y+=lh*2;
+    doc.setFont("helvetica","bold"); doc.setFillColor(34,197,94); doc.rect(14,y-5,182,8,"F");
+    doc.setTextColor(255,255,255); doc.text("Description",16,y); doc.text("Qty",120,y); doc.text("Unit Price",140,y); doc.text("Total",170,y);
+    y+=lh; doc.setFont("helvetica","normal"); doc.setTextColor(0,0,0); let subtotal=0;
+    quoteDetails.items.forEach(i=>{ const t=i.qty*i.price; subtotal+=t; doc.text(i.desc,16,y); doc.text(String(i.qty),120,y); doc.text(`KSh ${i.price.toLocaleString()}`,140,y); doc.text(`KSh ${t.toLocaleString()}`,170,y); y+=lh; });
+    y+=lh; doc.setFont("helvetica","bold"); doc.text(`TOTAL: KSh ${subtotal.toLocaleString()}`,140,y);
+    y+=lh*2; doc.setFont("helvetica","normal"); doc.text(`Payment Terms: ${quoteDetails.paymentTerms}`,14,y);
+    y+=lh; doc.text(`Duration: ${quoteDetails.duration}`,14,y);
     return doc;
   };
-
-  const handleDownloadQuotePDF = () => {
-    const doc = generateQuotePDF();
-    doc.save(`Quote-${selectedJob.id}.pdf`);
-  };
-
-  const handleSendQuote = async () => {
+  const downloadPDF = () => buildPDF().save(`Quote-${selected.id}.pdf`);
+  const sendQuote   = async () => {
     try {
-      setActionLoading(true);
-      
-      const pdf = generateQuotePDF();
-      const pdfBlob = pdf.output('blob');
-      
-      const formData = new FormData();
-      formData.append('job_id', selectedJob.id);
-      formData.append('quote_pdf', pdfBlob, `Quote-${selectedJob.id}.pdf`);
-      formData.append('send_method', sendMethod);
-      formData.append('quote_details', JSON.stringify(quoteDetails));
-      
-      if (sendMethod === 'email') {
-        formData.append('email', selectedJob.client?.email || '');
-      } else if (sendMethod === 'sms') {
-        formData.append('phone', selectedJob.client?.phone || '');
-      }
-
-      const { data } = await api.post(`/job-requests/${selectedJob.id}/send-quote/`, formData);
-      
-      alert(`✅ Quote sent successfully via ${sendMethod}!`);
-      setShowSendQuote(false);
-      
-    } catch (err) {
-      console.error("Error sending quote:", err);
-      alert(`❌ Failed to send quote via ${sendMethod}`);
-    } finally {
-      setActionLoading(false);
-    }
+      setAction(true);
+      const pdf=buildPDF(); const blob=pdf.output("blob");
+      const fd=new FormData();
+      fd.append("job_id",selected.id); fd.append("quote_pdf",blob,`Quote-${selected.id}.pdf`);
+      fd.append("send_method",sendMethod); fd.append("quote_details",JSON.stringify(quoteDetails));
+      if (sendMethod==="email") fd.append("email",selected.client?.email||"");
+      if (sendMethod==="sms")   fd.append("phone",selected.client?.phone||"");
+      await api.post(`/job-requests/${selected.id}/send-quote/`,fd);
+      addToast?.(`Quote sent via ${sendMethod}!`,"success","Sent",5000);
+      setShowSend(false);
+    } catch(e){ addToast?.("Failed to send quote.","error","Error"); } finally { setAction(false); }
+  };
+  const openWA = () => {
+    const msg=encodeURIComponent(`Hi ${selected.client?.full_name||"there"}! 👋\n\nYour quote for *${selected.service}* is ready!\n\n💰 *Total:* KSh ${calcTotal().toLocaleString()}\n⏱️ *Duration:* ${quoteDetails.duration}\n📋 *Terms:* ${quoteDetails.paymentTerms}\n\nLet me know if you have questions!`);
+    const ph=(selected.client?.phone||"").replace(/\D/g,"");
+    window.open(`https://wa.me/${ph}?text=${msg}`,"_blank");
+    setShowSend(false);
   };
 
-  const openWhatsApp = () => {
-    const total = calculateTotal();
-    const message = encodeURIComponent(
-      `Hi ${selectedJob.client?.full_name || 'there'}! 👋\n\n` +
-      `Your quote for *${selectedJob.service}* is ready!\n\n` +
-      `💰 *Total:* KSh ${total.toLocaleString()}\n` +
-      `⏱️ *Duration:* ${quoteDetails.duration}\n` +
-      `📋 *Payment Terms:* ${quoteDetails.paymentTerms}\n\n` +
-      `Let me know if you have any questions!`
-    );
-    
-    const phone = selectedJob.client?.phone?.replace(/\D/g, '') || '';
-    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-    setShowSendQuote(false);
-  };
-
-  const showPhoneNumber = () => {
-    if (!selectedJob) return "N/A";
-    const status = normalizedStatus(selectedJob.status);
-    const visibleStatuses = [
-      "accepted", "quotesubmitted", "quoteapproved", 
-      "inprogress", "completed", "paid"
-    ];
-    return visibleStatuses.includes(status)
-      ? selectedJob.client?.phone || selectedJob.phone || "N/A"
+  const phoneVisible = () => {
+    if (!selected) return "N/A";
+    return ["accepted","quotesubmitted","quoteapproved","inprogress","completed","paid"].includes(norm(selected.status))
+      ? selected.client?.phone||selected.phone||"N/A"
       : "Hidden until accepted";
   };
 
-  const getStatusBadge = (status) => {
-    const normalized = normalizedStatus(status);
-    const badges = {
-      pending: { bg: "secondary", text: "Pending" },
-      assigned: { bg: "info", text: "Assigned to You" },
-      accepted: { bg: "success", text: "Accepted" },
-      quotesubmitted: { bg: "warning", text: "Quote Submitted" },
-      quoteapproved: { bg: "primary", text: "Quote Approved" },
-      inprogress: { bg: "warning", text: "In Progress" },
-      completed: { bg: "info", text: "Completed - Pending Confirmation" },
-      paymentpending: { bg: "warning", text: "Payment Pending" },
-      paid: { bg: "success", text: "Paid & Completed" },
-      rejected: { bg: "danger", text: "Rejected" },
-    };
-    
-    return badges[normalized] || { bg: "dark", text: status };
+  // Filter tabs
+  const FILTERS = [
+    { id:"all",      label:"All Jobs" },
+    { id:"active",   label:"Active"   },
+    { id:"done",     label:"Completed"},
+  ];
+  const filterFn = (j) => {
+    if (filter==="active") return ["pending","assigned","accepted","quotesubmitted","quoteapproved","inprogress"].includes(norm(j.status));
+    if (filter==="done")   return ["completed","paymentpending","paid"].includes(norm(j.status));
+    return true;
+  };
+  const visible = jobs.filter(filterFn);
+
+  // Progress steps
+  const STEPS = ["Assigned","Accepted","Quoted","Approved","In Progress","Done","Paid"];
+  const stepIdx = (status) => {
+    const s = getStatus(status).step;
+    if (s===0) return -1;
+    return Math.min(s-2, STEPS.length-1);
   };
 
-  const getProgressPercentage = () => {
-    if (!selectedJob) return 0;
-    const status = normalizedStatus(selectedJob.status);
-    const progress = {
-      pending: 10,
-      assigned: 20,
-      accepted: 30,
-      quotesubmitted: 50,
-      quoteapproved: 60,
-      inprogress: 75,
-      completed: 90,
-      paid: 100,
+  // Action panel
+  const Actions = () => {
+    if (!selected) return null;
+    const s = norm(selected.status);
+
+    const Btn = ({variant="green", icon, children, ...props}) => {
+      const styles = {
+        green:  { bg:"linear-gradient(135deg,#22c55e,#16a34a)", color:"white", shadow:"rgba(34,197,94,.3)" },
+        amber:  { bg:"linear-gradient(135deg,#f59e0b,#d97706)", color:"white", shadow:"rgba(245,158,11,.3)" },
+        slate:  { bg:"#f1f5f9",                                 color:"#475569",shadow:"transparent"        },
+        red:    { bg:"linear-gradient(135deg,#ef4444,#dc2626)", color:"white", shadow:"rgba(239,68,68,.3)"  },
+        blue:   { bg:"linear-gradient(135deg,#3b82f6,#2563eb)", color:"white", shadow:"rgba(59,130,246,.3)" },
+        outline:{ bg:"white", color:"#374151", shadow:"transparent", border:"2px solid #e5e7eb" },
+      }[variant];
+      return (
+        <button {...props} style={{
+          background:styles.bg, color:styles.color, border:styles.border||"none",
+          borderRadius:12, padding:".75rem 1.375rem", fontWeight:700, fontSize:".9rem",
+          display:"inline-flex", alignItems:"center", gap:8, cursor:"pointer",
+          boxShadow:styles.shadow ? `0 4px 16px ${styles.shadow}` : "none",
+          transition:"all .2s", fontFamily:"'DM Sans',sans-serif", opacity:props.disabled?.8:1,
+          ...props.style,
+        }}
+          onMouseEnter={e=>{ if(!props.disabled) e.currentTarget.style.transform="translateY(-2px)"; }}
+          onMouseLeave={e=>e.currentTarget.style.transform=""}
+        >
+          {icon} {children}
+        </button>
+      );
     };
-    return progress[status] || 0;
-  };
 
-  const renderActionButtons = () => {
-    if (!selectedJob) return null;
-    const status = normalizedStatus(selectedJob.status);
+    const InfoStrip = ({color, icon, children}) => (
+      <div style={{ background:color+"15", borderLeft:`4px solid ${color}`, borderRadius:"0 10px 10px 0", padding:".875rem 1.125rem", marginBottom:"1rem", display:"flex", alignItems:"center", gap:10, fontWeight:600, fontSize:".875rem", color }}>
+        {icon} {children}
+      </div>
+    );
 
-    if (["pending", "assigned"].includes(status)) {
-      return (
-        <>
-          <Button
-            variant="success"
-            disabled={actionLoading}
-            onClick={() => updateJobStatus(selectedJob.id, "accept")}
-            className="modern-btn modern-btn-success"
-          >
-            <FaCheckCircle /> Accept Job
-          </Button>
-          <Button
-            variant="outline-danger"
-            disabled={actionLoading}
-            onClick={() => {
-              if (window.confirm("Are you sure you want to reject this job?")) {
-                updateJobStatus(selectedJob.id, "reject");
-              }
-            }}
-            className="modern-btn modern-btn-outline"
-          >
-            <FaTimesCircle /> Reject
-          </Button>
-        </>
-      );
-    }
+    if (["pending","assigned"].includes(s)) return (
+      <div style={{display:"flex",gap:".75rem",flexWrap:"wrap"}}>
+        <Btn variant="green" icon={<FaCheckCircle/>} disabled={actionLoading} onClick={()=>doAction(selected.id,"accept")}>Accept Job</Btn>
+        <Btn variant="outline" icon={<FaTimesCircle/>} disabled={actionLoading}
+          onClick={()=>{ if(window.confirm("Reject this job?")) doAction(selected.id,"reject"); }}
+          style={{color:"#ef4444",borderColor:"#fca5a5"}}>
+          Decline
+        </Btn>
+      </div>
+    );
 
-    if (status === "accepted") {
-      return (
-        <>
-          <Button variant="primary" onClick={() => setShowQuoteForm(true)} className="modern-btn modern-btn-primary">
-            <FaFileAlt /> Submit Quote
-          </Button>
-          <Button variant="outline-primary" className="modern-btn modern-btn-outline">
-            <FaPhone /> Call Client: {showPhoneNumber()}
-          </Button>
-          <Button variant="secondary" className="modern-btn modern-btn-secondary">
-            <FaComments /> Chat
-          </Button>
-        </>
-      );
-    }
+    if (s==="accepted") return (
+      <div style={{display:"flex",gap:".75rem",flexWrap:"wrap"}}>
+        <Btn variant="blue" icon={<FaFileAlt/>} onClick={()=>setShowQuote(true)}>Prepare Quote</Btn>
+        <Btn variant="outline" icon={<FaPhone/>}>{phoneVisible()}</Btn>
+        <Btn variant="slate" icon={<FaComments/>}>Message</Btn>
+      </div>
+    );
 
-    if (status === "quotesubmitted") {
-      return (
-        <>
-          <Alert variant="info" className="modern-alert modern-alert-info mb-3">
-            <FaClock className="me-2" /> Waiting for client to approve your quote
-          </Alert>
-          <Button variant="outline-primary" onClick={() => setShowQuoteForm(true)} className="modern-btn modern-btn-outline">
-            <FaFileAlt /> View/Edit Quote
-          </Button>
-          <Button variant="success" onClick={() => setShowSendQuote(true)} className="modern-btn modern-btn-success">
-            <FaEnvelope /> Send Quote to Client
-          </Button>
-          <Button variant="secondary" className="modern-btn modern-btn-secondary">
-            <FaComments /> Chat with Client
-          </Button>
-        </>
-      );
-    }
+    if (s==="quotesubmitted") return (
+      <>
+        <InfoStrip color="#3b82f6" icon={<FaClock/>}>Waiting for client to approve your quote</InfoStrip>
+        <div style={{display:"flex",gap:".75rem",flexWrap:"wrap"}}>
+          <Btn variant="outline" icon={<FaEdit/>} onClick={()=>setShowQuote(true)}>Edit Quote</Btn>
+          <Btn variant="green" icon={<FaEnvelope/>} onClick={()=>setShowSend(true)}>Resend Quote</Btn>
+        </div>
+      </>
+    );
 
-    if (status === "quoteapproved") {
-      return (
-        <>
-          <Alert variant="success" className="modern-alert modern-alert-success mb-3">
-            <FaCheckCircle className="me-2" /> Quote approved! Ready to start work.
-          </Alert>
-          <Button
-            variant="success"
-            onClick={() => updateJobStatus(selectedJob.id, "start")}
-            disabled={actionLoading}
-            className="modern-btn modern-btn-success"
-          >
-            🚀 Start Job
-          </Button>
-          <Button variant="outline-primary" className="modern-btn modern-btn-outline">
-            <FaPhone /> Call: {showPhoneNumber()}
-          </Button>
-        </>
-      );
-    }
+    if (s==="quoteapproved") return (
+      <>
+        <InfoStrip color="#16a34a" icon={<FaCheckCircle/>}>Quote approved — ready to start work!</InfoStrip>
+        <div style={{display:"flex",gap:".75rem",flexWrap:"wrap"}}>
+          <Btn variant="amber" icon={<FaTools/>} disabled={actionLoading} onClick={()=>doAction(selected.id,"start")}>Start Job</Btn>
+          <Btn variant="outline" icon={<FaPhone/>}>{phoneVisible()}</Btn>
+        </div>
+      </>
+    );
 
-    if (status === "inprogress") {
-      return (
-        <>
-          <Alert variant="warning" className="modern-alert modern-alert-warning mb-3">
-            <FaClock className="me-2" /> Time Elapsed: <strong>{formatTime(elapsed)}</strong>
-          </Alert>
-          
-          <Form.Group className="mb-3">
-            <Form.Label className="modern-label">
-              <FaCamera className="me-2" /> Upload Progress Photos (Optional)
-            </Form.Label>
-            <div className="file-upload-wrapper">
-              <Form.Control
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => setProgressPhotos(e.target.files)}
-                className="modern-file-input"
-              />
-              {progressPhotos.length > 0 && (
-                <div className="file-count-badge badge-success">
-                  <FaCheckCircle className="me-1" /> {progressPhotos.length} file(s) selected
-                </div>
-              )}
-            </div>
-            <small className="text-muted d-block mt-1">Keep client updated with progress photos</small>
-          </Form.Group>
+    if (s==="inprogress") return (
+      <>
+        <div style={{ background:"#1c1917", borderRadius:14, padding:"1rem 1.25rem", marginBottom:"1rem", display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:10, height:10, borderRadius:"50%", background:"#f97316", boxShadow:"0 0 0 4px rgba(249,115,22,.25)", animation:"pulse 1.5s infinite" }}/>
+          <span style={{ color:"#fed7aa", fontWeight:700, fontFamily:"'DM Mono',monospace", fontSize:"1.25rem", letterSpacing:2 }}>{fmt(elapsed)}</span>
+          <span style={{ color:"#78716c", fontSize:".78rem", fontWeight:600 }}>elapsed</span>
+        </div>
 
-          <Form.Group className="mb-3">
-            <Form.Label className="modern-label">
-              <FaCheckCircle className="me-2" /> Upload Completion Proof (Required to complete)
-            </Form.Label>
-            <div className="file-upload-wrapper">
-              <Form.Control
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => setProofFiles(e.target.files)}
-                required
-                className="modern-file-input"
-              />
-              {proofFiles.length > 0 && (
-                <div className={`file-count-badge ${proofFiles.length >= 3 ? 'badge-success' : 'badge-warning'}`}>
-                  <FaCamera className="me-1" /> {proofFiles.length} file(s) selected
-                  {proofFiles.length < 3 && ` (Need ${3 - proofFiles.length} more)`}
-                </div>
-              )}
-            </div>
-            <small className="text-muted d-block mt-1">Minimum 3 photos showing completed work</small>
-          </Form.Group>
-
-          <Button
-            variant="success"
-            disabled={!proofFiles || proofFiles.length < 3 || actionLoading}
-            onClick={() => updateJobStatus(selectedJob.id, "complete", { files: proofFiles })}
-            className="modern-btn modern-btn-success"
-          >
-            <FaCheckCircle /> Mark Complete & Submit
-          </Button>
-          <Button variant="secondary" className="modern-btn modern-btn-secondary">
-            <FaComments /> Chat
-          </Button>
-        </>
-      );
-    }
-
-    if (status === "completed") {
-      return (
-        <>
-          <Alert variant="info" className="modern-alert modern-alert-info">
-            <FaCheckCircle className="me-2" /> Work completed! Waiting for client confirmation and payment.
-          </Alert>
-          <Button variant="outline-secondary" className="modern-btn modern-btn-outline">
-            <FaComments /> Chat with Client
-          </Button>
-        </>
-      );
-    }
-
-    if (status === "paymentpending") {
-      return (
-        <>
-          <Alert variant="warning" className="modern-alert modern-alert-warning">
-            <FaMoneyBillWave className="me-2" /> Client confirmed completion. Payment pending.
-          </Alert>
-          <div className="mb-3 payment-details-card">
-            <h6 className="fw-bold mb-2">Payment Details:</h6>
-            <p className="mb-2">Amount Due: <strong className="text-success">KSh {selectedJob.budget?.toLocaleString()}</strong></p>
-            <p className="text-muted small mb-0">
-              Client will pay via Cash, M-Pesa, or Bank Transfer. 
-              Confirm receipt once you receive payment.
+        <Form.Group className="mb-3">
+          <label style={{ fontWeight:700, fontSize:".8rem", color:"#44403c", textTransform:"uppercase", letterSpacing:.5, marginBottom:6, display:"block" }}>
+            <FaCheckCircle style={{color:"#22c55e",marginRight:6}}/>Completion Proof — min 3 photos *
+          </label>
+          <div style={{ border:"2px dashed #d4cdc8", borderRadius:12, padding:"1.25rem", background:"#fafaf9", cursor:"pointer", textAlign:"center" }}
+            onClick={()=>document.getElementById("proofInput").click()}>
+            <FaCamera size={20} style={{color:"#a8a29e",marginBottom:6}}/>
+            <p style={{margin:0,fontSize:".8rem",color:"#78716c",fontWeight:600}}>
+              {proofFiles.length > 0 ? `${proofFiles.length} file${proofFiles.length>1?"s":""} selected` : "Click to upload photos"}
             </p>
+            {proofFiles.length>0 && proofFiles.length<3 && <p style={{margin:"4px 0 0",fontSize:".72rem",color:"#f97316"}}>Need {3-proofFiles.length} more</p>}
           </div>
-          <Button
-            variant="success"
-            onClick={() => {
-              if (window.confirm("Have you received the payment?")) {
-                updateJobStatus(selectedJob.id, "confirm-received");
-              }
-            }}
-            className="modern-btn modern-btn-success"
-          >
-            <FaMoneyBillWave /> Confirm Payment Received
-          </Button>
-        </>
-      );
-    }
+          <input id="proofInput" type="file" multiple accept="image/*" style={{display:"none"}} onChange={e=>setProofFiles(e.target.files)}/>
+        </Form.Group>
 
-    if (status === "paid") {
-      return (
-        <>
-          <Alert variant="success" className="modern-alert modern-alert-success">
-            🎉 Job successfully completed and paid!
-          </Alert>
-          <div className="text-center review-section">
-            <FaStar color="gold" size={32} />
-            <p className="mt-2 mb-0">Client will leave a review soon</p>
-          </div>
-        </>
-      );
-    }
+        <Btn variant="green" icon={<FaCheckCircle/>}
+          disabled={!proofFiles||proofFiles.length<3||actionLoading}
+          onClick={()=>doAction(selected.id,"complete",{files:proofFiles})}>
+          Submit & Mark Complete
+        </Btn>
+      </>
+    );
+
+    if (s==="completed") return (
+      <InfoStrip color="#3b82f6" icon={<FaCheckCircle/>}>Work submitted — awaiting client confirmation and payment</InfoStrip>
+    );
+
+    if (s==="paymentpending") return (
+      <>
+        <div style={{ background:"#fefce8", border:"2px solid #fde68a", borderRadius:14, padding:"1.25rem", marginBottom:"1rem" }}>
+          <div style={{fontSize:".72rem",color:"#92400e",fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Amount Due</div>
+          <div style={{fontSize:"2rem",fontWeight:900,color:"#15803d",lineHeight:1}}>KSh {selected.budget?.toLocaleString()}</div>
+          <div style={{fontSize:".75rem",color:"#78716c",marginTop:4}}>Cash · M-Pesa · Bank Transfer</div>
+        </div>
+        <Btn variant="green" icon={<FaMoneyBillWave/>}
+          onClick={()=>{ if(window.confirm("Confirm payment received?")) doAction(selected.id,"confirm-received"); }}>
+          Confirm Payment Received
+        </Btn>
+      </>
+    );
+
+    if (s==="paid") return (
+      <div style={{ textAlign:"center", padding:"2rem 1rem" }}>
+        <div style={{fontSize:"3rem",marginBottom:".5rem"}}>🎉</div>
+        <div style={{fontWeight:900,fontSize:"1.25rem",color:"#15803d"}}>Job Complete & Paid</div>
+        <div style={{color:"#78716c",marginTop:4,fontSize:".875rem"}}>Client may leave a review</div>
+      </div>
+    );
 
     return null;
   };
@@ -625,777 +324,413 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
   return (
     <>
       <style>{`
-        /* ========== ENHANCED UI STYLES ========== */
-        
-        /* Modern Buttons */
-        .modern-btn {
-          border-radius: 12px;
-          padding: 0.75rem 1.5rem;
-          font-weight: 600;
-          font-size: 0.9375rem;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          border: 2px solid transparent;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,500&family=DM+Mono:wght@400;500&display=swap');
 
-        .modern-btn-success {
-          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-          border-color: #22c55e;
-          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
-        }
+        .jt-wrap { font-family:'DM Sans',sans-serif; color:#1c1917; }
 
-        .modern-btn-success:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+        /* Filter tabs */
+        .jt-filters { display:flex; gap:.5rem; margin-bottom:1.5rem; }
+        .jt-filter {
+          padding:.5rem 1.25rem; border-radius:50px; font-weight:700; font-size:.8rem;
+          border:2px solid #e7e5e4; background:white; color:#78716c; cursor:pointer;
+          transition:all .2s; font-family:'DM Sans',sans-serif;
         }
+        .jt-filter:hover   { border-color:#d4cdc8; color:#44403c; }
+        .jt-filter.active  { background:#1c1917; color:white; border-color:#1c1917; }
 
-        .modern-btn-primary {
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          border-color: #3b82f6;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-        }
+        /* Job cards grid */
+        .jt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1rem; }
 
-        .modern-btn-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+        /* Job ticket card */
+        .jt-card {
+          background:white; border-radius:16px; overflow:hidden;
+          border:2px solid #e7e5e4; cursor:pointer;
+          transition:transform .2s, box-shadow .2s, border-color .2s;
+          position:relative;
         }
+        .jt-card:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,.1); border-color:#d4cdc8; }
+        .jt-card-top { padding:1.125rem 1.25rem .875rem; }
+        .jt-card-bottom { padding:.75rem 1.25rem; background:#fafaf9; border-top:2px solid #f5f5f4; display:flex; align-items:center; justify-content:space-between; }
 
-        .modern-btn-secondary {
-          background: #6b7280;
-          border-color: #6b7280;
-        }
+        /* Status strip at top of card */
+        .jt-status-strip { height:4px; width:100%; }
 
-        .modern-btn-outline {
-          background: white;
-          color: #374151;
-          border-color: #d1d5db;
-        }
+        /* Status dot */
+        .jt-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 
-        .modern-btn-outline:hover {
-          border-color: #22c55e;
-          color: #16a34a;
-          background: #f0fdf4;
-        }
+        /* Number chip */
+        .jt-num { font-family:'DM Mono',monospace; font-size:.68rem; color:#a8a29e; font-weight:500; }
 
-        /* Cards */
-        .job-card {
-          transition: all 0.3s ease;
-          border: 2px solid transparent;
-          border-radius: 16px;
-        }
-        
-        .job-card:hover {
-          border-color: #22c55e;
-          box-shadow: 0 8px 24px rgba(34, 197, 94, 0.15);
-          transform: translateY(-2px);
-        }
+        /* Empty state */
+        .jt-empty { text-align:center; padding:5rem 2rem; }
 
-        /* Progress Tracker */
-        .progress-tracker {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.03) 100%);
-          padding: 1.5rem;
-          border-radius: 16px;
-          margin-bottom: 1.5rem;
-          border: 1px solid rgba(34, 197, 94, 0.2);
+        /* Modal overrides */
+        .jt-modal .modal-content {
+          border-radius:20px; border:none;
+          box-shadow:0 24px 64px rgba(0,0,0,.15);
+          font-family:'DM Sans',sans-serif;
+          overflow:hidden;
         }
+        .jt-modal .modal-header { border:none; padding:1.5rem 1.75rem 0; }
+        .jt-modal .modal-body   { padding:1.25rem 1.75rem; }
+        .jt-modal .modal-footer { border:none; padding:1.25rem 1.75rem 1.5rem; background:#fafaf9; }
 
-        .progress-tracker h6 {
-          color: #16a34a;
-          font-weight: 700;
-          font-size: 0.875rem;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
+        /* Quote items */
+        .qt-item { background:#fafaf9; border:2px solid #e7e5e4; border-radius:12px; padding:1rem; margin-bottom:.75rem; }
+        .qt-input { width:100%; border:2px solid #e5e7eb; border-radius:10px; padding:.625rem .875rem; font-family:'DM Sans',sans-serif; font-size:.9rem; transition:border-color .2s; background:white; }
+        .qt-input:focus { outline:none; border-color:#22c55e; }
+        .qt-select { width:100%; border:2px solid #e5e7eb; border-radius:10px; padding:.625rem .875rem; font-family:'DM Sans',sans-serif; font-size:.9rem; background:white; }
 
-        .progress {
-          height: 12px;
-          border-radius: 10px;
-          background: rgba(255, 255, 255, 0.7);
-        }
+        /* Send method cards */
+        .sm-card { border:2px solid #e7e5e4; border-radius:14px; padding:1rem 1.25rem; cursor:pointer; transition:all .2s; margin-bottom:.75rem; display:flex; align-items:center; gap:1rem; background:white; }
+        .sm-card:hover   { border-color:#d4cdc8; background:#fafaf9; }
+        .sm-card.active  { border-color:#22c55e; background:#f0fdf4; }
+        .sm-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
-        .progress-bar {
-          border-radius: 10px;
-          background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
-        }
+        /* Progress steps */
+        .jt-steps { display:flex; align-items:center; gap:0; margin:1.25rem 0; overflow-x:auto; padding-bottom:.25rem; }
+        .jt-step { display:flex; align-items:center; gap:0; }
+        .jt-step-dot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:800; flex-shrink:0; transition:all .3s; }
+        .jt-step-dot.done   { background:#22c55e; color:white; }
+        .jt-step-dot.current{ background:#1c1917; color:white; box-shadow:0 0 0 4px rgba(28,25,23,.15); }
+        .jt-step-dot.future { background:#f5f5f4; color:#a8a29e; }
+        .jt-step-line { width:28px; height:2px; background:#e7e5e4; flex-shrink:0; }
+        .jt-step-line.done { background:#22c55e; }
 
-        /* Modern Alerts */
-        .modern-alert {
-          border-radius: 12px;
-          border: none;
-          padding: 1rem 1.25rem;
-          display: flex;
-          align-items: center;
-          font-weight: 500;
-        }
+        /* Keyframes */
+        @keyframes pulse { 0%,100%{box-shadow:0 0 0 4px rgba(249,115,22,.25)} 50%{box-shadow:0 0 0 8px rgba(249,115,22,.1)} }
+        @keyframes slideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        .jt-animate { animation:slideIn .35s ease forwards; }
 
-        .modern-alert-success {
-          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-          border-left: 4px solid #22c55e;
-          color: #15803d;
-        }
+        /* Detail rows */
+        .jt-detail { display:flex; align-items:flex-start; gap:.75rem; padding:.75rem 0; border-bottom:1px solid #f5f5f4; }
+        .jt-detail:last-child { border-bottom:none; }
+        .jt-detail-icon { width:32px; height:32px; background:#f5f5f4; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#78716c; font-size:.8rem; flex-shrink:0; margin-top:2px; }
+        .jt-detail-label { font-size:.72rem; color:#a8a29e; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:2px; }
+        .jt-detail-val   { font-size:.9375rem; color:#1c1917; font-weight:600; }
 
-        .modern-alert-warning {
-          background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-          border-left: 4px solid #f59e0b;
-          color: #92400e;
-        }
-
-        .modern-alert-info {
-          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-          border-left: 4px solid #3b82f6;
-          color: #1e40af;
-        }
-
-        /* Quote Form Card */
-        .quote-form-card {
-          background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
-          border: 2px solid #86efac;
-          border-radius: 20px;
-          padding: 2rem;
-          animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .quote-form-header {
-          border-bottom: 2px solid #86efac;
-          padding-bottom: 1rem;
-          margin-bottom: 1.5rem;
-        }
-
-        /* Form Inputs */
-        .modern-input {
-          border: 2px solid #e5e7eb;
-          border-radius: 10px;
-          padding: 0.75rem 1rem;
-          transition: all 0.3s ease;
-        }
-
-        .modern-input:focus {
-          border-color: #22c55e;
-          box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
-        }
-
-        .modern-label {
-          font-weight: 600;
-          font-size: 0.875rem;
-          color: #374151;
-          margin-bottom: 0.5rem;
-          display: flex;
-          align-items: center;
-        }
-
-        /* Quote Items */
-        .quote-item-row {
-          background: #f9fafb;
-          border-radius: 12px;
-          padding: 1rem;
-          margin-bottom: 1rem;
-          border: 2px solid #e5e7eb;
-          transition: all 0.3s ease;
-        }
-
-        .quote-item-row:hover {
-          border-color: #22c55e;
-          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
-        }
-
-        .item-total {
-          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-          color: white;
-          padding: 0.5rem 1rem;
-          border-radius: 8px;
-          font-weight: 700;
-          display: inline-block;
-        }
-
-        /* File Upload */
-        .file-upload-wrapper {
-          position: relative;
-        }
-
-        .modern-file-input {
-          border: 2px dashed #d1d5db;
-          border-radius: 12px;
-          padding: 2rem;
-          background: #f9fafb;
-          transition: all 0.3s ease;
-          cursor: pointer;
-        }
-
-        .modern-file-input:hover {
-          border-color: #22c55e;
-          background: #f0fdf4;
-        }
-
-        .file-count-badge {
-          margin-top: 0.75rem;
-          padding: 0.5rem 1rem;
-          border-radius: 8px;
-          font-size: 0.875rem;
-          font-weight: 600;
-          display: inline-flex;
-          align-items: center;
-        }
-
-        .badge-success {
-          background: #dcfce7;
-          color: #15803d;
-        }
-
-        .badge-warning {
-          background: #fef3c7;
-          color: #92400e;
-        }
-
-        /* Send Method Cards */
-        .send-method-card {
-          padding: 1.25rem;
-          border: 2px solid #e5e7eb;
-          border-radius: 16px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          margin-bottom: 1rem;
-          background: white;
-        }
-
-        .send-method-card:hover {
-          border-color: #22c55e;
-          box-shadow: 0 6px 20px rgba(34, 197, 94, 0.12);
-          transform: translateY(-2px);
-        }
-
-        .send-method-card.active {
-          border-color: #22c55e;
-          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-          box-shadow: 0 6px 20px rgba(34, 197, 94, 0.15);
-        }
-
-        .send-method-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: transform 0.3s ease;
-        }
-
-        .send-method-card:hover .send-method-icon {
-          transform: scale(1.1);
-        }
-
-        .icon-email { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); }
-        .icon-sms { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); }
-        .icon-whatsapp { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); }
-        .icon-download { background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%); }
-
-        /* Payment Details */
-        .payment-details-card {
-          background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
-          border: 2px solid #86efac;
-          border-radius: 12px;
-          padding: 1.25rem;
-        }
-
-        /* Review Section */
-        .review-section {
-          padding: 2rem;
-          background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-          border-radius: 12px;
-        }
-
-        /* Detail Sections */
-        .detail-item {
-          padding: 0.75rem;
-          background: white;
-          border-radius: 10px;
-          margin-bottom: 0.5rem;
-          border-left: 3px solid #22c55e;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-          .modern-btn {
-            width: 100%;
-            justify-content: center;
-          }
-        }
+        @media(max-width:600px) { .jt-grid { grid-template-columns:1fr; } }
       `}</style>
 
-      <div className="card p-4 shadow-sm border-0">
-        <h4 className="mb-3 fw-bold">My Jobs</h4>
+      <div className="jt-wrap">
 
-        {!jobs || jobs.length === 0 ? (
-          <Alert variant="info" className="modern-alert modern-alert-info">
-            <FaInfoCircle className="me-2" />
-            No jobs assigned yet. Jobs will appear here when admin assigns them to you.
-          </Alert>
-        ) : (
-          <div className="table-responsive">
-            <table className="table align-middle">
-              <thead className="table-light">
-                <tr>
-                  <th>#</th>
-                  <th>Client</th>
-                  <th>Service</th>
-                  <th>Location</th>
-                  <th>Budget</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.map((job, i) => {
-                  const badge = getStatusBadge(job.status);
-                  return (
-                    <tr key={job.id}>
-                      <td>{i + 1}</td>
-                      <td>{job.client?.full_name || "N/A"}</td>
-                      <td>{job.service || "N/A"}</td>
-                      <td>{job.location || "N/A"}</td>
-                      <td>KSh {job.budget?.toLocaleString() || "N/A"}</td>
-                      <td>
-                        <Badge bg={badge.bg}>{badge.text}</Badge>
-                      </td>
-                      <td>
-                        <Button
-                          size="sm"
-                          variant="outline-primary"
-                          onClick={() => handleViewJob(job)}
-                        >
-                          View Details
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {/* ── Header ── */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"1.5rem", flexWrap:"wrap", gap:"1rem" }}>
+          <div>
+            <h2 style={{ margin:0, fontWeight:800, fontSize:"1.5rem", letterSpacing:"-.5px" }}>Work Orders</h2>
+            <p style={{ margin:"3px 0 0", color:"#78716c", fontSize:".875rem" }}>
+              {jobs.length} job{jobs.length!==1?"s":""} assigned · {jobs.filter(j=>["inprogress","accepted"].includes(norm(j.status))).length} active
+            </p>
+          </div>
+          <div className="jt-filters">
+            {FILTERS.map(f => (
+              <button key={f.id} className={`jt-filter ${filter===f.id?"active":""}`} onClick={()=>setFilter(f.id)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Empty state ── */}
+        {visible.length === 0 && (
+          <div className="jt-empty">
+            <FaHardHat size={48} style={{ color:"#d4cdc8", marginBottom:"1rem", display:"block", margin:"0 auto 1rem" }}/>
+            <h3 style={{ fontWeight:800, color:"#44403c", marginBottom:".5rem" }}>No jobs here</h3>
+            <p style={{ color:"#a8a29e", margin:0 }}>
+              {filter==="all" ? "Jobs will appear once admin assigns them to you." : `No ${filter} jobs at the moment.`}
+            </p>
           </div>
         )}
 
-        {/* Job Details Modal */}
-        {selectedJob && (
-          <Modal show onHide={handleClose} centered size="lg">
-            <Modal.Header closeButton className="border-0">
-              <Modal.Title className="d-flex align-items-center gap-2">
-                <FaFileAlt className="text-success" />
-                {selectedJob.service} - Job #{selectedJob.id}
-              </Modal.Title>
+        {/* ── Job card grid ── */}
+        <div className="jt-grid">
+          {visible.map((job, i) => {
+            const s    = getStatus(job.status);
+            const isUrgent = job.isUrgent;
+            return (
+              <div key={job.id} className="jt-card jt-animate" style={{ animationDelay:`${i*40}ms` }} onClick={()=>openJob(job)}>
+                {/* Status colour strip */}
+                <div className="jt-status-strip" style={{ background:s.dot }}/>
+
+                <div className="jt-card-top">
+                  <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:".75rem" }}>
+                    <div>
+                      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                        <span style={{ width:8, height:8, borderRadius:"50%", background:s.dot, display:"inline-block" }}/>
+                        <span style={{ fontSize:".72rem", fontWeight:700, color:s.color, textTransform:"uppercase", letterSpacing:.5 }}>{s.label}</span>
+                        {isUrgent && <span style={{ background:"#fef2f2", color:"#ef4444", fontSize:".65rem", fontWeight:800, padding:"1px 7px", borderRadius:50 }}>URGENT</span>}
+                      </div>
+                      <h4 style={{ margin:0, fontWeight:800, fontSize:"1.0625rem", color:"#1c1917", letterSpacing:"-.25px" }}>{job.service||"Service"}</h4>
+                    </div>
+                    <div style={{ background:"#f5f5f4", borderRadius:8, padding:"4px 10px", textAlign:"right" }}>
+                      <div style={{ fontSize:".65rem", color:"#a8a29e", fontWeight:600 }}>Budget</div>
+                      <div style={{ fontWeight:800, fontSize:".9rem", color:"#15803d" }}>KSh {job.budget?.toLocaleString()||"TBD"}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display:"flex", alignItems:"center", gap:6, color:"#78716c", fontSize:".8rem", marginBottom:6 }}>
+                    <FaMapMarkerAlt size={11}/> {job.location||"Location TBD"}
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, color:"#78716c", fontSize:".8rem" }}>
+                    <FaTools size={11}/> {job.client?.full_name||"Client"}
+                  </div>
+                </div>
+
+                <div className="jt-card-bottom">
+                  <span className="jt-num">#{String(job.id).padStart(4,"0")}</span>
+                  <span style={{ display:"flex", alignItems:"center", gap:5, fontSize:".8rem", color:"#44403c", fontWeight:700 }}>
+                    View <FaArrowRight size={11}/>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ══ Job Detail Modal ══ */}
+        {selected && (
+          <Modal show onHide={closeJob} centered size="lg" className="jt-modal">
+            <Modal.Header closeButton>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:44, height:44, borderRadius:12, background:getStatus(selected.status).dot+"22", display:"flex", alignItems:"center", justifyContent:"center", color:getStatus(selected.status).dot }}>
+                  <FaBriefcase size={18}/>
+                </div>
+                <div>
+                  <div style={{ fontWeight:800, fontSize:"1.0625rem", lineHeight:1.2 }}>{selected.service}</div>
+                  <div style={{ fontSize:".75rem", color:"#78716c", marginTop:2 }}>Job #{String(selected.id).padStart(4,"0")} · {selected.client?.full_name||"Client"}</div>
+                </div>
+              </div>
             </Modal.Header>
 
             <Modal.Body>
-              {/* Progress Tracker */}
-              <div className="progress-tracker">
-                <h6 className="mb-2 d-flex align-items-center gap-2">
-                  <FaClock />
-                  Job Progress
-                </h6>
-                <ProgressBar 
-                  now={getProgressPercentage()} 
-                  label={`${getProgressPercentage()}%`}
-                  variant="success"
-                  animated
-                  striped
-                />
-                <small className="text-muted d-block mt-2">
-                  {getStatusBadge(selectedJob.status).text}
-                </small>
+              {/* Progress tracker */}
+              <div style={{ background:"#fafaf9", border:"2px solid #f5f5f4", borderRadius:14, padding:"1rem 1.25rem", marginBottom:"1.25rem" }}>
+                <div style={{ fontSize:".72rem", fontWeight:700, color:"#a8a29e", textTransform:"uppercase", letterSpacing:.5, marginBottom:".75rem" }}>Progress</div>
+                <div className="jt-steps">
+                  {STEPS.map((step, i) => {
+                    const cur = stepIdx(selected.status);
+                    const isDone    = i < cur;
+                    const isCurrent = i === cur;
+                    return (
+                      <div key={i} className="jt-step">
+                        <div style={{ textAlign:"center" }}>
+                          <div className={`jt-step-dot ${isDone?"done":isCurrent?"current":"future"}`}>
+                            {isDone ? "✓" : i+1}
+                          </div>
+                          <div style={{ fontSize:".58rem", color:isDone||isCurrent?"#44403c":"#a8a29e", fontWeight:600, marginTop:4, whiteSpace:"nowrap", textAlign:"center" }}>{step}</div>
+                        </div>
+                        {i < STEPS.length-1 && <div className={`jt-step-line ${isDone?"done":""}`} style={{ marginTop:"-14px" }}/>}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Job Details Card */}
-              <Card className="mb-3 shadow-sm job-card border-0">
-                <Card.Body>
-                  <Row>
-                    <Col md={8}>
-                      <h5 className="fw-bold d-flex align-items-center gap-2 mb-3">
-                        <FaFileAlt className="text-success" />
-                        {selectedJob.service}
-                      </h5>
-                      <Badge bg={getStatusBadge(selectedJob.status).bg} className="mb-3 px-3 py-2">
-                        {getStatusBadge(selectedJob.status).text}
-                      </Badge>
-
-                      <div className="detail-item">
-                        <p className="mb-1"><strong>📝 Description:</strong></p>
-                        <p className="text-muted mb-0">{selectedJob.description || "No description provided"}</p>
-                      </div>
-
-                      <div className="detail-item">
-                        <p className="mb-0">
-                          <FaPhone className="text-success me-2" />
-                          <strong>Client Phone:</strong> {showPhoneNumber()}
-                        </p>
-                      </div>
-
-                      <div className="detail-item">
-                        <p className="mb-0">
-                          <FaMapMarkerAlt className="text-success me-2" />
-                          <strong>Location:</strong> {selectedJob.location}
-                        </p>
-                        {selectedJob.address && (
-                          <p className="mb-0 text-muted small mt-1">
-                            <strong>Address:</strong> {selectedJob.address}
-                          </p>
-                        )}
-                      </div>
-
-                      {selectedJob.schedule && (
-                        <div className="detail-item">
-                          <p className="mb-0">
-                            <FaCalendarAlt className="text-success me-2" />
-                            <strong>Scheduled:</strong> {new Date(selectedJob.schedule).toLocaleString()}
-                          </p>
-                        </div>
-                      )}
-                    </Col>
-
-                    <Col md={4}>
-                      <div className="detail-item">
-                        <h6 className="fw-bold mb-3">Job Details</h6>
-                        <div className="mb-3">
-                          <small className="text-muted d-block">Budget</small>
-                          <h4 className="text-success fw-bold mb-0">KSh {selectedJob.budget?.toLocaleString()}</h4>
-                        </div>
-                        <div>
-                          <small className="text-muted d-block mb-2">Priority</small>
-                          <Badge bg={selectedJob.isUrgent ? "danger" : "secondary"} className="px-3 py-2">
-                            {selectedJob.isUrgent ? (
-                              <><FaExclamationTriangle className="me-1" /> Urgent</>
-                            ) : (
-                              <><FaCheckCircle className="me-1" /> Normal</>
-                            )}
-                          </Badge>
-                        </div>
-                      </div>
-                    </Col>
-                  </Row>
-                </Card.Body>
-              </Card>
-
-              {/* Quote Form - FIXED: Added condition to show for "accepted" and "quotesubmitted" statuses */}
-              {showQuoteForm && ["accepted", "quotesubmitted"].includes(normalizedStatus(selectedJob.status)) && (
-                <Card className="mb-3 quote-form-card border-0">
-                  <div className="quote-form-header">
-                    <h6 className="fw-bold mb-0 d-flex align-items-center gap-2">
-                      <FaFileAlt className="text-success" />
-                      {normalizedStatus(selectedJob.status) === "accepted" ? "Submit Professional Quote" : "View/Edit Quote"}
-                    </h6>
+              {/* Two-column details */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1rem", marginBottom:"1.25rem" }}>
+                {/* Left: job info */}
+                <div style={{ background:"white", border:"2px solid #f5f5f4", borderRadius:14, padding:"1.125rem" }}>
+                  <div style={{ fontSize:".72rem", fontWeight:700, color:"#a8a29e", textTransform:"uppercase", letterSpacing:.5, marginBottom:".75rem" }}>Job Details</div>
+                  <div className="jt-detail">
+                    <div className="jt-detail-icon"><FaPhone/></div>
+                    <div><div className="jt-detail-label">Client Phone</div><div className="jt-detail-val">{phoneVisible()}</div></div>
                   </div>
+                  <div className="jt-detail">
+                    <div className="jt-detail-icon"><FaMapMarkerAlt/></div>
+                    <div><div className="jt-detail-label">Location</div><div className="jt-detail-val">{selected.location||"N/A"}</div></div>
+                  </div>
+                  {selected.schedule && (
+                    <div className="jt-detail">
+                      <div className="jt-detail-icon"><FaCalendarAlt/></div>
+                      <div><div className="jt-detail-label">Scheduled</div><div className="jt-detail-val">{new Date(selected.schedule).toLocaleString()}</div></div>
+                    </div>
+                  )}
+                  {selected.description && (
+                    <div className="jt-detail">
+                      <div className="jt-detail-icon"><FaFileAlt/></div>
+                      <div><div className="jt-detail-label">Description</div><div className="jt-detail-val" style={{fontSize:".85rem",color:"#78716c"}}>{selected.description}</div></div>
+                    </div>
+                  )}
+                </div>
 
-                  <Form>
-                    <Form.Group className="mb-4">
-                      <Form.Label className="modern-label">
-                        <FaEdit /> Business/Company Name
-                      </Form.Label>
-                      <Form.Control
-                        className="modern-input"
-                        value={quoteDetails.plumberName}
-                        onChange={(e) =>
-                          setQuoteDetails({ ...quoteDetails, plumberName: e.target.value })
-                        }
-                        placeholder="Your name or business name"
-                      />
-                    </Form.Group>
-
-                    <h6 className="fw-bold mb-3 d-flex align-items-center gap-2">
-                      <FaFileAlt className="text-success" />
-                      Items & Services
-                    </h6>
-
-                    {quoteDetails.items.map((item, index) => (
-                      <div key={index} className="quote-item-row">
-                        <Row className="align-items-end g-2">
-                          <Col md={5}>
-                            <Form.Label className="modern-label small">Description</Form.Label>
-                            <Form.Control
-                              className="modern-input"
-                              value={item.desc}
-                              onChange={(e) => updateQuoteItem(index, "desc", e.target.value)}
-                              placeholder="e.g., Painting labor"
-                            />
-                          </Col>
-                          <Col md={2}>
-                            <Form.Label className="modern-label small">Qty</Form.Label>
-                            <Form.Control
-                              className="modern-input"
-                              type="number"
-                              value={item.qty}
-                              onChange={(e) => updateQuoteItem(index, "qty", parseInt(e.target.value))}
-                              min="1"
-                            />
-                          </Col>
-                          <Col md={3}>
-                            <Form.Label className="modern-label small">Unit Price (KSh)</Form.Label>
-                            <Form.Control
-                              className="modern-input"
-                              type="number"
-                              value={item.price}
-                              onChange={(e) => updateQuoteItem(index, "price", parseFloat(e.target.value))}
-                              min="0"
-                            />
-                          </Col>
-                          <Col md={2} className="d-flex align-items-center gap-2">
-                            <span className="item-total small">
-                              {(item.qty * item.price).toLocaleString()}
-                            </span>
-                            {quoteDetails.items.length > 1 && (
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                onClick={() => removeQuoteItem(index)}
-                              >
-                                <FaTrash />
-                              </Button>
-                            )}
-                          </Col>
-                        </Row>
-                      </div>
-                    ))}
-
-                    <Button
-                      variant="outline-success"
-                      size="sm"
-                      onClick={addQuoteItem}
-                      className="mb-4"
-                    >
-                      <FaPlus /> Add Item
-                    </Button>
-
-                    <Row className="mb-4 g-3">
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="modern-label">Work Type</Form.Label>
-                          <Form.Select
-                            className="modern-input"
-                            value={quoteDetails.workType}
-                            onChange={(e) =>
-                              setQuoteDetails({ ...quoteDetails, workType: e.target.value })
-                            }
-                          >
-                            <option value="">Select...</option>
-                            <option value="Labour Only">Labour Only</option>
-                            <option value="Labour + Materials">Labour + Materials</option>
-                            <option value="Materials Only">Materials Only</option>
-                          </Form.Select>
-                        </Form.Group>
-                      </Col>
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="modern-label">
-                            <FaClock /> Estimated Duration
-                          </Form.Label>
-                          <Form.Control
-                            className="modern-input"
-                            value={quoteDetails.duration}
-                            onChange={(e) =>
-                              setQuoteDetails({ ...quoteDetails, duration: e.target.value })
-                            }
-                            placeholder="e.g., 2 days, 1 week"
-                          />
-                        </Form.Group>
-                      </Col>
-                    </Row>
-
-                    <Form.Group className="mb-4">
-                      <Form.Label className="modern-label">
-                        <FaMoneyBillWave /> Payment Terms
-                      </Form.Label>
-                      <Form.Select
-                        className="modern-input"
-                        value={quoteDetails.paymentTerms}
-                        onChange={(e) =>
-                          setQuoteDetails({ ...quoteDetails, paymentTerms: e.target.value })
-                        }
-                      >
-                        <option>50% Deposit, 50% on Completion</option>
-                        <option>Full Payment on Completion</option>
-                        <option>30% Deposit, 70% on Completion</option>
-                      </Form.Select>
-                    </Form.Group>
-
-                    <Form.Group className="mb-4">
-                      <Form.Label className="modern-label">Additional Notes</Form.Label>
-                      <Form.Control
-                        as="textarea"
-                        rows={3}
-                        className="modern-input"
-                        value={quoteDetails.notes}
-                        onChange={(e) =>
-                          setQuoteDetails({ ...quoteDetails, notes: e.target.value })
-                        }
-                        placeholder="Any special terms, warranties, or notes..."
-                      />
-                    </Form.Group>
-
-                    <Alert variant="success" className="modern-alert modern-alert-success">
-                      <FaMoneyBillWave className="me-2" />
-                      <strong>Total Quote: KSh {calculateTotal().toLocaleString()}</strong>
-                    </Alert>
-
-                    <div className="d-flex justify-content-between flex-wrap gap-2">
-                      <Button
-                        variant="outline-secondary"
-                        onClick={handleDownloadQuotePDF}
-                        className="modern-btn modern-btn-outline"
-                      >
-                        <FaDownload /> Download PDF
-                      </Button>
-                      <div className="d-flex gap-2">
-                        <Button
-                          variant="secondary"
-                          onClick={() => setShowQuoteForm(false)}
-                          className="modern-btn"
-                        >
-                          Cancel
-                        </Button>
-                        {normalizedStatus(selectedJob.status) === "accepted" && (
-                          <Button
-                            variant="success"
-                            onClick={handleSubmitQuote}
-                            disabled={actionLoading}
-                            className="modern-btn modern-btn-success"
-                          >
-                            <FaCheckCircle /> Submit Quote
-                          </Button>
-                        )}
+                {/* Right: budget & urgency */}
+                <div style={{ background:"white", border:"2px solid #f5f5f4", borderRadius:14, padding:"1.125rem" }}>
+                  <div style={{ fontSize:".72rem", fontWeight:700, color:"#a8a29e", textTransform:"uppercase", letterSpacing:.5, marginBottom:".75rem" }}>Financial</div>
+                  <div style={{ marginBottom:"1rem" }}>
+                    <div style={{ fontSize:".72rem", color:"#a8a29e", fontWeight:600, marginBottom:3 }}>Budget / Quote</div>
+                    <div style={{ fontSize:"1.75rem", fontWeight:900, color:"#15803d", letterSpacing:"-.5px" }}>
+                      KSh {selected.budget?.toLocaleString()||"TBD"}
+                    </div>
+                  </div>
+                  <div className="jt-detail" style={{ paddingTop:0 }}>
+                    <div><div className="jt-detail-label">Priority</div>
+                      <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:selected.isUrgent?"#fef2f2":"#f5f5f4", color:selected.isUrgent?"#ef4444":"#78716c", padding:"3px 12px", borderRadius:50, fontWeight:700, fontSize:".8rem", marginTop:3 }}>
+                        {selected.isUrgent ? <><FaExclamationTriangle size={11}/> Urgent</> : "Normal"}
                       </div>
                     </div>
-                  </Form>
-                </Card>
+                  </div>
+                  <div className="jt-detail">
+                    <div><div className="jt-detail-label">Status</div>
+                      <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:getStatus(selected.status).bg, color:getStatus(selected.status).color, padding:"3px 12px", borderRadius:50, fontWeight:700, fontSize:".8rem", marginTop:3 }}>
+                        <span style={{width:6,height:6,borderRadius:"50%",background:getStatus(selected.status).dot,flexShrink:0}}/>
+                        {getStatus(selected.status).label}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quote form */}
+              {showQuote && ["accepted","quotesubmitted"].includes(norm(selected.status)) && (
+                <div style={{ background:"#fafaf9", border:"2px solid #e7e5e4", borderRadius:16, padding:"1.375rem", marginBottom:"1.25rem" }}>
+                  <div style={{ fontWeight:800, fontSize:"1rem", marginBottom:"1.125rem", display:"flex", alignItems:"center", gap:8 }}>
+                    <FaFileAlt style={{color:"#22c55e"}}/> 
+                    {norm(selected.status)==="accepted" ? "Prepare Quote" : "Edit Quote"}
+                  </div>
+
+                  <div style={{marginBottom:"1rem"}}>
+                    <label style={{fontWeight:600,fontSize:".8rem",color:"#44403c",display:"block",marginBottom:5}}>Your Name / Business</label>
+                    <input className="qt-input" value={quoteDetails.plumberName} placeholder="e.g. James Kamau Electrical"
+                      onChange={e=>setQuote({...quoteDetails,plumberName:e.target.value})}/>
+                  </div>
+
+                  <div style={{ fontWeight:700, fontSize:".85rem", marginBottom:".75rem", color:"#44403c" }}>Line Items</div>
+                  {quoteDetails.items.map((item,idx)=>(
+                    <div key={idx} className="qt-item">
+                      <Row className="g-2 align-items-end">
+                        <Col xs={12} md={5}>
+                          <label style={{fontSize:".72rem",fontWeight:600,color:"#78716c",display:"block",marginBottom:3}}>Description</label>
+                          <input className="qt-input" value={item.desc} placeholder="e.g. Labour charge" onChange={e=>updateItem(idx,"desc",e.target.value)}/>
+                        </Col>
+                        <Col xs={4} md={2}>
+                          <label style={{fontSize:".72rem",fontWeight:600,color:"#78716c",display:"block",marginBottom:3}}>Qty</label>
+                          <input className="qt-input" type="number" min="1" value={item.qty} onChange={e=>updateItem(idx,"qty",parseInt(e.target.value))}/>
+                        </Col>
+                        <Col xs={8} md={3}>
+                          <label style={{fontSize:".72rem",fontWeight:600,color:"#78716c",display:"block",marginBottom:3}}>Unit Price (KSh)</label>
+                          <input className="qt-input" type="number" min="0" value={item.price} onChange={e=>updateItem(idx,"price",parseFloat(e.target.value))}/>
+                        </Col>
+                        <Col xs={12} md={2} style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{background:"#f0fdf4",border:"1.5px solid #86efac",color:"#15803d",padding:"5px 10px",borderRadius:8,fontWeight:700,fontSize:".8rem",whiteSpace:"nowrap"}}>
+                            {(item.qty*item.price).toLocaleString()}
+                          </div>
+                          {quoteDetails.items.length>1 && (
+                            <button onClick={()=>removeItem(idx)} style={{background:"#fef2f2",border:"1.5px solid #fca5a5",color:"#ef4444",borderRadius:8,padding:"5px 8px",cursor:"pointer",display:"flex",alignItems:"center"}}><FaTrash size={11}/></button>
+                          )}
+                        </Col>
+                      </Row>
+                    </div>
+                  ))}
+
+                  <button onClick={addItem} style={{background:"white",border:"2px dashed #d4cdc8",color:"#78716c",borderRadius:10,padding:".625rem 1.125rem",fontWeight:700,fontSize:".85rem",cursor:"pointer",display:"flex",alignItems:"center",gap:6,marginBottom:"1rem",fontFamily:"'DM Sans',sans-serif"}}>
+                    <FaPlus size={11}/> Add Item
+                  </button>
+
+                  <Row className="g-2 mb-3">
+                    <Col md={6}>
+                      <label style={{fontWeight:600,fontSize:".8rem",color:"#44403c",display:"block",marginBottom:5}}>Work Type</label>
+                      <select className="qt-select" value={quoteDetails.workType} onChange={e=>setQuote({...quoteDetails,workType:e.target.value})}>
+                        <option value="">Select…</option>
+                        <option>Labour Only</option><option>Labour + Materials</option><option>Materials Only</option>
+                      </select>
+                    </Col>
+                    <Col md={6}>
+                      <label style={{fontWeight:600,fontSize:".8rem",color:"#44403c",display:"block",marginBottom:5}}>Duration</label>
+                      <input className="qt-input" value={quoteDetails.duration} placeholder="e.g. 2 days" onChange={e=>setQuote({...quoteDetails,duration:e.target.value})}/>
+                    </Col>
+                  </Row>
+                  <div style={{marginBottom:"1rem"}}>
+                    <label style={{fontWeight:600,fontSize:".8rem",color:"#44403c",display:"block",marginBottom:5}}>Payment Terms</label>
+                    <select className="qt-select" value={quoteDetails.paymentTerms} onChange={e=>setQuote({...quoteDetails,paymentTerms:e.target.value})}>
+                      <option>50% Deposit, 50% on Completion</option>
+                      <option>Full Payment on Completion</option>
+                      <option>30% Deposit, 70% on Completion</option>
+                    </select>
+                  </div>
+                  <div style={{marginBottom:"1.125rem"}}>
+                    <label style={{fontWeight:600,fontSize:".8rem",color:"#44403c",display:"block",marginBottom:5}}>Notes</label>
+                    <textarea className="qt-input" rows={3} style={{resize:"vertical"}} value={quoteDetails.notes} placeholder="Warranties, special terms…" onChange={e=>setQuote({...quoteDetails,notes:e.target.value})}/>
+                  </div>
+
+                  {/* Total */}
+                  <div style={{ background:"#1c1917", borderRadius:12, padding:"1rem 1.25rem", display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"1rem" }}>
+                    <span style={{ color:"#a8a29e", fontWeight:600, fontSize:".875rem" }}>Quote Total</span>
+                    <span style={{ color:"white", fontWeight:900, fontSize:"1.375rem", letterSpacing:"-.5px" }}>KSh {calcTotal().toLocaleString()}</span>
+                  </div>
+
+                  <div style={{ display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:"0.5rem" }}>
+                    <button onClick={downloadPDF} style={{ background:"white", border:"2px solid #e7e5e4", color:"#44403c", borderRadius:10, padding:".625rem 1.125rem", fontWeight:700, fontSize:".85rem", cursor:"pointer", display:"flex", alignItems:"center", gap:6, fontFamily:"'DM Sans',sans-serif" }}>
+                      <FaDownload size={13}/> Download PDF
+                    </button>
+                    <div style={{ display:"flex", gap:".5rem" }}>
+                      <button onClick={()=>setShowQuote(false)} style={{ background:"#f5f5f4", border:"none", color:"#78716c", borderRadius:10, padding:".625rem 1.125rem", fontWeight:700, fontSize:".85rem", cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Cancel</button>
+                      {norm(selected.status)==="accepted" && (
+                        <button onClick={submitQuote} disabled={actionLoading} style={{ background:"linear-gradient(135deg,#22c55e,#16a34a)", border:"none", color:"white", borderRadius:10, padding:".625rem 1.375rem", fontWeight:700, fontSize:".85rem", cursor:"pointer", display:"flex", alignItems:"center", gap:6, fontFamily:"'DM Sans',sans-serif", opacity:actionLoading?.7:1 }}>
+                          <FaCheckCircle size={13}/> Submit Quote
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="d-flex gap-2 flex-wrap">
-                {renderActionButtons()}
+              {/* Action buttons */}
+              <div style={{ padding:"0", marginTop:".5rem" }}>
+                <div style={{ fontSize:".72rem", fontWeight:700, color:"#a8a29e", textTransform:"uppercase", letterSpacing:.5, marginBottom:".875rem" }}>Actions</div>
+                <Actions/>
               </div>
             </Modal.Body>
 
-            <Modal.Footer className="border-0">
-              <Button variant="secondary" onClick={handleClose} className="modern-btn">
-                Close
-              </Button>
+            <Modal.Footer>
+              <button onClick={closeJob} style={{ background:"#f5f5f4", border:"none", color:"#78716c", borderRadius:10, padding:".625rem 1.375rem", fontWeight:700, fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}>Close</button>
             </Modal.Footer>
           </Modal>
         )}
 
-        {/* Send Quote Modal */}
-        {showSendQuote && selectedJob && (
-          <Modal show={showSendQuote} onHide={() => setShowSendQuote(false)} centered>
-            <Modal.Header closeButton className="border-0">
-              <Modal.Title className="d-flex align-items-center gap-2">
-                <FaEnvelope className="text-success" />
-                Send Quote to Client
-              </Modal.Title>
+        {/* ══ Send Quote Modal ══ */}
+        {showSend && selected && (
+          <Modal show onHide={()=>setShowSend(false)} centered className="jt-modal">
+            <Modal.Header closeButton>
+              <div style={{ fontWeight:800, fontSize:"1.0625rem" }}>Send Quote</div>
             </Modal.Header>
             <Modal.Body>
-              <p className="text-muted mb-4">
-                Choose how to send the quote to <strong>{selectedJob.client?.full_name}</strong>
+              <p style={{ color:"#78716c", marginBottom:"1.25rem", fontSize:".875rem" }}>
+                Sending to <strong style={{color:"#1c1917"}}>{selected.client?.full_name||"client"}</strong>
               </p>
-
-              <div 
-                className={`send-method-card ${sendMethod === 'email' ? 'active' : ''}`}
-                onClick={() => setSendMethod('email')}
-              >
-                <div className="d-flex align-items-center">
-                  <div className="send-method-icon icon-email me-3">
-                    <FaEnvelope size={24} color="#3b82f6" />
-                  </div>
+              {[
+                { id:"email",    icon:<FaEnvelope color="#3b82f6"/>,  bg:"#eff6ff", label:"Email",         desc:"PDF attachment via email"     },
+                { id:"sms",      icon:<FaSms color="#f59e0b"/>,       bg:"#fffbeb", label:"SMS",           desc:"Text message with quote link" },
+                { id:"whatsapp", icon:<FaWhatsapp color="#16a34a"/>,  bg:"#f0fdf4", label:"WhatsApp",      desc:"Pre-filled WhatsApp message"  },
+                { id:"download", icon:<FaDownload color="#6366f1"/>,  bg:"#eef2ff", label:"Download Only", desc:"Save PDF to share manually"   },
+              ].map(m => (
+                <div key={m.id} className={`sm-card ${sendMethod===m.id?"active":""}`} onClick={()=>setSend(m.id)}>
+                  <div className="sm-icon" style={{background:m.bg}}>{m.icon}</div>
                   <div>
-                    <h6 className="mb-0 fw-bold">Email</h6>
-                    <small className="text-muted">Send via email with PDF attachment</small>
+                    <div style={{ fontWeight:700, fontSize:".9rem", color:"#1c1917" }}>{m.label}</div>
+                    <div style={{ fontSize:".78rem", color:"#78716c", marginTop:2 }}>{m.desc}</div>
                   </div>
+                  {sendMethod===m.id && <div style={{ marginLeft:"auto", color:"#22c55e" }}><FaCheckCircle/></div>}
                 </div>
+              ))}
+              <div style={{ background:"#fafaf9", border:"2px solid #f5f5f4", borderRadius:12, padding:"1rem", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <span style={{ color:"#78716c", fontWeight:600, fontSize:".875rem" }}>Quote Total</span>
+                <span style={{ color:"#15803d", fontWeight:900, fontSize:"1.125rem" }}>KSh {calcTotal().toLocaleString()}</span>
               </div>
-
-              <div 
-                className={`send-method-card ${sendMethod === 'sms' ? 'active' : ''}`}
-                onClick={() => setSendMethod('sms')}
-              >
-                <div className="d-flex align-items-center">
-                  <div className="send-method-icon icon-sms me-3">
-                    <FaSms size={24} color="#f59e0b" />
-                  </div>
-                  <div>
-                    <h6 className="mb-0 fw-bold">SMS</h6>
-                    <small className="text-muted">Send text message with quote link</small>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                className={`send-method-card ${sendMethod === 'whatsapp' ? 'active' : ''}`}
-                onClick={() => setSendMethod('whatsapp')}
-              >
-                <div className="d-flex align-items-center">
-                  <div className="send-method-icon icon-whatsapp me-3">
-                    <FaWhatsapp size={24} color="#16a34a" />
-                  </div>
-                  <div>
-                    <h6 className="mb-0 fw-bold">WhatsApp</h6>
-                    <small className="text-muted">Opens WhatsApp with pre-filled message</small>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                className={`send-method-card ${sendMethod === 'download' ? 'active' : ''}`}
-                onClick={() => setSendMethod('download')}
-              >
-                <div className="d-flex align-items-center">
-                  <div className="send-method-icon icon-download me-3">
-                    <FaDownload size={24} color="#9333ea" />
-                  </div>
-                  <div>
-                    <h6 className="mb-0 fw-bold">Download Only</h6>
-                    <small className="text-muted">Download PDF to send manually</small>
-                  </div>
-                </div>
-              </div>
-
-              <Alert variant="info" className="modern-alert modern-alert-info mt-3">
-                <FaMoneyBillWave className="me-2" />
-                <strong>Total:</strong> KSh {calculateTotal().toLocaleString()}
-              </Alert>
             </Modal.Body>
-            <Modal.Footer className="border-0">
-              <Button variant="secondary" onClick={() => setShowSendQuote(false)} className="modern-btn">
-                Cancel
-              </Button>
-              {sendMethod === 'whatsapp' ? (
-                <Button variant="success" onClick={openWhatsApp} className="modern-btn modern-btn-success">
-                  <FaWhatsapp /> Open WhatsApp
-                </Button>
-              ) : sendMethod === 'download' ? (
-                <Button variant="success" onClick={handleDownloadQuotePDF} className="modern-btn modern-btn-success">
-                  <FaDownload /> Download PDF
-                </Button>
+            <Modal.Footer>
+              <button onClick={()=>setShowSend(false)} style={{ background:"#f5f5f4", border:"none", color:"#78716c", borderRadius:10, padding:".625rem 1.375rem", fontWeight:700, fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}>Cancel</button>
+              {sendMethod==="whatsapp" ? (
+                <button onClick={openWA} style={{ background:"linear-gradient(135deg,#22c55e,#16a34a)", border:"none", color:"white", borderRadius:10, padding:".625rem 1.375rem", fontWeight:700, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                  <FaWhatsapp/> Open WhatsApp
+                </button>
+              ) : sendMethod==="download" ? (
+                <button onClick={downloadPDF} style={{ background:"#1c1917", border:"none", color:"white", borderRadius:10, padding:".625rem 1.375rem", fontWeight:700, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                  <FaDownload/> Download PDF
+                </button>
               ) : (
-                <Button 
-                  variant="success" 
-                  onClick={handleSendQuote}
-                  disabled={actionLoading}
-                  className="modern-btn modern-btn-success"
-                >
-                  {actionLoading ? 'Sending...' : (
-                    <>
-                      {sendMethod === 'email' && <><FaEnvelope /> Send Email</>}
-                      {sendMethod === 'sms' && <><FaSms /> Send SMS</>}
-                    </>
-                  )}
-                </Button>
+                <button onClick={sendQuote} disabled={actionLoading} style={{ background:"linear-gradient(135deg,#22c55e,#16a34a)", border:"none", color:"white", borderRadius:10, padding:".625rem 1.375rem", fontWeight:700, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6, opacity:actionLoading?.7:1 }}>
+                  {actionLoading ? "Sending…" : sendMethod==="email" ? <><FaEnvelope/> Send Email</> : <><FaSms/> Send SMS</>}
+                </button>
               )}
             </Modal.Footer>
           </Modal>
@@ -1405,9 +740,5 @@ function JobsTab({ jobs: initialJobs = [], setJobs }) {
   );
 }
 
-JobsTab.propTypes = {
-  jobs: PropTypes.array,
-  setJobs: PropTypes.func,
-};
-
+JobsTab.propTypes = { jobs: PropTypes.array, setJobs: PropTypes.func, addToast: PropTypes.func };
 export default JobsTab;
