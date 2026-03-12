@@ -227,4 +227,3 @@ BREVO_API_KEY       = config('BREVO_API_KEY', default='')
 GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
-BREVO_API_KEY = config("BREVO_API_KEY", default="")

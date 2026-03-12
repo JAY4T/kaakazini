@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import api from "../../api/axiosClient"; 
-
+import api from "../../api/axiosClient";
 import { getFullImageUrl } from "../../utils/getFullImageUrl";
 
 function CraftsmanProfile() {
@@ -10,735 +9,711 @@ function CraftsmanProfile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [activeTab, setActiveTab] = useState('about');
+  const [lightboxImg, setLightboxImg] = useState(null);
 
   useEffect(() => {
     if (!slug || slug === 'undefined' || slug === 'null') {
-      setNotFound(true);
-      setLoading(false);
-      setErrorMsg('Invalid craftsman slug.');
-      return;
+      setNotFound(true); setLoading(false);
+      setErrorMsg('Invalid craftsman slug.'); return;
     }
-
     const fetchCraftsman = async () => {
-      setLoading(true);
-      setNotFound(false);
-      setErrorMsg('');
+      setLoading(true); setNotFound(false); setErrorMsg('');
       try {
         const response = await api.get(`/public-craftsman/${slug}/`);
-        if (response.status === 200 && response.data) {
-          setCraftsman(response.data);
-        } else {
-          setNotFound(true);
-          setErrorMsg('No data returned from API.');
-        }
+        if (response.status === 200 && response.data) setCraftsman(response.data);
+        else { setNotFound(true); setErrorMsg('No data returned from API.'); }
       } catch (error) {
-        console.error('Error fetching craftsman data:', error);
-        setErrorMsg(
-          error.response?.status === 404
-            ? 'Craftsman not found on the server.'
-            : 'Failed to fetch craftsman data.'
-        );
+        setErrorMsg(error.response?.status === 404 ? 'Craftsman not found.' : 'Failed to fetch craftsman data.');
         setNotFound(true);
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     };
-
     fetchCraftsman();
   }, [slug]);
 
-  if (loading)
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#f3f2ef'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner-border text-warning" role="status" style={{ width: '3rem', height: '3rem' }}>
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="mt-3 text-secondary fw-semibold">Loading profile...</p>
-        </div>
+  if (loading) return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#faf9f6'}}>
+      <div style={{textAlign:'center'}}>
+        <div style={{width:56,height:56,border:'3px solid #f0ede8',borderTopColor:'#198754',borderRadius:'50%',animation:'spin 0.8s linear infinite',margin:'0 auto'}}/>
+        <p style={{marginTop:16,fontFamily:"'DM Sans',sans-serif",color:'#6c757d',fontWeight:600}}>Loading profile…</p>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
-    );
+    </div>
+  );
 
-  if (notFound || !craftsman)
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f2ef' }}>
-        <div className="text-center p-5">
-          <h2 className="text-danger fs-4 fw-bold">Craftsman Not Found</h2>
-          <p className="text-muted mt-2">{errorMsg || 'Please check the URL or select another craftsman.'}</p>
-          <Link to="/" className="btn btn-warning mt-3">Go Home</Link>
-        </div>
+  if (notFound || !craftsman) return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#faf9f6'}}>
+      <div style={{textAlign:'center',padding:'40px 24px'}}>
+        <div style={{fontSize:'3rem',marginBottom:16}}>🔍</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",color:'#1a1a2e',marginBottom:8}}>Craftsman Not Found</h2>
+        <p style={{color:'#6c757d',marginBottom:24}}>{errorMsg || 'Please check the URL or select another craftsman.'}</p>
+        <Link to="/craftsmen" style={{background:'#198754',color:'#fff',padding:'12px 28px',borderRadius:10,textDecoration:'none',fontWeight:700}}>Browse Craftsmen</Link>
       </div>
-    );
+    </div>
+  );
 
-  // Get full URLs for images
   const profileImage = getFullImageUrl(craftsman.profile);
   const proofDocument = getFullImageUrl(craftsman.proof_document);
   const primaryService = craftsman.primary_service || null;
   const services = primaryService
-    ? [{ name: primaryService, service_image_url: craftsman.service_image }] 
-      .concat(craftsman.services || [])
+    ? [{ name: primaryService, service_image_url: craftsman.service_image }].concat(craftsman.services || [])
     : craftsman.services || [];
 
-  const avgRating =
-    craftsman.reviews && craftsman.reviews.length > 0
-      ? (craftsman.reviews.reduce((sum, r) => sum + r.rating, 0) / craftsman.reviews.length).toFixed(1)
-      : null;
+  const avgRating = craftsman.reviews?.length > 0
+    ? (craftsman.reviews.reduce((sum, r) => sum + r.rating, 0) / craftsman.reviews.length).toFixed(1)
+    : null;
 
   const handleCopyLink = () => {
-    const profileUrl = `${window.location.origin}/craftsman/${slug}`;
-    navigator.clipboard.writeText(profileUrl).then(() => {
-      alert('Profile link copied to clipboard!');
-    });
+    navigator.clipboard.writeText(`${window.location.origin}/craftsman/${slug}`)
+      .then(() => alert('Profile link copied!'));
   };
+
+  const tabs = ['about','portfolio','skills','reviews'];
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+        :root {
+          --green:   #198754;
+          --green-d: #145a32;
+          --green-l: #e8f5e9;
+          --gold:    #FFD700;
+          --gold-l:  #fffbea;
+          --bg:      #faf9f6;
+          --white:   #ffffff;
+          --text:    #1a1a2e;
+          --muted:   #6c757d;
+          --border:  #e8e4de;
+        }
+        * { box-sizing:border-box; }
+        body { background:var(--bg); font-family:'DM Sans',sans-serif; color:var(--text); }
 
-        .profile-container {
-          background: #f3f2ef;
-          min-height: 100vh;
-          padding: 2rem 0;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        /* ── Cover ── */
+        .cp-cover {
+          height:260px; position:relative; overflow:hidden;
+          background:linear-gradient(135deg,#145a32 0%,#198754 45%,#f59e0b 100%);
+        }
+        .cp-cover-pattern {
+          position:absolute; inset:0; opacity:.12;
+          background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        @media(max-width:768px){ .cp-cover{height:160px;} }
+
+        /* ── Profile header ── */
+        .cp-header-card {
+          background:var(--white); border-radius:16px;
+          box-shadow:0 4px 30px rgba(0,0,0,.08);
+          margin:0 0 1.5rem;
+          padding:0 0 1.5rem;
+          overflow:hidden;
+        }
+        .cp-avatar-row {
+          padding:0 2rem 1.5rem;
+          margin-top:-70px;
+          display:flex; align-items:flex-end; gap:1.5rem;
+          flex-wrap:wrap;
+        }
+        @media(max-width:576px){ .cp-avatar-row{margin-top:-50px; padding:0 1rem 1.25rem; gap:1rem;} }
+        .cp-avatar {
+          width:140px; height:140px; border-radius:50%;
+          border:5px solid var(--white); box-shadow:0 4px 20px rgba(0,0,0,.15);
+          object-fit:cover; background:var(--white); flex-shrink:0;
+        }
+        @media(max-width:576px){ .cp-avatar{width:100px;height:100px;} }
+        .cp-name-block { flex:1; min-width:200px; padding-top:80px; }
+        @media(max-width:576px){ .cp-name-block{padding-top:60px;} }
+        .cp-name { font-family:'Playfair Display',serif; font-size:2rem; font-weight:800; color:var(--text); margin:0 0 4px; }
+        @media(max-width:576px){ .cp-name{font-size:1.5rem;} }
+        .cp-headline { font-size:.97rem; color:var(--muted); margin:0 0 8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .cp-trade-pill {
+          background:var(--green); color:#fff; border-radius:20px;
+          padding:3px 12px; font-size:.75rem; font-weight:700;
+          display:inline-flex; align-items:center; gap:5px;
+        }
+        .cp-verified-badge {
+          background:var(--gold-l); color:#7c4b00; border:1.5px solid var(--gold);
+          border-radius:20px; padding:3px 12px; font-size:.73rem; font-weight:700;
+          display:inline-flex; align-items:center; gap:5px;
+        }
+        .cp-location { font-size:.87rem; color:var(--muted); display:flex; align-items:center; gap:6px; }
+        .cp-rating-pill {
+          display:inline-flex; align-items:center; gap:6px;
+          background:var(--gold-l); border:1.5px solid var(--gold);
+          border-radius:20px; padding:5px 14px; font-size:.87rem; font-weight:700;
+          color:#7c4b00; margin-top:8px;
         }
 
-        .profile-cover {
-          background: linear-gradient(135deg, #fbbf24 0%, #22c55e 100%);
-          height: 200px;
-          border-radius: 8px 8px 0 0;
-          position: relative;
+        /* ── Stats row ── */
+        .cp-stats {
+          display:flex; gap:0; border-top:1px solid var(--border);
+          margin:0 2rem;
+        }
+        @media(max-width:576px){ .cp-stats{margin:0 1rem;} }
+        .cp-stat {
+          flex:1; text-align:center; padding:16px 8px;
+          border-right:1px solid var(--border);
+        }
+        .cp-stat:last-child { border-right:none; }
+        .cp-stat-val { display:block; font-size:1.35rem; font-weight:800; color:var(--text); }
+        .cp-stat-lbl { display:block; font-size:.72rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+
+        /* ── Action buttons ── */
+        .cp-actions {
+          display:flex; gap:10px; flex-wrap:wrap;
+          padding:1.25rem 2rem 0;
+        }
+        @media(max-width:576px){ .cp-actions{padding:1rem 1rem 0; flex-direction:column;} }
+        .cp-btn-hire {
+          flex:1; min-width:180px; display:flex; align-items:center; justify-content:center; gap:8px;
+          background:var(--green); color:#fff;
+          border:none; border-radius:12px; padding:14px 24px;
+          font-family:'DM Sans',sans-serif; font-size:1rem; font-weight:700;
+          cursor:pointer; text-decoration:none;
+          transition:all .2s; box-shadow:0 4px 18px rgba(25,135,84,.3);
+        }
+        .cp-btn-hire:hover { background:var(--green-d); color:#fff; transform:translateY(-2px); box-shadow:0 8px 24px rgba(25,135,84,.4); }
+        .cp-btn-contact {
+          display:flex; align-items:center; gap:8px;
+          background:var(--gold); color:#1a1a2e;
+          border:none; border-radius:12px; padding:14px 24px;
+          font-family:'DM Sans',sans-serif; font-size:.97rem; font-weight:700;
+          cursor:pointer; text-decoration:none;
+          transition:all .2s; box-shadow:0 4px 14px rgba(255,215,0,.35);
+        }
+        .cp-btn-contact:hover { filter:brightness(.9); color:#1a1a2e; transform:translateY(-2px); }
+        .cp-btn-share {
+          display:flex; align-items:center; gap:8px;
+          background:var(--white); color:var(--muted);
+          border:1.5px solid var(--border); border-radius:12px; padding:14px 20px;
+          font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:600;
+          cursor:pointer; transition:all .2s;
+        }
+        .cp-btn-share:hover { border-color:var(--green); color:var(--green); }
+
+        /* ── How to hire banner ── */
+        .cp-hire-guide {
+          background:linear-gradient(135deg,var(--green-l) 0%,#fff 100%);
+          border:1.5px solid #c8e6c9; border-radius:14px;
+          padding:20px 24px; margin-bottom:1.5rem;
+          display:flex; align-items:flex-start; gap:16px;
+        }
+        .cp-hire-guide-icon { font-size:1.6rem; flex-shrink:0; margin-top:2px; }
+        .cp-hire-guide h4 { font-family:'Playfair Display',serif; font-size:1.05rem; font-weight:700; color:var(--text); margin:0 0 6px; }
+        .cp-hire-guide p { font-size:.84rem; color:var(--muted); margin:0; line-height:1.65; }
+        .cp-hire-steps { display:flex; gap:12px; margin-top:14px; flex-wrap:wrap; }
+        .cp-hire-step {
+          display:flex; align-items:center; gap:8px;
+          background:var(--white); border:1px solid #c8e6c9; border-radius:10px;
+          padding:8px 14px; font-size:.78rem; font-weight:600; color:var(--green);
+        }
+        .cp-hire-step-num {
+          width:22px; height:22px; border-radius:50%; background:var(--green); color:#fff;
+          display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:800; flex-shrink:0;
         }
 
-        .profile-card {
-          background: white;
-          border-radius: 8px;
-          box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.08);
-          margin-bottom: 1rem;
-          overflow: hidden;
+        /* ── Tabs ── */
+        .cp-tabs {
+          display:flex; gap:0; background:var(--white);
+          border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.06);
+          overflow:hidden; margin-bottom:1.5rem;
+          border:1.5px solid var(--border);
+        }
+        .cp-tab {
+          flex:1; padding:14px 8px; text-align:center; border:none;
+          background:transparent; font-family:'DM Sans',sans-serif;
+          font-size:.84rem; font-weight:600; color:var(--muted); cursor:pointer;
+          transition:all .18s; border-right:1px solid var(--border); display:flex;
+          align-items:center; justify-content:center; gap:6px;
+        }
+        .cp-tab:last-child { border-right:none; }
+        .cp-tab.active { background:var(--green); color:#fff; }
+        .cp-tab:hover:not(.active) { background:var(--green-l); color:var(--green); }
+
+        /* ── Section card ── */
+        .cp-section {
+          background:var(--white); border-radius:14px;
+          box-shadow:0 2px 16px rgba(0,0,0,.06);
+          padding:1.75rem; margin-bottom:1.5rem;
+          border:1px solid var(--border);
+        }
+        .cp-section-title {
+          font-family:'Playfair Display',serif; font-size:1.2rem; font-weight:700;
+          color:var(--text); margin:0 0 1.25rem;
+          display:flex; align-items:center; gap:10px;
+        }
+        .cp-section-title-icon {
+          width:32px; height:32px; border-radius:8px; background:var(--green-l);
+          color:var(--green); display:flex; align-items:center; justify-content:center;
+          font-size:.88rem; flex-shrink:0;
+        }
+        .cp-about-text { font-size:.95rem; color:var(--muted); line-height:1.8; }
+
+        /* ── Gallery ── */
+        .cp-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+        .cp-gallery-img {
+          width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px;
+          cursor:pointer; transition:transform .25s, box-shadow .25s;
+          box-shadow:0 2px 8px rgba(0,0,0,.1);
+        }
+        .cp-gallery-img:hover { transform:scale(1.04); box-shadow:0 8px 24px rgba(0,0,0,.2); }
+
+        /* ── Lightbox ── */
+        .cp-lightbox {
+          position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.88);
+          display:flex; align-items:center; justify-content:center; padding:20px;
+          cursor:pointer;
+        }
+        .cp-lightbox img { max-width:90vw; max-height:85vh; border-radius:12px; object-fit:contain; }
+        .cp-lightbox-close {
+          position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%;
+          background:rgba(255,255,255,.15); border:1.5px solid rgba(255,255,255,.3);
+          color:#fff; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
         }
 
-        .profile-header-section {
-          padding: 0 1.5rem 1.5rem;
-          position: relative;
-          margin-top: -80px;
+        /* ── Skills ── */
+        .cp-skills { display:flex; flex-wrap:wrap; gap:8px; }
+        .cp-skill-tag {
+          background:var(--green-l); color:var(--green); border:1px solid #c8e6c9;
+          border-radius:20px; padding:6px 16px; font-size:.82rem; font-weight:600;
         }
 
-        .profile-avatar {
-          width: 160px;
-          height: 160px;
-          border-radius: 50%;
-          border: 4px solid white;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          object-fit: cover;
-          background: white;
+        /* ── Reviews ── */
+        .cp-review {
+          background:var(--bg); border-radius:12px; padding:1.25rem;
+          border:1px solid var(--border); margin-bottom:12px;
         }
-
-        .profile-name {
-          font-size: 1.75rem;
-          font-weight: 600;
-          color: rgba(0,0,0,0.9);
-          margin: 1rem 0 0.25rem;
+        .cp-review-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+        .cp-reviewer-name { font-weight:700; color:var(--text); font-size:.95rem; margin:0 0 3px; }
+        .cp-reviewer-loc { font-size:.78rem; color:var(--muted); }
+        .cp-rating-badge {
+          background:var(--gold); color:#1a1a2e; border-radius:20px;
+          padding:4px 12px; font-size:.8rem; font-weight:800;
+          display:flex; align-items:center; gap:4px; flex-shrink:0;
         }
+        .cp-review-text { font-size:.88rem; color:var(--muted); line-height:1.65; margin:0; }
 
-        .profile-headline {
-          font-size: 1rem;
-          color: rgba(0,0,0,0.6);
-          margin-bottom: 0.5rem;
+        /* ── Sidebar ── */
+        .cp-sidebar-card {
+          background:var(--white); border-radius:14px;
+          box-shadow:0 2px 16px rgba(0,0,0,.06);
+          padding:1.5rem; margin-bottom:1.5rem;
+          border:1px solid var(--border);
         }
-
-        .profile-location {
-          font-size: 0.875rem;
-          color: rgba(0,0,0,0.6);
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
+        .cp-contact-item {
+          display:flex; align-items:center; gap:12px;
+          padding:12px 0; border-bottom:1px solid var(--border); font-size:.9rem;
         }
-
-        .profile-stats {
-          display: flex;
-          gap: 1.5rem;
-          margin-top: 1rem;
-          padding-top: 1rem;
-          border-top: 1px solid rgba(0,0,0,0.08);
+        .cp-contact-item:last-child { border-bottom:none; padding-bottom:0; }
+        .cp-contact-icon {
+          width:36px; height:36px; border-radius:10px; background:var(--green-l);
+          color:var(--green); display:flex; align-items:center; justify-content:center;
+          font-size:.88rem; flex-shrink:0;
         }
+        .cp-contact-label { font-size:.73rem; color:var(--muted); display:block; }
+        .cp-contact-value { font-weight:600; color:var(--text); }
 
-        .stat-item {
-          display: flex;
-          flex-direction: column;
+        /* ── Credentials ── */
+        .cp-cred-btn {
+          display:flex; align-items:center; gap:10px;
+          background:var(--green-l); color:var(--green);
+          border:1.5px solid #c8e6c9; border-radius:10px; padding:12px 18px;
+          font-weight:700; font-size:.88rem; text-decoration:none; transition:all .18s;
+          width:100%;
         }
+        .cp-cred-btn:hover { background:var(--green); color:#fff; }
 
-        .stat-value {
-          font-size: 1.125rem;
-          font-weight: 600;
-          color: rgba(0,0,0,0.9);
+        /* ── Services list ── */
+        .cp-service-item {
+          display:flex; align-items:center; gap:12px; padding:10px 0;
+          border-bottom:1px solid var(--border); font-size:.9rem;
         }
+        .cp-service-item:last-child { border-bottom:none; }
+        .cp-service-dot { width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0; }
 
-        .stat-label {
-          font-size: 0.75rem;
-          color: rgba(0,0,0,0.6);
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
+        /* ── Footer ── */
+        .cp-footer { background:#1a1a2e; color:#bbb; padding:52px 0 26px; font-family:'DM Sans',sans-serif; }
+        .cp-footer h5 { color:#fff; font-weight:700; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; margin-bottom:14px; }
+        .cp-footer a { color:#bbb; text-decoration:none; font-size:.85rem; transition:color .15s; }
+        .cp-footer a:hover { color:var(--gold); }
+        .cp-footer p { font-size:.85rem; margin-bottom:6px; }
 
-        .action-buttons {
-          display: flex;
-          gap: 0.75rem;
-          margin-top: 1.5rem;
-        }
-
-        .btn-primary-custom {
-          background: linear-gradient(135deg, #fbbf24 0%, #22c55e 100%);
-          color: #1f2937;
-          border: none;
-          padding: 0.625rem 1.5rem;
-          border-radius: 24px;
-          font-weight: 600;
-          font-size: 0.9375rem;
-          cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
-        }
-
-        .btn-primary-custom:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
-        }
-
-        .btn-secondary-custom {
-          background: white;
-          color: #6b7280;
-          border: 1px solid #6b7280;
-          padding: 0.625rem 1.5rem;
-          border-radius: 24px;
-          font-weight: 600;
-          font-size: 0.9375rem;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .btn-secondary-custom:hover {
-          background: #f9fafb;
-          border-color: #374151;
-          color: #374151;
-        }
-
-        .section-card {
-          background: white;
-          border-radius: 8px;
-          box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.08);
-          padding: 1.5rem;
-          margin-bottom: 1rem;
-        }
-
-        .section-title {
-          font-size: 1.25rem;
-          font-weight: 600;
-          color: rgba(0,0,0,0.9);
-          margin-bottom: 1rem;
-        }
-
-        .section-content {
-          font-size: 0.9375rem;
-          color: rgba(0,0,0,0.8);
-          line-height: 1.6;
-        }
-
-        .gallery-scroll {
-          display: flex;
-          overflow-x: auto;
-          gap: 1rem;
-          padding: 0.5rem 0 1rem;
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: thin;
-          scrollbar-color: #d1d5db #f3f4f6;
-        }
-
-        .gallery-scroll::-webkit-scrollbar {
-          height: 8px;
-        }
-
-        .gallery-scroll::-webkit-scrollbar-track {
-          background: #f3f4f6;
-          border-radius: 4px;
-        }
-
-        .gallery-scroll::-webkit-scrollbar-thumb {
-          background: #d1d5db;
-          border-radius: 4px;
-        }
-
-        .gallery-scroll::-webkit-scrollbar-thumb:hover {
-          background: #9ca3af;
-        }
-
-        .gallery-item {
-          flex-shrink: 0;
-          width: 180px;
-        }
-
-        .gallery-image {
-          width: 180px;
-          height: 180px;
-          border-radius: 8px;
-          object-fit: cover;
-          cursor: pointer;
-          transition: transform 0.2s;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .gallery-image:hover {
-          transform: scale(1.05);
-        }
-
-        .review-card {
-          background: #f9fafb;
-          border-radius: 8px;
-          padding: 1.25rem;
-          margin-bottom: 1rem;
-          border: 1px solid #e5e7eb;
-        }
-
-        .review-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: start;
-          margin-bottom: 0.75rem;
-        }
-
-        .reviewer-name {
-          font-weight: 600;
-          color: rgba(0,0,0,0.9);
-          font-size: 0.9375rem;
-        }
-
-        .reviewer-location {
-          font-size: 0.8125rem;
-          color: rgba(0,0,0,0.6);
-        }
-
-        .rating-badge {
-          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-          color: white;
-          padding: 0.25rem 0.75rem;
-          border-radius: 12px;
-          font-size: 0.8125rem;
-          font-weight: 600;
-        }
-
-        .review-text {
-          font-size: 0.9375rem;
-          color: rgba(0,0,0,0.7);
-          line-height: 1.5;
-        }
-
-        .skills-container {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-        }
-
-        .skill-badge {
-          background: #e5e7eb;
-          color: #374151;
-          padding: 0.5rem 1rem;
-          border-radius: 16px;
-          font-size: 0.875rem;
-          font-weight: 500;
-        }
-
-        .rating-summary {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-          background: #fef3c7;
-          padding: 0.5rem 1rem;
-          border-radius: 20px;
-          margin-top: 0.75rem;
-        }
-
-        .rating-number {
-          font-size: 1.125rem;
-          font-weight: 700;
-          color: #f59e0b;
-        }
-
-        .rating-stars {
-          color: #fbbf24;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 2rem;
-          color: rgba(0,0,0,0.4);
-          font-size: 0.9375rem;
-        }
-
-        /* Shop Section Styles */
-        .shop-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 1.25rem;
-        }
-
-        .shop-item {
-          border: 1px solid rgba(0,0,0,0.08);
-          border-radius: 8px;
-          overflow: hidden;
-          transition: all 0.3s ease;
-          cursor: pointer;
-          background: #fff;
-        }
-
-        .shop-item:hover {
-          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-          transform: translateY(-4px);
-        }
-
-        .shop-image {
-          width: 100%;
-          aspect-ratio: 1;
-          object-fit: cover;
-        }
-
-        .shop-details {
-          padding: 1rem;
-        }
-
-        .shop-title {
-          font-size: 0.9375rem;
-          font-weight: 600;
-          color: rgba(0,0,0,0.9);
-          margin: 0 0 0.5rem;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          min-height: 2.8rem;
-        }
-
-        .shop-price {
-          font-size: 1rem;
-          font-weight: 700;
-          background: linear-gradient(135deg, #fbbf24 0%, #22c55e 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          margin: 0 0 0.75rem;
-        }
-
-        .shop-cta {
-          display: block;
-          width: 100%;
-          padding: 0.625rem;
-          background: linear-gradient(135deg, #fbbf24 0%, #22c55e 100%);
-          color: #1f2937;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: all 0.2s;
-          text-align: center;
-          text-decoration: none;
-        }
-
-        .shop-cta:hover {
-          transform: scale(1.02);
-          box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
-        }
-
-        @media (max-width: 768px) {
-          .profile-cover {
-            height: 120px;
-          }
-
-          .profile-header-section {
-            margin-top: -60px;
-          }
-
-          .profile-avatar {
-            width: 120px;
-            height: 120px;
-          }
-
-          .profile-name {
-            font-size: 1.5rem;
-          }
-
-          .action-buttons {
-            flex-direction: column;
-          }
-
-          .btn-primary-custom,
-          .btn-secondary-custom {
-            width: 100%;
-          }
-
-          .profile-stats {
-            flex-direction: column;
-            gap: 1rem;
-          }
-
-          .shop-grid {
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1rem;
-          }
+        @media(max-width:768px){
+          .cp-tabs { overflow-x:auto; }
+          .cp-tab { font-size:.75rem; padding:12px 6px; white-space:nowrap; }
+          .cp-hire-steps { flex-direction:column; }
         }
       `}</style>
 
-      <div className="profile-container">
-        <div className="container" style={{ maxWidth: '1024px' }}>
-          
-          {/* Main Profile Card */}
-          <div className="profile-card">
-            <div className="profile-cover"></div>
-            
-            <div className="profile-header-section">
-              <img
-                src={profileImage}
-                alt={craftsman.name}
-                className="profile-avatar"
-                onError={(e) => (e.target.src = 'https://via.placeholder.com/160')}
-              />
-              
-              <h1 className="profile-name">{craftsman.name}</h1>
-              <p className="profile-headline">{craftsman.company_name || 'Independent Craftsman'} • {craftsman.profession || 'Skilled Tradesperson'}</p>
-              
-              <div className="profile-location">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                {craftsman.location || 'Kenya'}
-              </div>
+      {/* Lightbox */}
+      {lightboxImg && (
+        <div className="cp-lightbox" onClick={() => setLightboxImg(null)}>
+          <button className="cp-lightbox-close" onClick={() => setLightboxImg(null)}>✕</button>
+          <img src={lightboxImg} alt="Portfolio" onClick={e => e.stopPropagation()}/>
+        </div>
+      )}
 
-              {avgRating && (
-                <div className="rating-summary">
-                  <span className="rating-number">{avgRating}</span>
-                  <span className="rating-stars">★★★★★</span>
-                  <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>({craftsman.reviews.length} reviews)</span>
-                </div>
-              )}
-
-              <div className="profile-stats">
-                <div className="stat-item">
-                  <span className="stat-value">{services.length || 0}</span>
-                  <span className="stat-label">Projects</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-value">{craftsman.reviews?.length || 0}</span>
-                  <span className="stat-label">Reviews</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-value">{craftsman.status === 'approved' ? 'Verified' : 'Active'}</span>
-                  <span className="stat-label">Status</span>
-                </div>
-              </div>
-
-              <div className="action-buttons">
-                <Link to="/HireLogin" className="btn-primary-custom" style={{ textDecoration: 'none' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '0.5rem', display: 'inline' }}>
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  Hire {craftsman.name}
-                </Link>
-                <button className="btn-secondary-custom" onClick={handleCopyLink}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '0.5rem', display: 'inline' }}>
-                    <circle cx="18" cy="5" r="3"></circle>
-                    <circle cx="6" cy="12" r="3"></circle>
-                    <circle cx="18" cy="19" r="3"></circle>
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                  </svg>
-                  Share Profile
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* About Section */}
-          <div className="section-card">
-            <h2 className="section-title">About</h2>
-            <p className="section-content">
-              {craftsman.description || 'This craftsman has not yet added a description. They are a skilled professional ready to help with your projects.'}
-            </p>
-          </div>
-
-          {/* Portfolio/Gallery Section */}
-          <div className="section-card">
-            <h2 className="section-title">Portfolio & Work Gallery</h2>
-            {craftsman.gallery_images?.length > 0 ? (
-  <div className="gallery-scroll">
-    {craftsman.gallery_images.map((img, index) => (
-      <div key={img.id || index} className="gallery-item">
-        <img
-          src={getFullImageUrl(img.image_url)}
-          alt={`Project ${index + 1}`}
-          className="gallery-image"
-          onError={(e) => (e.target.src = 'https://via.placeholder.com/180')}
-        />
+      {/* ── COVER ── */}
+      <div className="cp-cover">
+        <div className="cp-cover-pattern"/>
       </div>
-    ))}
-  </div>
-) : (
-  <div className="empty-state">No portfolio images available yet</div>
-)}
 
-          </div>
+      <div style={{background:'var(--bg)',padding:'0 0 80px'}}>
+        <div className="container" style={{maxWidth:1100}}>
 
-          {/* Shop Section */}
-          {/* {services.length > 0 && (
-            <div className="section-card">
-              <h2 className="section-title">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }}>
-                  <circle cx="9" cy="21" r="1"></circle>
-                  <circle cx="20" cy="21" r="1"></circle>
-                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                </svg>
-                Shop
-              </h2>
-              <div className="shop-grid">
-                {services.map((service, index) => {
-                  const imageUrl = getFullImageUrl(service.service_image_url);
-                  return (
-                    <div key={index} className="shop-item">
-                      <img
-                        src={imageUrl}
-                        alt={service.name || `Product ${index + 1}`}
-                        className="shop-image"
-                        onError={(e) => (e.target.src = 'https://via.placeholder.com/200')}
-                      />
-                      <div className="shop-details">
-                        <h3 className="shop-title">{service.name || `Service ${index + 1}`}</h3>
-                        <p className="shop-price">Contact for pricing</p>
-                        <Link to="/HireLogin" className="shop-cta">
-                          Inquire Now
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )} */}
-
-          {/* Skills Section */}
-          <div className="section-card">
-            <h2 className="section-title">Skills & Expertise</h2>
-            {craftsman.skills ? (
-              <div className="skills-container">
-                {Array.isArray(craftsman.skills) &&
-                craftsman.skills.map((skill) => (
-               <span key={skill}>{skill}</span>
-               ))}
-
-              </div>
-            ) : (
-              <div className="empty-state">No skills listed</div>
-            )}
-          </div>
-
-          {/* Experience/Credentials Section */}
-          {proofDocument && (
-            <div className="section-card">
-              <h2 className="section-title">Credentials & Certifications</h2>
-              <a 
-                href={proofDocument} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="btn-secondary-custom"
-                style={{ display: 'inline-block', textDecoration: 'none' }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '0.5rem', display: 'inline' }}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-                View Verification Document
-              </a>
-            </div>
-          )}
-
-          {/* Reviews Section */}
-          <div className="section-card">
-            <h2 className="section-title">Client Reviews</h2>
-            {craftsman.reviews?.length > 0 ? (
-              <div>
-                {craftsman.reviews.map((review, index) => (
-                  <div key={index} className="review-card">
-                    <div className="review-header">
-                      <div>
-                        <div className="reviewer-name">{review.reviewer}</div>
-                        <div className="reviewer-location">{review.location}</div>
-                      </div>
-                      <div className="rating-badge">{review.rating}/10</div>
-                    </div>
-                    <p className="review-text">{review.comment}</p>
+          {/* ── HOW TO HIRE GUIDE ── */}
+          <div className="cp-hire-guide" style={{marginTop:24}}>
+            <div className="cp-hire-guide-icon">💡</div>
+            <div style={{flex:1}}>
+              <h4>How to Hire {craftsman.name?.split(' ')[0] || 'This Craftsman'}</h4>
+              <p>Follow these simple steps to get your job done quickly and professionally.</p>
+              <div className="cp-hire-steps">
+                {[
+                  {n:1, text:'Review portfolio & ratings below'},
+                  {n:2, text:'Click "Hire Now" to begin'},
+                  {n:3, text:'Describe your job & agree on price'},
+                  {n:4, text:'Rate after job completion'},
+                ].map(s => (
+                  <div className="cp-hire-step" key={s.n}>
+                    <span className="cp-hire-step-num">{s.n}</span>
+                    {s.text}
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="empty-state">No reviews yet. Be the first to hire and review!</div>
-            )}
+            </div>
           </div>
 
+          <div className="row g-4">
+            {/* ── MAIN COLUMN ── */}
+            <div className="col-lg-8">
+
+              {/* Profile Card */}
+              <div className="cp-header-card">
+                <div className="cp-avatar-row">
+                  <img
+                    src={profileImage} alt={craftsman.name} className="cp-avatar"
+                    onError={e => { e.target.src='https://placehold.co/140x140/e8f5e9/198754?text=👷'; }}
+                  />
+                  <div className="cp-name-block">
+                    <h1 className="cp-name">{craftsman.name}</h1>
+                    <p className="cp-headline">
+                      <span className="cp-trade-pill">
+                        <i className="fas fa-hard-hat"/> {craftsman.primary_service || 'Craftsman'}
+                      </span>
+                      {craftsman.status === 'approved' && (
+                        <span className="cp-verified-badge">
+                          <i className="fas fa-check-circle"/> Verified
+                        </span>
+                      )}
+                    </p>
+                    <p className="cp-location">
+                      <i className="fas fa-map-marker-alt" style={{color:'var(--green)'}}/>
+                      {craftsman.location || 'Kenya'}
+                      {craftsman.company_name && <> &nbsp;·&nbsp; {craftsman.company_name}</>}
+                    </p>
+                    {avgRating && (
+                      <div className="cp-rating-pill">
+                        <span style={{color:'#FFD700'}}>★</span>
+                        <strong>{avgRating}</strong>
+                        <span style={{fontWeight:400,opacity:.7}}>({craftsman.reviews.length} reviews)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="cp-stats">
+                  <div className="cp-stat">
+                    <span className="cp-stat-val">{craftsman.gallery_images?.length || 0}</span>
+                    <span className="cp-stat-lbl">Portfolio</span>
+                  </div>
+                  <div className="cp-stat">
+                    <span className="cp-stat-val">{craftsman.reviews?.length || 0}</span>
+                    <span className="cp-stat-lbl">Reviews</span>
+                  </div>
+                  <div className="cp-stat">
+                    <span className="cp-stat-val">{services.length}</span>
+                    <span className="cp-stat-lbl">Services</span>
+                  </div>
+                  <div className="cp-stat">
+                    <span className="cp-stat-val" style={{color:'var(--green)',fontSize:'1rem'}}>
+                      {craftsman.status === 'approved' ? '✓ Active' : 'Active'}
+                    </span>
+                    <span className="cp-stat-lbl">Status</span>
+                  </div>
+                </div>
+
+                <div className="cp-actions">
+                  <Link to="/HireLogin" className="cp-btn-hire">
+                    <i className="fas fa-hard-hat"/> Hire {craftsman.name?.split(' ')[0] || 'Now'}
+                  </Link>
+                  {craftsman.phone && (
+                    <a href={`tel:${craftsman.phone}`} className="cp-btn-contact">
+                      <i className="fas fa-phone"/> Call Now
+                    </a>
+                  )}
+                  <button className="cp-btn-share" onClick={handleCopyLink}>
+                    <i className="fas fa-share-alt"/> Share
+                  </button>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="cp-tabs">
+                {tabs.map(t => (
+                  <button key={t} className={`cp-tab ${activeTab===t?'active':''}`} onClick={() => setActiveTab(t)}>
+                    {t === 'about' && <><i className="fas fa-user"/>About</>}
+                    {t === 'portfolio' && <><i className="fas fa-images"/>Portfolio</>}
+                    {t === 'skills' && <><i className="fas fa-tools"/>Skills</>}
+                    {t === 'reviews' && <><i className="fas fa-star"/>Reviews {craftsman.reviews?.length > 0 && `(${craftsman.reviews.length})`}</>}
+                  </button>
+                ))}
+              </div>
+
+              {/* About */}
+              {activeTab === 'about' && (
+                <div className="cp-section">
+                  <h2 className="cp-section-title">
+                    <span className="cp-section-title-icon"><i className="fas fa-user"/></span>
+                    About {craftsman.name?.split(' ')[0]}
+                  </h2>
+                  <p className="cp-about-text">
+                    {craftsman.description || 'This craftsman has not yet added a description. They are a skilled professional ready to help with your projects.'}
+                  </p>
+                  {services.length > 0 && (
+                    <>
+                      <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,color:'var(--text)',marginTop:24,marginBottom:12}}>
+                        Services Offered
+                      </h3>
+                      <div>
+                        {services.map((svc, i) => (
+                          <div className="cp-service-item" key={i}>
+                            <span className="cp-service-dot"/>
+                            <span style={{fontWeight:600,color:'var(--text)'}}>{svc.name || `Service ${i+1}`}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Portfolio */}
+              {activeTab === 'portfolio' && (
+                <div className="cp-section">
+                  <h2 className="cp-section-title">
+                    <span className="cp-section-title-icon"><i className="fas fa-images"/></span>
+                    Work Portfolio
+                  </h2>
+                  {craftsman.gallery_images?.length > 0 ? (
+                    <>
+                      <p style={{fontSize:'.84rem',color:'var(--muted)',marginBottom:16}}>
+                        Click any image to enlarge. {craftsman.gallery_images.length} project{craftsman.gallery_images.length !== 1 ? 's' : ''} showcased.
+                      </p>
+                      <div className="cp-gallery">
+                        {craftsman.gallery_images.map((img, i) => (
+                          <img
+                            key={img.id || i}
+                            src={getFullImageUrl(img.image_url)}
+                            alt={`Project ${i+1}`}
+                            className="cp-gallery-img"
+                            loading="lazy"
+                            onClick={() => setLightboxImg(getFullImageUrl(img.image_url))}
+                            onError={e => { e.target.src='https://placehold.co/200x200/e8f5e9/198754?text=Project'; }}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{textAlign:'center',padding:'40px 20px',color:'var(--muted)'}}>
+                      <div style={{fontSize:'2.5rem',marginBottom:12}}></div>
+                      <p style={{fontWeight:600}}>No portfolio images yet</p>
+                      <p style={{fontSize:'.85rem'}}>This craftsman hasn't uploaded work samples yet — reach out directly to request examples.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Skills */}
+              {activeTab === 'skills' && (
+                <div className="cp-section">
+                  <h2 className="cp-section-title">
+                    <span className="cp-section-title-icon"><i className="fas fa-tools"/></span>
+                    Skills & Expertise
+                  </h2>
+                  {Array.isArray(craftsman.skills) && craftsman.skills.length > 0 ? (
+                    <div className="cp-skills">
+                      {craftsman.skills.map((skill, i) => (
+                        <span className="cp-skill-tag" key={i}>{skill}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{textAlign:'center',padding:'32px 20px',color:'var(--muted)'}}>
+                      <div style={{fontSize:'2rem',marginBottom:8}}>🔧</div>
+                      <p>No skills listed yet.</p>
+                    </div>
+                  )}
+                  {proofDocument && (
+                    <div style={{marginTop:24}}>
+                      <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,color:'var(--text)',marginBottom:12}}>
+                        Credentials & Certification
+                      </h3>
+                      <a href={proofDocument} target="_blank" rel="noopener noreferrer" className="cp-cred-btn">
+                        <i className="fas fa-file-certificate"/> View Verification Document
+                        <i className="fas fa-external-link-alt" style={{marginLeft:'auto',fontSize:'.75rem',opacity:.7}}/>
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Reviews */}
+              {activeTab === 'reviews' && (
+                <div className="cp-section">
+                  <h2 className="cp-section-title">
+                    <span className="cp-section-title-icon"><i className="fas fa-star"/></span>
+                    Client Reviews
+                    {avgRating && <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:'.85rem',fontWeight:600,color:'var(--muted)',marginLeft:8}}>Avg {avgRating}/10</span>}
+                  </h2>
+                  {craftsman.reviews?.length > 0 ? (
+                    craftsman.reviews.map((review, i) => (
+                      <div className="cp-review" key={i}>
+                        <div className="cp-review-header">
+                          <div>
+                            <p className="cp-reviewer-name">{review.reviewer}</p>
+                            <p className="cp-reviewer-loc">{review.location}</p>
+                          </div>
+                          <div className="cp-rating-badge">
+                            <span>★</span> {review.rating}/10
+                          </div>
+                        </div>
+                        <p className="cp-review-text">"{review.comment}"</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{textAlign:'center',padding:'40px 20px',color:'var(--muted)'}}>
+                      <div style={{fontSize:'2.5rem',marginBottom:12}}>⭐</div>
+                      <p style={{fontWeight:600}}>No reviews yet</p>
+                      <p style={{fontSize:'.85rem'}}>Be the first to hire {craftsman.name?.split(' ')[0]} and leave a review!</p>
+                      <Link to="/HireLogin" className="cp-btn-hire" style={{display:'inline-flex',marginTop:12,width:'auto',padding:'12px 24px'}}>
+                        <i className="fas fa-hard-hat"/> Hire Now & Be First to Review
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+
+            {/* ── SIDEBAR ── */}
+            <div className="col-lg-4">
+
+              {/* Sticky hire CTA */}
+              <div className="cp-sidebar-card" style={{position:'sticky',top:20,background:'linear-gradient(135deg,var(--green-l) 0%,#fff 100%)',border:'2px solid #c8e6c9'}}>
+                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1.1rem',fontWeight:700,marginBottom:6}}>
+                  Ready to hire?
+                </h3>
+                <p style={{fontSize:'.84rem',color:'var(--muted)',marginBottom:16,lineHeight:1.65}}>
+                  {craftsman.name?.split(' ')[0]} is available for work. Click below to start the hiring process.
+                </p>
+                <Link to="/HireLogin" className="cp-btn-hire" style={{display:'flex',width:'100%',justifyContent:'center',marginBottom:10}}>
+                  <i className="fas fa-hard-hat"/> Hire {craftsman.name?.split(' ')[0]}
+                </Link>
+                {craftsman.phone && (
+                  <a href={`tel:${craftsman.phone}`} className="cp-btn-contact" style={{display:'flex',width:'100%',justifyContent:'center'}}>
+                    <i className="fas fa-phone"/> Call Directly
+                  </a>
+                )}
+                <p style={{fontSize:'.73rem',color:'var(--muted)',textAlign:'center',marginTop:10,marginBottom:0}}>
+                  Free to contact · No upfront fees
+                </p>
+              </div>
+
+              {/* Contact details */}
+              <div className="cp-sidebar-card">
+                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,marginBottom:12}}>Contact Details</h3>
+                {craftsman.phone && (
+                  <div className="cp-contact-item">
+                    <span className="cp-contact-icon"><i className="fas fa-phone"/></span>
+                    <div>
+                      <span className="cp-contact-label">Phone</span>
+                      <a href={`tel:${craftsman.phone}`} className="cp-contact-value" style={{color:'var(--green)',display:'block'}}>{craftsman.phone}</a>
+                    </div>
+                  </div>
+                )}
+                <div className="cp-contact-item">
+                  <span className="cp-contact-icon"><i className="fas fa-map-marker-alt"/></span>
+                  <div>
+                    <span className="cp-contact-label">Location</span>
+                    <span className="cp-contact-value">{craftsman.location || 'Kenya'}</span>
+                  </div>
+                </div>
+                {craftsman.company_name && (
+                  <div className="cp-contact-item">
+                    <span className="cp-contact-icon"><i className="fas fa-building"/></span>
+                    <div>
+                      <span className="cp-contact-label">Company</span>
+                      <span className="cp-contact-value">{craftsman.company_name}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="cp-contact-item">
+                  <span className="cp-contact-icon"><i className="fas fa-hard-hat"/></span>
+                  <div>
+                    <span className="cp-contact-label">Primary Trade</span>
+                    <span className="cp-contact-value">{craftsman.primary_service || 'General Craftsman'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Browse more */}
+              <div className="cp-sidebar-card" style={{textAlign:'center'}}>
+                <div style={{fontSize:'1.8rem',marginBottom:8}}>🔍</div>
+                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,marginBottom:6}}>Looking for more options?</h3>
+                <p style={{fontSize:'.82rem',color:'var(--muted)',marginBottom:14}}>Browse all verified craftsmen across Kenya and find the perfect match.</p>
+                <Link to="/craftsmen" style={{display:'block',background:'var(--white)',color:'var(--green)',border:'1.5px solid var(--green)',borderRadius:10,padding:'10px',fontWeight:700,fontSize:'.88rem',textDecoration:'none',transition:'all .18s'}}
+                  onMouseOver={e=>{e.target.style.background='var(--green)';e.target.style.color='#fff';}}
+                  onMouseOut={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--green)';}}>
+                  <i className="fas fa-th-list me-2"/>View All Services
+                </Link>
+              </div>
+
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="footer text-light pt-5 pb-4" style={{ backgroundColor: '#1f2937' }}>
+      {/* ── FOOTER ── */}
+      <footer className="cp-footer">
         <div className="container">
-          <div className="row">
-            <div className="col-lg-3 col-md-6 mb-4">
-              <h5 className="text-uppercase fw-bold mb-3">Quick Links</h5>
-              <ul className="list-unstyled">
-                <li className="mb-2"><Link to="/" className="text-light text-decoration-none">Home</Link></li>
-                <li className="mb-2"><Link to="/signup" className="text-light text-decoration-none">Become A Craftsman</Link></li>
-                <li className="mb-2"><Link to="/HireSignUp" className="text-light text-decoration-none">Hire a Craftsman</Link></li>
+          <div className="row g-5">
+            <div className="col-lg-3 col-md-6">
+              <h5>Quick Links</h5>
+              <ul className="list-unstyled" style={{lineHeight:'2.2'}}>
+                <li><Link to="/">Home</Link></li>
+                <li><Link to="/craftsmen">Browse Craftsmen</Link></li>
+                <li><Link to="/craftsmen">View All Services</Link></li>
+                <li><Link to="/signup">Become A Craftsman</Link></li>
+                <li><Link to="/HireLogin">Hire a Craftsman</Link></li>
               </ul>
             </div>
-
-            <div className="col-lg-4 col-md-6 mb-4">
-              <h5 className="text-uppercase fw-bold mb-3">Contact Us</h5>
-              <p><i className="fas fa-map-marker-alt me-2"></i> Kisumu, Kenya</p>
-              <p><i className="fas fa-envelope me-2"></i> support@kaakazini.com</p>
+            <div className="col-lg-4 col-md-6">
+              <h5>Contact Us</h5>
+              <p><i className="fas fa-map-marker-alt me-2" style={{color:'var(--gold)'}}/>Kisumu, Kenya</p>
+              <p><i className="fas fa-envelope me-2" style={{color:'var(--gold)'}}/>support@kaakazini.com</p>
+              <p><i className="fas fa-phone me-2" style={{color:'var(--gold)'}}/>+254 700 000 000</p>
             </div>
-
-            <div className="col-lg-5 col-md-12 mb-4">
-              <h5 className="text-uppercase fw-bold mb-3">Find Us</h5>
-              <div style={{ width: '100%', height: '200px', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Kisumu Location Map"
-                />
+            <div className="col-lg-5">
+              <h5>Find Us</h5>
+              <div style={{borderRadius:12,overflow:'hidden',boxShadow:'0 4px 20px rgba(0,0,0,.3)'}}>
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
+                  width="100%" height="200" style={{border:0,display:'block'}} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Location"/>
               </div>
             </div>
           </div>
-
-          <hr className="border-secondary mt-4" />
-          <div className="d-flex justify-content-between align-items-center flex-column flex-md-row">
-            <p className="mb-md-0 text-center">© {new Date().getFullYear()} <strong>KaaKazini</strong>. All Rights Reserved.</p>
-            <div className="mt-2 mt-md-0 text-center">
-              <a href="#top" className="text-light text-decoration-none">Back to top <i className="fas fa-arrow-up ms-2"></i></a>
-            </div>
+          <hr style={{borderColor:'rgba(255,255,255,.08)',margin:'26px 0 18px'}}/>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10,fontSize:'.8rem'}}>
+            <p style={{margin:0}}>© {new Date().getFullYear()} <strong style={{color:'#fff'}}>KaaKazini</strong>. All rights reserved.</p>
+            <a href="#top" style={{color:'var(--gold)',fontWeight:600}}>Back to top ↑</a>
           </div>
         </div>
       </footer>
