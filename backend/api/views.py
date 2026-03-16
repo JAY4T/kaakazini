@@ -21,6 +21,8 @@ from .models import (
     JobRequest,
     ContactMessage,
     Review,
+    TeamInvite,        
+    CraftsmanMember
 )
 from .serializers import (
     CraftsmanSerializer,
@@ -29,11 +31,13 @@ from .serializers import (
     JobRequestSerializer,
     ContactMessageSerializer,
     ReviewSerializer,
+    TeamInviteSerializer,      
+    CraftsmanMemberSerializer, 
 )
 from .permissions import IsOwner
 from .payments import send_stk_push
 from api.utils import send_craftsman_approval_email
-
+from .team_notifications import dispatch_invite_notification
 
 logger = logging.getLogger(__name__)
 
@@ -535,6 +539,10 @@ class JobRequestListCreateView(generics.ListCreateAPIView):
         return JobRequest.objects.filter(client=user).order_by("-created_at")
 
 
+
+    def perform_create(self, serializer):
+        serializer.save(client=self.request.user)
+
 class JobRequestDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = JobRequestSerializer
     permission_classes = [IsAuthenticated]
@@ -803,3 +811,355 @@ class ContactMessageCreateView(generics.CreateAPIView):
     queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
     permission_classes = [AllowAny]
+
+
+
+class TeamInviteListCreateView(APIView):
+    """
+    GET  /craftsman/invites/   → list all non-revoked invites for this craftsman
+    POST /craftsman/invites/   → send a new invite (email via Brevo, SMS/WhatsApp via Celcom)
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def _get_craftsman(self, user):
+        try:
+            return Craftsman.objects.get(user=user)
+        except Craftsman.DoesNotExist:
+            return None
+ 
+    def get(self, request):
+        craftsman = self._get_craftsman(request.user)
+        if not craftsman:
+            return Response([], status=status.HTTP_200_OK)
+        invites = TeamInvite.objects.filter(craftsman=craftsman).exclude(status='revoked')
+        return Response(TeamInviteSerializer(invites, many=True).data)
+ 
+    def post(self, request):
+        craftsman = self._get_craftsman(request.user)
+        if not craftsman:
+            return Response(
+                {"detail": "Craftsman profile not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+ 
+        method  = request.data.get("method", "email")
+        contact = request.data.get("contact", "").strip()
+        name    = request.data.get("name", "").strip()
+        role    = request.data.get("role", "helper")
+ 
+        # For non-link invites a contact is required
+        if method != "link" and not contact:
+            return Response(
+                {"detail": "Contact (email or phone) is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+ 
+        # Prevent duplicate active invites to the same contact
+        if contact and TeamInvite.objects.filter(
+            craftsman=craftsman,
+            contact=contact,
+            status__in=["pending_invite", "pending_approval"],
+        ).exists():
+            return Response(
+                {"detail": "An active invite already exists for this contact."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+ 
+        invite = TeamInvite.objects.create(
+            craftsman=craftsman,
+            method=method,
+            contact=contact or None,
+            name=name or None,
+            role=role,
+            status="pending_invite",
+        )
+ 
+        # ── Fire notification: Brevo email / Celcom SMS or WhatsApp ───
+        notification_sent = dispatch_invite_notification(invite)
+        if not notification_sent and method != "link":
+            logger.warning(
+                f"[TeamInvite] Notification failed for invite #{invite.id} "
+                f"via {method} to {contact}"
+            )
+ 
+        return Response(
+            {
+                **TeamInviteSerializer(invite).data,
+                "notification_sent": notification_sent,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+ 
+ 
+class TeamInviteDeleteView(APIView):
+    """
+    DELETE /craftsman/invites/{id}/   → revoke an invite
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def delete(self, request, pk):
+        try:
+            craftsman = Craftsman.objects.get(user=request.user)
+        except Craftsman.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+ 
+        try:
+            invite = TeamInvite.objects.get(pk=pk, craftsman=craftsman)
+        except TeamInvite.DoesNotExist:
+            return Response({"detail": "Invite not found."}, status=status.HTTP_404_NOT_FOUND)
+ 
+        invite.status = "revoked"
+        invite.save()
+        return Response({"detail": "Invite revoked."}, status=status.HTTP_200_OK)
+ 
+ 
+# ─────────────────────────────────────────────
+# Team: Member Management
+# ─────────────────────────────────────────────
+ 
+class TeamMemberListView(APIView):
+    """
+    GET /craftsman/members/   → list all accepted members
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request):
+        try:
+            craftsman = Craftsman.objects.get(user=request.user)
+        except Craftsman.DoesNotExist:
+            return Response([], status=status.HTTP_200_OK)
+ 
+        members = CraftsmanMember.objects.filter(craftsman=craftsman, status="accepted")
+        return Response(CraftsmanMemberSerializer(members, many=True).data)
+ 
+ 
+class TeamMemberPendingApprovalView(APIView):
+    """
+    GET /craftsman/members/pending-approval/
+    → members who accepted the invite and are awaiting craftsman approval
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request):
+        try:
+            craftsman = Craftsman.objects.get(user=request.user)
+        except Craftsman.DoesNotExist:
+            return Response([], status=status.HTTP_200_OK)
+ 
+        pending = CraftsmanMember.objects.filter(
+            craftsman=craftsman, status="pending_approval"
+        )
+        return Response(CraftsmanMemberSerializer(pending, many=True).data)
+ 
+ 
+class TeamMemberApproveView(APIView):
+    """
+    POST /craftsman/members/{id}/approve/
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def post(self, request, pk):
+        try:
+            craftsman = Craftsman.objects.get(user=request.user)
+        except Craftsman.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+ 
+        try:
+            member = CraftsmanMember.objects.get(pk=pk, craftsman=craftsman)
+        except CraftsmanMember.DoesNotExist:
+            return Response({"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND)
+ 
+        if member.status != "pending_approval":
+            return Response(
+                {"detail": f"Member is already '{member.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+ 
+        member.status = "accepted"
+        member.save()
+ 
+        if member.invite:
+            member.invite.status = "accepted"
+            member.invite.save()
+ 
+        # Notify the new member by email that they have been approved
+        _notify_member_approved(member)
+ 
+        return Response(CraftsmanMemberSerializer(member).data, status=status.HTTP_200_OK)
+ 
+ 
+class TeamMemberRejectView(APIView):
+    """
+    POST /craftsman/members/{id}/reject/
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def post(self, request, pk):
+        try:
+            craftsman = Craftsman.objects.get(user=request.user)
+        except Craftsman.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+ 
+        try:
+            member = CraftsmanMember.objects.get(pk=pk, craftsman=craftsman)
+        except CraftsmanMember.DoesNotExist:
+            return Response({"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND)
+ 
+        member.status = "rejected"
+        member.save()
+ 
+        if member.invite:
+            member.invite.status = "rejected"
+            member.invite.save()
+ 
+        return Response({"detail": "Member rejected."}, status=status.HTTP_200_OK)
+ 
+ 
+class TeamMemberDeleteView(APIView):
+    """
+    DELETE /craftsman/members/{id}/   → remove an active member
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def delete(self, request, pk):
+        try:
+            craftsman = Craftsman.objects.get(user=request.user)
+        except Craftsman.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+ 
+        try:
+            member = CraftsmanMember.objects.get(pk=pk, craftsman=craftsman)
+        except CraftsmanMember.DoesNotExist:
+            return Response({"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND)
+ 
+        member.delete()
+        return Response({"detail": "Member removed."}, status=status.HTTP_204_NO_CONTENT)
+ 
+ 
+# ─────────────────────────────────────────────
+# Public: Accept Invite via Token (link flow)
+# ─────────────────────────────────────────────
+ 
+class TeamInviteAcceptView(APIView):
+    """
+    POST /craftsman/invites/accept/{token}/
+    Body: { full_name, email, phone }
+    Creates a CraftsmanMember with status='pending_approval'.
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def post(self, request, token):
+        try:
+            invite = TeamInvite.objects.get(token=token, status="pending_invite")
+        except TeamInvite.DoesNotExist:
+            return Response(
+                {"detail": "Invite link is invalid or has already been used."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+ 
+        if invite.craftsman.user == request.user:
+            return Response(
+                {"detail": "You cannot join your own team."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+ 
+        if CraftsmanMember.objects.filter(
+            craftsman=invite.craftsman, user=request.user
+        ).exists():
+            return Response(
+                {"detail": "You are already a member of this team."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+ 
+        member = CraftsmanMember.objects.create(
+            craftsman=invite.craftsman,
+            user=request.user,
+            invite=invite,
+            full_name=request.data.get("full_name") or getattr(request.user, "full_name", ""),
+            email=request.data.get("email")         or request.user.email,
+            phone=request.data.get("phone")         or getattr(request.user, "phone_number", ""),
+            role=invite.role,
+            status="pending_approval",
+        )
+ 
+        invite.status = "pending_approval"
+        invite.save()
+ 
+        return Response(
+            {
+                "detail": "Request submitted. You will be notified once the team owner approves you.",
+                "member": CraftsmanMemberSerializer(member).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+ 
+ 
+# ─────────────────────────────────────────────
+# Private helper — approval notification email
+# ─────────────────────────────────────────────
+ 
+def _notify_member_approved(member):
+    """
+    Send a Brevo email to the newly approved team member.
+    Fires-and-forgets: errors are logged but never surface to the caller.
+    """
+    import requests as _req
+    from django.conf import settings as _s
+ 
+    api_key = getattr(_s, "BREVO_API_KEY", "")
+    if not api_key or not member.email:
+        return
+ 
+    craftsman_name = (
+        member.craftsman.full_name
+        or member.craftsman.user.full_name
+        or "Your team owner"
+    )
+    role          = member.role.capitalize()
+    dashboard_url = f"{getattr(_s, 'FRONTEND_URL', 'https://kaakazini.com')}/dashboard"
+    sender_email  = getattr(_s, "BREVO_SENDER_EMAIL", "noreply@kaakazini.com")
+    sender_name   = getattr(_s, "BREVO_SENDER_NAME",  "KaaKazini")
+ 
+    html_content = f"""
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;">
+      <div style="background:#0d0d0d;padding:24px 32px;border-radius:12px 12px 0 0;">
+        <h2 style="color:#FFD700;margin:0;">&#10003; You've been approved!</h2>
+      </div>
+      <div style="background:#f9fafb;padding:28px 32px;border:1px solid #e5e7eb;">
+        <p style="font-size:1rem;color:#111827;">Hi <strong>{member.full_name or 'there'}</strong>,</p>
+        <p style="color:#374151;">
+          <strong>{craftsman_name}</strong> has approved your request to join their
+          team on <strong>KaaKazini</strong> as a <strong>{role}</strong>.
+        </p>
+        <p style="color:#374151;">You can now log in and access the team dashboard.</p>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="{dashboard_url}"
+             style="background:#FFD700;color:#0d0d0d;padding:14px 32px;
+                    border-radius:10px;text-decoration:none;font-weight:700;
+                    font-size:1rem;display:inline-block;">
+            Go to Dashboard &rarr;
+          </a>
+        </div>
+      </div>
+      <div style="background:#f3f4f6;padding:14px 32px;border-radius:0 0 12px 12px;
+                  font-size:.75rem;color:#9ca3af;text-align:center;">
+        KaaKazini &mdash; Kenya's verified craftsman marketplace
+      </div>
+    </div>
+    """
+ 
+    try:
+        _req.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json={
+                "sender":      {"name": sender_name, "email": sender_email},
+                "to":          [{"email": member.email, "name": member.full_name or ""}],
+                "subject":     f"You've been approved to join {craftsman_name}'s team",
+                "htmlContent": html_content,
+            },
+            headers={"api-key": api_key, "Content-Type": "application/json"},
+            timeout=10,
+        ).raise_for_status()
+        logger.info(f"[Brevo] Approval email sent to {member.email} (member #{member.id})")
+    except Exception as exc:
+        logger.error(f"[Brevo] Failed to send approval email to {member.email}: {exc}")

@@ -7,6 +7,8 @@ import requests
 
 from django.utils.text import slugify
 from django.conf import settings
+import uuid
+
 
 
 User = get_user_model()
@@ -301,3 +303,92 @@ class ContactMessage(models.Model):
     email = models.EmailField(blank=True, default='')
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+
+
+TEAM_ROLE_CHOICES = [
+    ('helper',  'Helper'),
+    ('foreman', 'Foreman'),
+    ('partner', 'Partner'),
+]
+ 
+INVITE_METHOD_CHOICES = [
+    ('email',    'Email'),
+    ('sms',      'SMS'),
+    ('whatsapp', 'WhatsApp'),
+    ('link',     'Link'),
+]
+ 
+ 
+class TeamInvite(models.Model):
+    """
+    Represents an outgoing invite sent by a craftsman to a prospective member.
+    Status starts as 'pending_invite'.  When the invitee clicks the link and
+    creates / links their account the status moves to 'pending_approval'.
+    """
+    STATUS_CHOICES = [
+        ('pending_invite',   'Invite Sent'),
+        ('pending_approval', 'Awaiting Approval'),
+        ('accepted',         'Accepted'),
+        ('rejected',         'Rejected'),
+        ('declined',         'Declined'),
+        ('revoked',          'Revoked'),
+    ]
+ 
+    craftsman  = models.ForeignKey(
+        'Craftsman', on_delete=models.CASCADE, related_name='team_invites'
+    )
+    name       = models.CharField(max_length=255, blank=True, null=True)
+    contact    = models.CharField(max_length=255, blank=True, null=True,
+                                  help_text='Email address or phone number')
+    method     = models.CharField(max_length=20, choices=INVITE_METHOD_CHOICES, default='email')
+    role       = models.CharField(max_length=20, choices=TEAM_ROLE_CHOICES, default='helper')
+    token      = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    status     = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending_invite')
+    created_at = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        ordering = ['-created_at']
+ 
+    def __str__(self):
+        return f"Invite → {self.contact} ({self.role}) by {self.craftsman}"
+ 
+ 
+class CraftsmanMember(models.Model):
+    """
+    A confirmed team member: someone who accepted an invite AND was approved
+    by the craftsman owner.
+    """
+    STATUS_CHOICES = [
+        ('pending_approval', 'Awaiting Approval'),
+        ('accepted',         'Active'),
+        ('rejected',         'Rejected'),
+    ]
+ 
+    craftsman  = models.ForeignKey(
+        'Craftsman', on_delete=models.CASCADE, related_name='team_members'
+    )
+    # The member's own user account (set when they register / link via invite)
+    user       = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='craftsman_memberships',
+        null=True, blank=True
+    )
+    invite     = models.OneToOneField(
+        TeamInvite, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='member'
+    )
+    full_name  = models.CharField(max_length=255, blank=True, null=True)
+    email      = models.EmailField(blank=True, null=True)
+    phone      = models.CharField(max_length=30, blank=True, null=True)
+    role       = models.CharField(max_length=20, choices=TEAM_ROLE_CHOICES, default='helper')
+    status     = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending_approval')
+    joined_at  = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        ordering = ['-joined_at']
+        unique_together = [('craftsman', 'user')]
+ 
+    def __str__(self):
+        return f"{self.full_name} ({self.role}) — {self.craftsman}"
+ 

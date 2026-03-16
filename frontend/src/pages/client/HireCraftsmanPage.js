@@ -1,973 +1,1576 @@
 import React, { useState, useEffect } from "react";
-import api from "../../api/axiosClient"; 
+import { Link } from "react-router-dom";
+import api from "../../api/axiosClient";
 
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
+const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const MEDIA    = process.env.REACT_APP_MEDIA_URL    || 'https://staging.kaakazini.com';
 
-const HireCraftsmanPage = () => {
-  const [activeTab, setActiveTab] = useState("makeRequest");
-  const [client, setClient] = useState(null);
-  const [jobs, setJobs] = useState([]);
-  const [reviews, setReviews] = useState({});
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedQuoteJob, setSelectedQuoteJob] = useState(null);
+const imgUrl = p => (!p ? null : p.startsWith('http') ? p : `${MEDIA}${p}`);
+const avi    = name => `https://ui-avatars.com/api/?name=${encodeURIComponent(name||'C')}&background=1a1a1a&color=FFD700&size=80&bold=true`;
 
-  const [individualForm, setIndividualForm] = useState({
-    name: "",
-    phone: "",
-    service: "",
-    schedule: "",
-    address: "",
-    location: "",
-    description: "",
-    isUrgent: false,
-    media: null,
-    budget: "",
+const SERVICES  = ["Plumbing","Electrical","Carpentry","Painting","Masonry","Tiling","Roofing","Tailoring","Metalwork","Other"];
+const LOCATIONS = ["Nairobi","Mombasa","Kisumu","Eldoret","Nakuru","Thika","Kisii","Nyeri","Meru","Machakos"];
+
+/* ─────────────────────────────────────────────────
+   ALL STYLES
+───────────────────────────────────────────────── */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+.hcp {
+  --sb-w: 260px;
+  --yellow: #FFD700;
+  --yellow-d: #e6c200;
+  --yellow-l: #fef9c3;
+  --green: #16a34a;
+  --green-d: #15803d;
+  --green-l: #f0fdf4;
+  --black: #0d0d0d;
+  --off: #f8fafc;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --muted: #64748b;
+  all: initial;
+  font-family: 'Outfit', sans-serif;
+  display: block;
+  background: var(--off);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.hcp *, .hcp *::before, .hcp *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+}
+
+@keyframes spin   { to { transform: rotate(360deg); } }
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes pulse  { 0%,100% { opacity:1; } 50% { opacity:.45; } }
+@keyframes mpesa-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.3); } 50% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } }
+
+/* ══ APP SHELL ══ */
+.hcp .shell { display: flex; min-height: 100vh; position: relative; }
+
+/* ══ SIDEBAR ══ */
+.hcp .sb {
+  width: var(--sb-w); min-width: var(--sb-w);
+  background: var(--black);
+  display: flex; flex-direction: column;
+  height: 100vh; position: sticky; top: 0;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255,215,0,.08);
+  overflow: hidden;
+  z-index: 10;
+}
+
+.hcp .sb::after {
+  content: ''; position: absolute;
+  bottom: -60px; left: 50%; transform: translateX(-50%);
+  width: 180px; height: 180px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,215,0,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hcp .sb-head {
+  position: relative; z-index: 1;
+  padding: 22px 18px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  flex-shrink: 0;
+}
+
+.hcp .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.hcp .brand-logo {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: var(--yellow);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.hcp .brand-logo i { color: var(--black); font-size: .85rem; }
+.hcp .brand-name { font-size: 1.05rem; font-weight: 800; color: #fff; letter-spacing: -.01em; }
+
+.hcp .user-row { display: flex; align-items: center; gap: 10px; }
+.hcp .user-av {
+  width: 38px; height: 38px; border-radius: 50%;
+  object-fit: cover; border: 2px solid rgba(255,215,0,.35); flex-shrink: 0;
+}
+.hcp .user-name { font-weight: 700; font-size: .85rem; color: #fff; margin-bottom: 3px; line-height: 1.2; }
+.hcp .user-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(255,215,0,.12); color: var(--yellow);
+  border: 1px solid rgba(255,215,0,.25); border-radius: 20px;
+  padding: 2px 8px; font-size: .58rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.hcp .user-badge::before {
+  content: ''; width: 5px; height: 5px;
+  border-radius: 50%; background: var(--yellow);
+}
+
+.hcp .sb-nav { position: relative; z-index: 1; flex: 1; padding: 14px 10px; overflow-y: auto; }
+.hcp .nav-section {
+  font-size: .58rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: rgba(255,255,255,.25);
+  padding: 0 10px; margin-bottom: 7px; margin-top: 4px;
+}
+.hcp .nb {
+  width: 100%; padding: 10px 12px; border: none; border-radius: 10px;
+  background: transparent; color: rgba(255,255,255,.5);
+  font-family: 'Outfit', sans-serif; font-weight: 600; font-size: .83rem;
+  text-align: left; display: flex; align-items: center; gap: 10px;
+  cursor: pointer; transition: all .18s; margin-bottom: 2px; position: relative;
+}
+.hcp .nb-icon {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: rgba(255,255,255,.07);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .18s; font-size: .78rem;
+}
+.hcp .nb:hover { color: #fff; }
+.hcp .nb:hover .nb-icon { background: rgba(255,215,0,.15); color: var(--yellow); }
+.hcp .nb.on { color: #fbbf24; }
+.hcp .nb.on .nb-icon { background: linear-gradient(135deg, #fbbf24, #22c55e); color: var(--black); }
+.hcp .nb.on::before {
+  content: ''; position: absolute; left: -10px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 20px;
+  background: linear-gradient(180deg, #fbbf24, #22c55e);
+  border-radius: 0 3px 3px 0;
+}
+
+.hcp .sb-foot {
+  position: relative; z-index: 1; padding: 12px 10px;
+  border-top: 1px solid rgba(255,255,255,.06); flex-shrink: 0;
+}
+.hcp .sb-foot a {
+  display: flex; align-items: center; gap: 10px;
+  font-size: .8rem; font-weight: 600; color: rgba(255,255,255,.35);
+  text-decoration: none; padding: 9px 12px; border-radius: 10px; transition: all .15s;
+}
+.hcp .sb-foot a:hover { color: #fff; background: rgba(255,255,255,.07); }
+
+/* ══ MOBILE TOPBAR ══ */
+.hcp .topbar {
+  display: none; position: fixed;
+  top: 0; left: 0; right: 0; height: 56px;
+  background: var(--black); z-index: 300;
+  align-items: center; padding: 0 16px; gap: 12px;
+  border-bottom: 1px solid rgba(255,215,0,.12);
+}
+.hcp .topbar-brand { font-size: 1rem; font-weight: 800; color: #fff; flex: 1; }
+.hcp .hamburger {
+  width: 38px; height: 38px; border-radius: 9px;
+  background: rgba(255,215,0,.12); color: var(--yellow);
+  border: 1.5px solid rgba(255,215,0,.25);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: .88rem; flex-shrink: 0;
+}
+
+/* ══ MOBILE OVERLAY + SLIDING SIDEBAR ══ */
+.hcp .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 400; }
+.hcp .overlay.show { display: block; }
+.hcp .sb-mobile {
+  position: fixed; top: 0; left: 0; bottom: 0; width: 260px;
+  z-index: 500; transform: translateX(-100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+.hcp .sb-mobile.open { transform: translateX(0); }
+
+/* ══ MAIN ══ */
+.hcp .main { flex: 1; min-width: 0; padding: 2.25rem 2.25rem 3rem; background: var(--off); }
+
+/* ══ CONTENT CARD ══ */
+.hcp .card {
+  background: #fff; border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.06);
+  padding: 2.25rem; margin-bottom: 1.75rem;
+  border: 2px solid rgba(255,215,0,.1);
+  position: relative; overflow: hidden;
+  animation: fadeUp .35s ease both;
+}
+.hcp .card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, var(--black), var(--yellow), var(--black));
+}
+
+/* ══ FILTER BAR ══ */
+.hcp .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; align-items: center; }
+.hcp .srch-wrap { flex: 1; min-width: 180px; position: relative; }
+.hcp .srch-ico {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: .82rem; pointer-events: none;
+}
+.hcp .srch {
+  width: 100%; padding: 11px 13px 11px 36px; font-size: .88rem;
+  border: 2px solid var(--border); border-radius: 11px;
+  background: #fff; color: var(--text); font-family: 'Outfit', sans-serif;
+  outline: none; transition: border-color .2s, box-shadow .2s; font-weight: 500;
+}
+.hcp .srch:focus { border-color: var(--yellow); box-shadow: 0 0 0 4px rgba(255,215,0,.1); }
+.hcp .filter-sel {
+  padding: 11px 15px; border: 2px solid var(--border); border-radius: 11px;
+  font-size: .88rem; font-family: 'Outfit', sans-serif; outline: none;
+  background: #fff; color: var(--text); cursor: pointer;
+  min-width: 145px; font-weight: 600; transition: border-color .2s;
+}
+.hcp .filter-sel:focus { border-color: var(--yellow); }
+
+/* ══ CRAFTSMAN GRID ══ */
+.hcp .craft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px;
+}
+.hcp .craft-card {
+  background: #fff; border: 2px solid var(--border); border-radius: 18px;
+  overflow: hidden; display: flex; flex-direction: column;
+  transition: transform .22s, box-shadow .22s, border-color .2s;
+  box-shadow: 0 4px 14px rgba(0,0,0,.05);
+}
+.hcp .craft-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 44px rgba(0,0,0,.11);
+  border-color: var(--yellow);
+}
+.hcp .craft-cover {
+  position: relative; height: 140px; overflow: hidden; flex-shrink: 0;
+}
+.hcp .craft-cover img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform .38s; display: block;
+}
+.hcp .craft-card:hover .craft-cover img { transform: scale(1.07); }
+.hcp .craft-cover::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.5) 0%, transparent 55%);
+}
+.hcp .trade-pill {
+  position: absolute; top: 10px; left: 10px; z-index: 1;
+  background: linear-gradient(135deg, var(--yellow), var(--yellow-d));
+  color: var(--black); border-radius: 50px; padding: 3px 11px;
+  font-size: .6rem; font-weight: 800; letter-spacing: .04em;
+  box-shadow: 0 2px 8px rgba(255,215,0,.4);
+}
+.hcp .avail-pill {
+  position: absolute; top: 10px; right: 10px; z-index: 1;
+  background: var(--green); color: #fff; border-radius: 50px;
+  padding: 3px 9px; font-size: .58rem; font-weight: 700;
+  display: flex; align-items: center; gap: 4px;
+  box-shadow: 0 2px 8px rgba(22,163,74,.4);
+}
+.hcp .avail-dot {
+  width: 5px; height: 5px; border-radius: 50%; background: #fff;
+  animation: pulse 1.5s infinite;
+}
+.hcp .craft-body { padding: 15px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.hcp .craft-row { display: flex; align-items: center; gap: 10px; }
+.hcp .craft-av {
+  width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+  border: 2.5px solid var(--yellow); flex-shrink: 0;
+}
+.hcp .craft-name { font-weight: 800; font-size: .9rem; color: var(--text); }
+.hcp .craft-loc { font-size: .72rem; color: var(--green); font-weight: 600; margin-top: 2px; }
+.hcp .craft-stars { display: inline-flex; gap: 1px; font-size: .68rem; color: #f59e0b; }
+.hcp .craft-rtg { font-size: .7rem; font-weight: 700; color: var(--muted); }
+.hcp .craft-desc { font-size: .76rem; color: var(--muted); line-height: 1.6; flex: 1; }
+.hcp .hire-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  background: linear-gradient(135deg, var(--black), #333);
+  color: var(--yellow); border: none; border-radius: 11px;
+  padding: 10px 0; font-weight: 800; font-size: .82rem;
+  cursor: pointer; margin-top: auto; font-family: 'Outfit', sans-serif;
+  transition: all .2s; box-shadow: 0 4px 14px rgba(0,0,0,.2);
+}
+.hcp .hire-btn:hover {
+  background: linear-gradient(135deg, #1a1a1a, #444);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(0,0,0,.3);
+}
+
+/* ══ HIRE FORM ══ */
+.hcp .locked-bar {
+  display: flex; align-items: center; gap: 16px;
+  background: linear-gradient(135deg, #0d0d0d, #1a1a2e);
+  border-radius: 14px; padding: 18px 22px; margin-bottom: 20px;
+  border: 1px solid rgba(255,215,0,.15);
+  box-shadow: 0 8px 28px rgba(0,0,0,.2); flex-wrap: wrap;
+}
+.hcp .locked-av {
+  width: 56px; height: 56px; border-radius: 50%;
+  object-fit: cover; border: 3px solid var(--yellow); flex-shrink: 0;
+}
+.hcp .locked-tag {
+  display: inline-block; background: rgba(255,215,0,.15);
+  color: var(--yellow); border: 1px solid rgba(255,215,0,.3);
+  border-radius: 50px; padding: 2px 10px;
+  font-size: .6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;
+}
+.hcp .locked-name { font-weight: 800; font-size: 1.15rem; color: #fff; }
+.hcp .locked-meta { font-size: .76rem; color: rgba(255,255,255,.5); font-weight: 500; margin-top: 3px; }
+
+.hcp .back-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: none; border: 2px solid var(--border);
+  color: var(--muted); border-radius: 9px; padding: 8px 15px;
+  font-size: .8rem; font-weight: 700; cursor: pointer;
+  font-family: 'Outfit', sans-serif; transition: all .15s; margin-bottom: 18px;
+}
+.hcp .back-btn:hover { border-color: var(--yellow); color: var(--text); background: var(--yellow-l); }
+
+.hcp .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.hcp .lbl {
+  display: block; font-size: .68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin-bottom: 6px;
+}
+.hcp .inp, .hcp .sel, .hcp .ta {
+  width: 100%; padding: 11px 13px; font-size: .88rem;
+  border: 2px solid var(--border); border-radius: 11px;
+  background: var(--off); color: var(--text);
+  font-family: 'Outfit', sans-serif; outline: none;
+  transition: border-color .2s, box-shadow .2s; font-weight: 500;
+  display: block; appearance: auto;
+}
+.hcp .inp:focus, .hcp .sel:focus, .hcp .ta:focus {
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 4px rgba(255,215,0,.1);
+  background: #fff;
+}
+.hcp .ta { resize: vertical; min-height: 95px; }
+.hcp .ck-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; }
+.hcp .ck { width: 16px; height: 16px; accent-color: var(--black); cursor: pointer; }
+.hcp .ck-lbl { font-size: .85rem; font-weight: 600; color: var(--text); cursor: pointer; }
+
+.hcp .submit-btn {
+  width: 100%; padding: 14px; font-size: .93rem; font-weight: 800;
+  background: linear-gradient(135deg, var(--yellow), var(--yellow-d));
+  color: var(--black); border: none; border-radius: 13px;
+  cursor: pointer; font-family: 'Outfit', sans-serif;
+  transition: all .2s; margin-top: 10px;
+  box-shadow: 0 6px 22px rgba(255,215,0,.3);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.hcp .submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(255,215,0,.4);
+  filter: brightness(1.04);
+}
+.hcp .submit-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+.hcp .ok-banner {
+  background: var(--green-l); border: 2px solid #bbf7d0;
+  border-radius: 13px; padding: 13px 17px;
+  font-size: .88rem; color: var(--green-d); font-weight: 700;
+  display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+}
+
+/* ══ TABLE ══ */
+.hcp .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.hcp .tbl { width: 100%; border-collapse: collapse; min-width: 560px; }
+.hcp .tbl th {
+  background: var(--off); font-size: .66rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+  padding: 12px 16px; text-align: left;
+  border-bottom: 2px solid var(--border); white-space: nowrap;
+}
+.hcp .tbl td {
+  padding: 13px 16px; border-bottom: 1px solid var(--border);
+  font-size: .86rem; vertical-align: middle; font-family: 'Outfit', sans-serif;
+}
+.hcp .tbl tr:last-child td { border-bottom: none; }
+.hcp .tbl tbody tr:hover { background: var(--off); }
+
+/* Badges */
+.hcp .bdg {
+  display: inline-flex; align-items: center; gap: 5px;
+  border-radius: 50px; padding: 4px 11px;
+  font-size: .68rem; font-weight: 700; white-space: nowrap;
+}
+.hcp .bdg-g  { background: var(--green-l); color: var(--green-d); }
+.hcp .bdg-y  { background: #fef9c3; color: #78350f; }
+.hcp .bdg-r  { background: #fef2f2; color: #b91c1c; }
+.hcp .bdg-gr { background: #f3f4f6; color: #6b7280; }
+.hcp .bdg-b  { background: #eff6ff; color: #1d4ed8; }
+.hcp .bdg-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; display: inline-block; flex-shrink: 0;
+}
+
+/* Action buttons */
+.hcp .act {
+  padding: 5px 12px; border-radius: 7px; font-size: .72rem;
+  font-weight: 700; cursor: pointer; border: 2px solid;
+  font-family: 'Outfit', sans-serif; transition: all .14s; white-space: nowrap;
+}
+.hcp .act-ok  { background: var(--green-l); color: var(--green-d); border-color: #bbf7d0; }
+.hcp .act-ok:hover  { background: var(--green); color: #fff; border-color: var(--green); }
+.hcp .act-bad { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.hcp .act-bad:hover { background: #b91c1c; color: #fff; border-color: #b91c1c; }
+.hcp .act-pay {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #fff; border-color: transparent;
+  box-shadow: 0 3px 10px rgba(22,163,74,.3);
+  animation: mpesa-glow 2s infinite;
+}
+.hcp .act-pay:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+/* ══ M-PESA PAYMENT MODAL ══ */
+.hcp .mpesa-steps {
+  display: flex; flex-direction: column; gap: 14px; margin: 18px 0;
+}
+.hcp .mpesa-step {
+  display: flex; align-items: flex-start; gap: 13px;
+  padding: 14px; border-radius: 12px;
+  background: var(--off); border: 1.5px solid var(--border);
+}
+.hcp .mpesa-num {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: var(--black); color: var(--yellow);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 800;
+}
+.hcp .mpesa-step-title { font-weight: 800; font-size: .85rem; color: var(--text); margin-bottom: 2px; }
+.hcp .mpesa-step-text  { font-size: .76rem; color: var(--muted); line-height: 1.6; }
+.hcp .mpesa-amt {
+  background: linear-gradient(135deg, #0d0d0d, #1a1a2e);
+  border-radius: 12px; padding: 16px 20px; margin: 10px 0;
+  display: flex; justify-content: space-between; align-items: center;
+  border: 1px solid rgba(255,215,0,.15);
+}
+.hcp .mpesa-amt-lbl { font-size: .72rem; font-weight: 700; color: rgba(255,255,255,.5); text-transform: uppercase; }
+.hcp .mpesa-amt-val { font-size: 1.6rem; font-weight: 900; color: var(--yellow); }
+.hcp .mpesa-inp-wrap { margin: 16px 0; }
+.hcp .mpesa-btn {
+  width: 100%; padding: 14px; border-radius: 13px; border: none;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #fff; font-weight: 800; font-size: .93rem;
+  cursor: pointer; font-family: 'Outfit', sans-serif;
+  transition: all .2s; display: flex; align-items: center;
+  justify-content: center; gap: 8px;
+  box-shadow: 0 6px 22px rgba(22,163,74,.3);
+}
+.hcp .mpesa-btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.hcp .mpesa-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+.hcp .mpesa-note {
+  text-align: center; font-size: .74rem; color: var(--muted);
+  margin-top: 12px; line-height: 1.6;
+}
+.hcp .mpesa-logo-row {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 16px;
+}
+.hcp .mpesa-logo {
+  background: #16a34a; color: #fff;
+  border-radius: 8px; padding: 4px 12px;
+  font-size: .78rem; font-weight: 900; letter-spacing: .05em;
+}
+
+/* ══ REVIEWS ══ */
+.hcp .rev-grid { display: flex; flex-direction: column; gap: 16px; }
+.hcp .rev-card {
+  background: #fff; border: 2px solid var(--border); border-radius: 18px;
+  padding: 24px; box-shadow: 0 6px 22px rgba(0,0,0,.05);
+  position: relative; overflow: hidden; animation: fadeUp .35s ease both;
+}
+.hcp .rev-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, var(--black), var(--yellow));
+}
+.hcp .rev-header {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 12px; margin-bottom: 13px;
+}
+.hcp .rev-svc { font-weight: 800; font-size: 1.02rem; color: var(--text); margin-bottom: 2px; }
+.hcp .rev-meta { font-size: .76rem; color: var(--muted); font-weight: 500; }
+.hcp .rev-craft {
+  display: flex; align-items: center; gap: 9px; margin-bottom: 14px;
+  padding: 9px 13px; background: var(--off); border-radius: 9px;
+  border: 1.5px solid var(--border);
+}
+.hcp .rev-craft-av {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid var(--yellow); object-fit: cover;
+}
+.hcp .rev-craft-name { font-size: .82rem; font-weight: 700; color: var(--text); }
+.hcp .star-row { display: flex; gap: 6px; margin-bottom: 13px; align-items: center; }
+.hcp .star {
+  font-size: 1.8rem; cursor: pointer; transition: transform .12s;
+  color: #d1d5db; user-select: none; line-height: 1;
+}
+.hcp .star:hover, .hcp .star.on { color: #f59e0b; transform: scale(1.2); }
+.hcp .star-val { font-size: .82rem; font-weight: 800; color: var(--muted); margin-left: 4px; }
+.hcp .rev-btn {
+  background: linear-gradient(135deg, var(--yellow), var(--yellow-d));
+  color: var(--black); border: none; border-radius: 9px;
+  padding: 9px 22px; font-weight: 800; font-size: .84rem;
+  cursor: pointer; font-family: 'Outfit', sans-serif;
+  transition: all .18s; box-shadow: 0 4px 14px rgba(255,215,0,.3);
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.hcp .rev-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,215,0,.4); }
+
+/* ══ PAYMENTS ══ */
+.hcp .pay-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 14px; margin-bottom: 20px;
+}
+.hcp .pay-stat {
+  background: #fff; border: 2px solid rgba(255,215,0,.12);
+  border-radius: 16px; padding: 20px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.05); transition: transform .2s;
+}
+.hcp .pay-stat:hover { transform: translateY(-3px); }
+.hcp .pay-stat-icon {
+  width: 42px; height: 42px; border-radius: 11px;
+  background: #0d0d0d; display: flex; align-items: center;
+  justify-content: center; margin-bottom: 13px;
+}
+.hcp .pay-stat-icon i { color: var(--yellow); font-size: .88rem; }
+.hcp .pay-stat-v { font-size: 1.55rem; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+.hcp .pay-stat-l {
+  font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted);
+}
+
+/* ══ PROFILE ══ */
+.hcp .prof-hero {
+  background: linear-gradient(135deg, #0d0d0d, #1a1a2e);
+  border: 1px solid rgba(255,215,0,.12); border-radius: 18px;
+  padding: 28px; margin-bottom: 18px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 18px 48px rgba(0,0,0,.2);
+  animation: fadeUp .35s ease both;
+}
+.hcp .prof-hero::before {
+  content: ''; position: absolute; top: -80px; right: -80px;
+  width: 260px; height: 260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,215,0,.08) 0%, transparent 65%);
+  pointer-events: none;
+}
+.hcp .prof-top {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 18px;
+  margin-bottom: 24px; flex-wrap: wrap;
+}
+.hcp .prof-av { width: 68px; height: 68px; border-radius: 50%; border: 3px solid var(--yellow); flex-shrink: 0; object-fit: cover; }
+.hcp .prof-name { font-size: clamp(1.25rem, 3vw, 1.8rem); font-weight: 900; color: #fff; margin-bottom: 5px; letter-spacing: -.03em; }
+.hcp .prof-role {
+  display: inline-block; background: rgba(255,215,0,.12);
+  color: var(--yellow); border: 1px solid rgba(255,215,0,.25);
+  border-radius: 50px; padding: 2px 11px;
+  font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+}
+.hcp .prof-email { font-size: .78rem; color: rgba(255,255,255,.5); margin-top: 4px; }
+.hcp .prof-stats-row {
+  position: relative; z-index: 1; display: flex;
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding-top: 18px; flex-wrap: wrap; gap: 8px 0;
+}
+.hcp .prof-stat {
+  flex: 1; min-width: 80px; text-align: center;
+  border-right: 1px solid rgba(255,255,255,.08); padding: 0 12px;
+}
+.hcp .prof-stat:last-child { border-right: none; }
+.hcp .prof-stat-v { font-size: 1.4rem; font-weight: 800; color: var(--yellow); margin-bottom: 2px; }
+.hcp .prof-stat-l { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: rgba(255,255,255,.45); }
+.hcp .prof-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.hcp .prof-item {
+  display: flex; align-items: flex-start; gap: 11px;
+  background: #fff; border-radius: 13px; padding: 15px;
+  border: 2px solid var(--border);
+  box-shadow: 0 2px 10px rgba(0,0,0,.04); transition: border-color .2s, transform .2s;
+}
+.hcp .prof-item:hover { border-color: var(--yellow); transform: translateY(-2px); }
+.hcp .prof-item-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: #0d0d0d; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+}
+.hcp .prof-item-icon i { color: var(--yellow); font-size: .8rem; }
+.hcp .prof-item-lbl { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 2px; }
+.hcp .prof-item-val { font-size: .88rem; font-weight: 700; color: var(--text); word-break: break-word; }
+
+/* ══ EMPTY STATE ══ */
+.hcp .empty { text-align: center; padding: 56px 20px; }
+.hcp .empty-icon {
+  width: 66px; height: 66px; border-radius: 50%;
+  background: var(--off); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px; font-size: 1.4rem; color: #cbd5e1;
+}
+.hcp .empty h3 { font-size: .97rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.hcp .empty p  { font-size: .83rem; color: var(--muted); }
+
+/* ══ SPINNER ══ */
+.hcp .spinner {
+  width: 16px; height: 16px;
+  border: 2.5px solid rgba(0,0,0,.18); border-top-color: var(--black);
+  border-radius: 50%; animation: spin .7s linear infinite;
+  display: inline-block; vertical-align: middle;
+}
+.hcp .spinner-white {
+  width: 16px; height: 16px;
+  border: 2.5px solid rgba(255,255,255,.25); border-top-color: #fff;
+  border-radius: 50%; animation: spin .7s linear infinite;
+  display: inline-block; vertical-align: middle;
+}
+
+/* ══ MODAL ══ */
+.hcp .modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65);
+  z-index: 800; display: flex; align-items: center;
+  justify-content: center; padding: 20px;
+  animation: fadeUp .2s ease both;
+}
+.hcp .modal-box {
+  background: #fff; border-radius: 20px;
+  border: 2px solid rgba(255,215,0,.15);
+  font-family: 'Outfit', sans-serif;
+  box-shadow: 0 24px 80px rgba(0,0,0,.25);
+  max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto;
+}
+.hcp .modal-hd {
+  border-bottom: 2px solid #f1f5f9; padding: 20px 26px;
+  border-radius: 18px 18px 0 0;
+  position: relative;
+}
+.hcp .modal-hd.dark {
+  background: linear-gradient(135deg, #0d0d0d, #1a1a2e);
+}
+.hcp .modal-hd.dark h5 { color: #fff; }
+.hcp .modal-hd.dark p  { color: rgba(255,255,255,.5); }
+.hcp .modal-hd.light { background: linear-gradient(135deg, var(--yellow-l), var(--green-l)); }
+.hcp .modal-hd h5 { font-weight: 800; font-size: 1.15rem; color: #1e293b; margin-bottom: 2px; }
+.hcp .modal-hd p  { font-size: .78rem; color: #64748b; }
+.hcp .modal-body { padding: 24px 28px; }
+.hcp .modal-ft {
+  border-top: 2px solid #f1f5f9; padding: 16px 26px;
+  display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;
+}
+.hcp .modal-close {
+  position: absolute; top: 16px; right: 20px;
+  background: none; border: none; font-size: 1.1rem;
+  cursor: pointer; color: #64748b; line-height: 1;
+}
+.hcp .modal-hd.dark .modal-close { color: rgba(255,255,255,.5); }
+.hcp .mbl {
+  padding: 7px 18px; border-radius: 9px; font-weight: 700;
+  font-size: .84rem; cursor: pointer; font-family: 'Outfit', sans-serif;
+  border: 2px solid transparent; transition: all .15s;
+}
+.hcp .mbl-light { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+.hcp .mbl-light:hover { background: #e2e8f0; }
+.hcp .mbl-red   { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.hcp .mbl-red:hover   { background: #b91c1c; color: #fff; }
+.hcp .mbl-gold  { background: linear-gradient(135deg, var(--yellow), var(--yellow-d)); color: var(--black); box-shadow: 0 4px 14px rgba(255,215,0,.3); font-weight: 800; }
+.hcp .mbl-gold:hover  { filter: brightness(1.06); transform: translateY(-1px); }
+
+/* Divider */
+.hcp .modal-hr { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
+
+/* ══ RESPONSIVE ══ */
+@media (max-width: 992px) {
+  .hcp .sb { display: none; }
+  .hcp .topbar { display: flex; }
+  .hcp .sb-mobile { display: flex; flex-direction: column; }
+  .hcp .main { padding: 72px 16px 40px; }
+  .hcp .card { padding: 1.4rem; }
+  .hcp .form-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .hcp .craft-grid { grid-template-columns: 1fr 1fr; }
+  .hcp .pay-grid   { grid-template-columns: 1fr 1fr; }
+  .hcp .filter-bar { flex-direction: column; }
+  .hcp .srch-wrap  { min-width: 100%; }
+  .hcp .filter-sel { min-width: 100%; }
+}
+@media (max-width: 400px) {
+  .hcp .craft-grid { grid-template-columns: 1fr; }
+  .hcp .pay-grid   { grid-template-columns: 1fr; }
+  .hcp .main       { padding: 66px 12px 36px; }
+}
+`;
+
+/* ── Stars component ── */
+function Stars({ r }) {
+  return (
+    <span className="craft-stars">
+      {[1,2,3,4,5].map(i => (
+        <i key={i} className={i <= Math.round(Number(r)||0) ? 'fas fa-star' : 'far fa-star'}/>
+      ))}
+    </span>
+  );
+}
+
+/* ── Shared SidebarContent ── */
+function SidebarContent({ client, tab, setTab, setSbOpen }) {
+  const TABS = [
+    { id:'browse',   label:'Find Craftsmen', icon:'fas fa-search' },
+    { id:'requests', label:'My Requests',    icon:'fas fa-clipboard-list' },
+    { id:'reviews',  label:'Leave a Review', icon:'fas fa-star' },
+    { id:'payments', label:'Payments',       icon:'fas fa-receipt' },
+    { id:'profile',  label:'My Profile',     icon:'fas fa-user' },
+  ];
+  return (
+    <>
+      <div className="sb-head">
+        {/* <div className="brand">
+          <div className="brand-logo"><i className="fas fa-hard-hat"/></div>
+          <span className="brand-name">KaaKazini</span>
+        </div> */}
+        <div className="user-row">
+          <img src={avi(client.full_name)} alt={client.full_name} className="user-av"/>
+          <div>
+            <p className="user-name">{client.full_name||'Client'}</p>
+            <span className="user-badge">Client</span>
+          </div>
+        </div>
+      </div>
+      <div className="sb-nav">
+        <p className="nav-section">Menu</p>
+        {TABS.map(t => (
+          <button key={t.id}
+            className={`nb${(tab===t.id||(tab==='hire'&&t.id==='browse'))?' on':''}`}
+            onClick={() => { setTab(t.id); setSbOpen(false); }}>
+            <span className="nb-icon"><i className={t.icon}/></span>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="sb-foot">
+        <Link to="/"><span className="nb-icon"><i className="fas fa-arrow-left"/></span>Back to site</Link>
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN COMPONENT
+═══════════════════════════════════════════════ */
+export default function HireCraftsmanPage() {
+  const [tab, setTab]             = useState('browse');
+  const [sbOpen, setSbOpen]       = useState(false);
+  const [client, setClient]       = useState(null);
+  const [jobs, setJobs]           = useState([]);
+  const [craftsmen, setCraftsmen] = useState([]);
+  const [srch, setSrch]           = useState('');
+  const [trade, setTrade]         = useState('All');
+  const [picked, setPicked]       = useState(null);
+  const [jobOk, setJobOk]         = useState(false);
+  const [jobBusy, setJobBusy]     = useState(false);
+  const [reviews, setReviews]     = useState({});
+
+  // Quote modal
+  const [quoteJob, setQuoteJob]   = useState(null);
+
+  // Payment modal
+  const [payJob, setPayJob]       = useState(null);
+  const [payPhone, setPayPhone]   = useState('');
+  const [payBusy, setPayBusy]     = useState(false);
+  const [payOk, setPayOk]         = useState(false);
+
+  const [jf, setJf] = useState({
+    service:'', budget:'', schedule:'', location:'', address:'',
+    description:'', isUrgent: false, media: null
   });
 
   useEffect(() => {
-    const fetchClientData = async () => {
-      try {
-        const res = await api.get("/me/");
-        setClient(res.data);
-        setIndividualForm((prev) => ({
-          ...prev,
-          name: res.data.full_name || "",
-          phone: res.data.phone || res.data.phone_number || "",
-        }));
-        fetchJobs(res.data.id);
-      } catch (err) {
-        console.error("Client not logged in", err);
-        setClient(null);
-      }
-    };
-    fetchClientData();
+    api.get('/me/').then(r => {
+      setClient(r.data);
+      fetchJobs(r.data.id);
+      setPayPhone(r.data.phone || r.data.phone_number || '');
+    }).catch(() => setClient(null));
   }, []);
 
-  const fetchJobs = async (clientId) => {
+  useEffect(() => {
+    fetch(`${API_BASE}/public-craftsman/`)
+      .then(r => r.json())
+      .then(d => setCraftsmen((d||[]).filter(c => c.status==='approved' && c.primary_service)))
+      .catch(() => {});
+  }, []);
+
+  const fetchJobs = async id => {
     try {
-      const { data } = await api.get("/job-requests/");
-      const clientJobs = data.filter((j) => {
+      const { data } = await api.get('/job-requests/');
+      const mine = data.filter(j => {
         if (!j.client) return false;
-        if (typeof j.client === "number") return j.client === clientId;
-        if (typeof j.client === "object" && j.client.id) return j.client.id === clientId;
-        if (j.client_id) return j.client_id === clientId;
-        return false;
+        if (typeof j.client === 'number') return j.client === id;
+        if (j.client?.id) return j.client.id === id;
+        return j.client_id === id;
       });
-      setJobs(clientJobs);
-
-      const initialReviews = {};
-      clientJobs.forEach((job) => {
-        initialReviews[job.id] = { rating: job.rating || 0, review: job.review || "" };
-      });
-      setReviews(initialReviews);
-    } catch (err) {
-      console.error("Error fetching jobs:", err);
-    }
+      setJobs(mine);
+      const rv = {};
+      mine.forEach(j => { rv[j.id] = { rating: j.rating||0, review: j.review||'' }; });
+      setReviews(rv);
+    } catch {}
   };
 
-  const handleIndividualChange = (e) => {
+  /* ── Open hire form with pre-filled craftsman data ── */
+  const openHire = c => {
+    setPicked(c);
+    setJf(p => ({
+      ...p,
+      service:  c.primary_service || '',
+      location: c.location?.toLowerCase() || '',
+    }));
+    setTab('hire');
+    setSbOpen(false);
+  };
+
+  const jfChange = e => {
     const { id, value, type, checked, files } = e.target;
-    if (type === "checkbox") {
-      setIndividualForm((prev) => ({ ...prev, [id]: checked }));
-    } else if (type === "file") {
-      setIndividualForm((prev) => ({ ...prev, [id]: files[0] }));
-    } else {
-      setIndividualForm((prev) => ({ ...prev, [id]: value }));
-    }
+    if (type === 'checkbox') setJf(p => ({ ...p, [id]: checked }));
+    else if (type === 'file')  setJf(p => ({ ...p, [id]: files[0] }));
+    else                       setJf(p => ({ ...p, [id]: value }));
   };
 
-  const handleIndividualSubmit = async (e) => {
+  /* ── Submit automated job request ── */
+  const submitHire = async e => {
     e.preventDefault();
-    if (!client || !client.id) return alert("Client ID missing.");
-    const formData = new FormData();
-    formData.append("client", client.id);
-    Object.entries(individualForm).forEach(([key, val]) => {
-      if (val !== null && val !== "") {
-        formData.append(key, key === "schedule" ? new Date(val).toISOString() : val);
-      }
+    if (!client?.id) return;
+    setJobBusy(true);
+    const fd = new FormData();
+    fd.append('client',   client.id);
+    if (picked?.id) fd.append('craftsman', picked.id);   // auto-assigned to this craftsman
+    fd.append('name',  client.full_name || '');
+    fd.append('phone', client.phone || client.phone_number || '');
+    fd.append('status', 'Pending');  // system auto-sets initial status
+    Object.entries(jf).forEach(([k, v]) => {
+      if (v !== null && v !== '' && k !== 'media')
+        fd.append(k, k === 'schedule' ? new Date(v).toISOString() : v);
     });
+    if (jf.media) fd.append('media', jf.media);
     try {
-      await api.post("/job-requests/", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      alert("✅ Request submitted!");
-      fetchJobs(client.id);
-      setIndividualForm((prev) => ({
-        ...prev,
-        service: "",
-        schedule: "",
-        address: "",
-        location: "",
-        description: "",
-        isUrgent: false,
-        media: null,
-        budget: "",
-      }));
-      setActiveTab("myRequests");
-    } catch (err) {
-      console.error("Submission error:", err.response?.data || err.message);
-      alert("❌ Failed to submit request.");
-    }
+      await api.post('/job-requests/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setJobOk(true);
+      await fetchJobs(client.id);
+      setTimeout(() => { setJobOk(false); setTab('requests'); setPicked(null); }, 2400);
+    } catch {
+      alert('Failed to submit. Please try again.');
+    } finally { setJobBusy(false); }
   };
 
-  const updateJob = async (jobId, update) => {
+  /* ── Quote approve / reject ── */
+  const quoteDecide = async (jobId, decision) => {
+    if (!window.confirm(`${decision === 'approve' ? 'Approve' : 'Reject'} this quote?`)) return;
     try {
-      await api.patch(`/job-requests/${jobId}/`, update);
-      fetchJobs(client.id);
-    } catch (err) {
-      console.error("Update error:", err);
-    }
+      await api.post(`/job-requests/${jobId}/quote-decision/`, { decision });
+      await fetchJobs(client.id);
+      setQuoteJob(null);
+    } catch { alert(`Could not ${decision} quote.`); }
   };
 
-  const handleQuoteDecision = async (jobId, decision) => {
+  /* ── M-Pesa STK push ── */
+  const initiateMpesa = async () => {
+    if (!payPhone.match(/^2547\d{8}$/)) {
+      alert('Enter a valid M-Pesa number in the format 2547XXXXXXXX');
+      return;
+    }
+    setPayBusy(true);
     try {
-      await api.post(`/job-requests/${jobId}/quote-decision/`, {
-        decision: decision
+      await api.post(`/job-requests/${payJob.id}/pay/`, {
+        phone:  payPhone,
+        amount: Number(payJob.budget),
       });
-      alert(`✅ Quote ${decision}d successfully!`);
-      fetchJobs(client.id);
+      setPayOk(true);
+      await fetchJobs(client.id);
+      setTimeout(() => { setPayOk(false); setPayJob(null); }, 4000);
     } catch (err) {
-      console.error(`Error ${decision}ing quote:`, err.response?.data || err.message);
-      alert(`❌ Failed to ${decision} quote.`);
-    }
+      alert(err.response?.data?.detail || 'Payment initiation failed. Please try again.');
+    } finally { setPayBusy(false); }
   };
 
-  const submitReview = async (jobId) => {
-  const reviewData = reviews[jobId] || {};
-  const rating = parseInt(reviewData.rating) || 0;
-  const reviewText = reviewData.review?.trim() || "";
-
-  if (!rating || reviewText === "") {
-    return alert("Please add both rating and review.");
-  }
-
-  const job = jobs.find((j) => j.id === jobId);
-  if (!job) return alert("Job not found.");
-  if (!job.location || !job.craftsman?.id) {
-    return alert("Cannot submit review: missing location or craftsman.");
-  }
-
-  try {
-    await api.post("/reviews/", {
-      rating,
-      comment: reviewText,
-      location: job.location,
-      craftsman: job.craftsman.id,
-    });
-
-    alert("✅ Review submitted successfully!");
-    setReviews((prev) => ({ ...prev, [jobId]: { rating: 0, review: "" } }));
-
-  } catch (err) {
-    console.error("Review submission error:", err.response?.data || err.message);
-    alert("❌ Failed to submit review.");
-  }
-};
-
-
-  const handlePayment = async (jobId) => {
+  /* ── Review submit ── */
+  const submitReview = async jobId => {
+    const r = reviews[jobId] || {};
+    if (!r.rating || !r.review?.trim()) return alert('Please fill in rating and review.');
+    const job = jobs.find(j => j.id === jobId);
+    if (!job?.craftsman?.id) return alert('Missing craftsman info.');
     try {
-      await api.post(`/job-requests/${jobId}/pay/`);
-      alert("✅ Payment successful!");
-      fetchJobs(client.id);
-    } catch (err) {
-      console.error("Payment error:", err.response?.data || err.message);
-      alert("❌ Payment failed.");
-    }
+      await api.post('/reviews/', {
+        rating:   r.rating,
+        comment:  r.review.trim(),
+        location: job.location || '',
+        craftsman: job.craftsman.id,
+      });
+      alert('Review submitted!');
+      setReviews(p => ({ ...p, [jobId]: { rating: 0, review: '' } }));
+    } catch { alert('Failed to submit review.'); }
   };
 
-  if (!client)
-    return (
-      <div className="text-center mt-5">
-        Client not logged in. Please login to access your dashboard.
+  /* ── Helpers ── */
+  const filtered = craftsmen.filter(c => {
+    const q  = srch.toLowerCase();
+    const mt = trade === 'All' || c.primary_service === trade;
+    const mq = !q
+      || (c.name||'').toLowerCase().includes(q)
+      || (c.primary_service||'').toLowerCase().includes(q)
+      || (c.location||'').toLowerCase().includes(q);
+    return mt && mq;
+  });
+
+  const badgeCls = s => {
+    if (!s) return 'bdg bdg-gr';
+    const sl = s.toLowerCase();
+    if (sl.includes('paid'))    return 'bdg bdg-g';
+    if (sl.includes('complet')) return 'bdg bdg-g';
+    if (sl.includes('approv'))  return 'bdg bdg-b';
+    if (sl.includes('cancel'))  return 'bdg bdg-r';
+    if (sl.includes('quote'))   return 'bdg bdg-b';
+    return 'bdg bdg-y';
+  };
+
+  const totalSpent     = jobs.filter(j => j.budget).reduce((a, j) => a + Number(j.budget), 0);
+  const completedCount = jobs.filter(j => /complet|paid/i.test(j.status||'')).length;
+  const pendingCount   = jobs.filter(j => !/complet|paid|cancel/i.test(j.status||'')).length;
+
+  /* ── canPay: job is approved and not yet paid ── */
+  const canPay = job => {
+    const s = (job.status||'').toLowerCase();
+    return (s.includes('approv') || s.includes('quot')) && !s.includes('paid');
+  };
+
+  /* ── Loading screen ── */
+  if (!client) return (
+    <div className="hcp">
+      <style>{CSS}</style>
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0d0d0d' }}>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ width:44, height:44, border:'3px solid rgba(255,215,0,.2)', borderTopColor:'#FFD700', borderRadius:'50%', animation:'spin .7s linear infinite', margin:'0 auto 14px' }}/>
+          <p style={{ color:'rgba(255,215,0,.6)', fontWeight:700, fontSize:'.88rem', fontFamily:'Outfit,sans-serif' }}>Loading your dashboard…</p>
+        </div>
       </div>
-    );
+    </div>
+  );
 
+  /* ═══ RENDER ═══ */
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+    <div className="hcp">
+      <style>{CSS}</style>
 
-        * { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-
-        .dashboard-container { min-height: 100vh; background: #f8fafc; position: relative; }
-
-        /* ── Sidebar ── */
-        .dashboard-sidebar {
-          background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
-          min-height: 100vh; position: fixed; left: 0; top: 0;
-          width: 280px; padding: 2rem 0;
-          box-shadow: 4px 0 20px rgba(0,0,0,0.1);
-          z-index: 1000; transition: transform 0.3s ease;
-        }
-        .sidebar-header { padding: 0 1.5rem; margin-bottom: 2rem; }
-        .sidebar-logo {
-          font-size: 1.5rem; font-weight: 800;
-          background: linear-gradient(135deg, #22c55e 0%, #fbbf24 100%);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          background-clip: text; margin-bottom: 0.5rem;
-        }
-        .sidebar-user { color: #e5e7eb; font-size: 0.875rem; font-weight: 500; }
-        .sidebar-user strong { color: white; font-weight: 700; }
-        .sidebar-nav { padding: 0 1rem; }
-        .nav-item-custom { margin-bottom: 0.5rem; }
-        .nav-btn {
-          width: 100%; padding: 0.875rem 1.25rem; border-radius: 12px;
-          border: none; background: transparent; color: #9ca3af;
-          font-weight: 600; font-size: 0.9375rem; text-align: left;
-          transition: all 0.3s ease; display: flex; align-items: center; gap: 0.75rem;
-        }
-        .nav-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-        .nav-btn.active {
-          background: linear-gradient(135deg, #22c55e 0%, #fbbf24 100%);
-          color: white; box-shadow: 0 4px 15px rgba(34,197,94,0.3);
-        }
-        .nav-icon { width: 20px; height: 20px; }
-
-        /* ── Mobile toggle ── */
-        .sidebar-toggle {
-          position: fixed; top: 1rem; left: 1rem; z-index: 1100;
-          background: linear-gradient(135deg, #22c55e 0%, #fbbf24 100%);
-          border: none; width: 48px; height: 48px; border-radius: 12px;
-          color: white; display: none; align-items: center; justify-content: center;
-          box-shadow: 0 4px 15px rgba(34,197,94,0.3);
-        }
-        .sidebar-overlay {
-          display: none; position: fixed; inset: 0;
-          background: rgba(0,0,0,0.5); z-index: 999;
-        }
-
-        /* ── Main content ── */
-        .dashboard-main { margin-left: 280px; padding: 2rem; min-height: 100vh; }
-        .page-header { margin-bottom: 2rem; }
-        .page-title { font-size: 2rem; font-weight: 800; color: #1f2937; margin: 0; }
-
-        /* ── Cards ── */
-        .content-card {
-          background: white; border-radius: 16px; padding: 2rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem;
-        }
-        .card-title { font-size: 1.25rem; font-weight: 700; color: #1f2937; margin-bottom: 1.5rem; }
-
-        /* ── Form ── */
-        .form-label-custom { font-weight: 600; font-size: 0.875rem; color: #374151; margin-bottom: 0.5rem; }
-        .form-control-custom {
-          border: 2px solid #e5e7eb; border-radius: 12px;
-          padding: 0.75rem 1rem; font-size: 0.9375rem; transition: all 0.3s ease;
-        }
-        .form-control-custom:focus {
-          outline: none; border-color: #22c55e;
-          box-shadow: 0 0 0 4px rgba(34,197,94,0.1);
-        }
-        .form-select-custom {
-          border: 2px solid #e5e7eb; border-radius: 12px;
-          padding: 0.75rem 1rem; font-size: 0.9375rem; transition: all 0.3s ease;
-        }
-        .form-select-custom:focus {
-          outline: none; border-color: #22c55e;
-          box-shadow: 0 0 0 4px rgba(34,197,94,0.1);
-        }
-
-        /* ── Buttons ── */
-        .btn-primary-custom {
-          background: linear-gradient(135deg, #22c55e 0%, #fbbf24 100%);
-          color: white; border: none; padding: 0.875rem 1.5rem;
-          border-radius: 12px; font-weight: 700; font-size: 1rem;
-          transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(34,197,94,0.3);
-          cursor: pointer;
-        }
-        .btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(34,197,94,0.4); }
-        .btn-success-custom {
-          background: #22c55e; color: white; border: none;
-          padding: 0.5rem 1rem; border-radius: 8px;
-          font-weight: 600; font-size: 0.875rem; transition: all 0.2s ease; cursor: pointer;
-          white-space: nowrap;
-        }
-        .btn-success-custom:hover { background: #16a34a; transform: translateY(-1px); }
-        .btn-danger-custom {
-          background: #ef4444; color: white; border: none;
-          padding: 0.5rem 1rem; border-radius: 8px;
-          font-weight: 600; font-size: 0.875rem; transition: all 0.2s ease; cursor: pointer;
-          white-space: nowrap;
-        }
-        .btn-danger-custom:hover { background: #dc2626; transform: translateY(-1px); }
-
-        /* ── View Document button ── */
-        .btn-view-doc {
-          display: inline-flex; align-items: center; gap: 0.35rem;
-          background: #f0fdf4; color: #16a34a; border: 1.5px solid #86efac;
-          padding: 0.4rem 0.875rem; border-radius: 8px; font-weight: 700;
-          font-size: 0.8rem; text-decoration: none;
-          transition: all 0.18s ease; cursor: pointer; white-space: nowrap;
-          font-family: inherit;
-        }
-        .btn-view-doc:hover {
-          background: #dcfce7; border-color: #22c55e; color: #15803d;
-          transform: translateY(-1px); text-decoration: none;
-        }
-        .btn-view-doc-disabled {
-          display: inline-flex; align-items: center; gap: 0.35rem;
-          background: #f9fafb; color: #9ca3af; border: 1.5px solid #e5e7eb;
-          padding: 0.4rem 0.875rem; border-radius: 8px;
-          font-weight: 600; font-size: 0.8rem; cursor: not-allowed; white-space: nowrap;
-        }
-
-        /* ── Quote details expand card ── */
-        .btn-view-quote-detail {
-          display: inline-flex; align-items: center; gap: 0.35rem;
-          background: #f0fdf4; color: #16a34a; border: 1.5px solid #86efac;
-          padding: 0.4rem 0.875rem; border-radius: 8px; font-weight: 700;
-          font-size: 0.8rem; cursor: pointer; white-space: nowrap;
-          font-family: inherit; transition: all 0.18s ease;
-        }
-        .btn-view-quote-detail:hover { background: #dcfce7; border-color: #22c55e; color: #15803d; }
-
-        .quote-detail-popup {
-          margin-top: 0.5rem;
-          background: #f0fdf4; border: 1.5px solid #86efac;
-          border-radius: 10px; padding: 0.75rem 1rem;
-          font-size: 0.8rem; min-width: 200px;
-          animation: fadeIn 0.15s ease;
-        }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
-
-        .qd-title { font-weight: 800; color: #15803d; margin-bottom: 0.5rem; font-size: 0.82rem; }
-        .qd-row {
-          display: flex; justify-content: space-between; padding: 0.22rem 0;
-          border-bottom: 1px solid #d1fae5; font-size: 0.76rem; color: #374151; gap: 1rem;
-        }
-        .qd-row:last-child { border-bottom: none; }
-        .qd-label { color: #6b7280; }
-        .qd-val   { font-weight: 700; color: #1f2937; text-align: right; }
-        .qd-total {
-          margin-top: 0.5rem; padding-top: 0.4rem; border-top: 2px solid #86efac;
-          display: flex; justify-content: space-between; font-weight: 800; font-size: 0.85rem;
-        }
-        .qd-total-val { color: #16a34a; }
-
-        /* ── Table (desktop) ── */
-        .table-custom { background: white; border-radius: 12px; overflow: hidden; }
-        .table-custom thead { background: #f9fafb; }
-        .table-custom th {
-          font-weight: 700; font-size: 0.875rem; color: #374151;
-          text-transform: uppercase; letter-spacing: 0.5px; padding: 1rem; border: none;
-        }
-        .table-custom td {
-          padding: 1rem; vertical-align: middle;
-          border-top: 1px solid #f3f4f6; font-size: 0.9375rem;
-        }
-        .table-custom tbody tr:hover { background: #f9fafb; }
-
-        /* ── Badges ── */
-        .badge-custom { padding: 0.375rem 0.875rem; border-radius: 20px; font-weight: 600; font-size: 0.8125rem; white-space: nowrap; }
-        .badge-success { background: #d1fae5; color: #065f46; }
-        .badge-warning { background: #fef3c7; color: #92400e; }
-        .badge-danger  { background: #fee2e2; color: #991b1b; }
-
-        /* ── Stars ── */
-        .star-rating { display: inline-flex; gap: 0.25rem; }
-        .star { cursor: pointer; font-size: 1.75rem; transition: all 0.2s; user-select: none; }
-        .star:hover { transform: scale(1.1); }
-        .star.filled { color: #fbbf24; }
-        .star.empty  { color: #d1d5db; }
-
-        /* ── Profile ── */
-        .profile-info { display: grid; gap: 1.25rem; }
-        .profile-item { display: flex; align-items: start; gap: 1rem; }
-        .profile-icon {
-          width: 40px; height: 40px;
-          background: linear-gradient(135deg, #22c55e 0%, #fbbf24 100%);
-          border-radius: 10px; display: flex; align-items: center;
-          justify-content: center; flex-shrink: 0;
-        }
-        .profile-icon svg { width: 20px; height: 20px; color: white; }
-        .profile-content { flex: 1; }
-        .profile-label { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 0.25rem; }
-        .profile-value { font-size: 1rem; color: #1f2937; font-weight: 600; }
-
-        /* ── Empty state ── */
-        .empty-state { text-align: center; padding: 3rem 1rem; color: #9ca3af; }
-        .empty-state svg { width: 64px; height: 64px; margin-bottom: 1rem; opacity: 0.5; }
-
-        /* ═══════════════════════════════════
-           RESPONSIVE BREAKPOINTS
-        ═══════════════════════════════════ */
-
-        /* Tablet & below — hide desktop sidebar, show toggle */
-        @media (max-width: 992px) {
-          .dashboard-sidebar { transform: translateX(-100%); }
-          .dashboard-sidebar.open { transform: translateX(0); }
-          .sidebar-toggle { display: flex; }
-          .sidebar-overlay.open { display: block; }
-          .dashboard-main { margin-left: 0; padding: 5rem 1rem 2rem; }
-        }
-
-        /* Mobile — table becomes card stack */
-        @media (max-width: 768px) {
-          .page-title { font-size: 1.4rem; }
-          .content-card { padding: 1.25rem; }
-
-          /* Hide table header on mobile */
-          .table-custom thead { display: none; }
-
-          /* Each row becomes a card */
-          .table-custom, .table-custom tbody, .table-custom tr { display: block; }
-          .table-custom tbody tr {
-            background: white;
-            border-radius: 14px;
-            border: 1.5px solid #e5e7eb;
-            padding: 1rem;
-            margin-bottom: 0.875rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-          }
-          .table-custom tbody tr:hover { background: white; }
-
-          /* Each cell = labelled row */
-          .table-custom td {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 0.45rem 0;
-            border-top: 1px solid #f3f4f6;
-            font-size: 0.875rem;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-          }
-          .table-custom td:first-child { border-top: none; padding-top: 0; }
-          .table-custom td:last-child  { padding-bottom: 0; }
-
-          /* data-label pseudo element */
-          .table-custom td::before {
-            content: attr(data-label);
-            font-weight: 700;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #9ca3af;
-            flex-shrink: 0;
-            min-width: 76px;
-            padding-top: 0.15rem;
-          }
-
-          /* Right-align cell values */
-          .table-custom td > span,
-          .table-custom td > strong,
-          .table-custom td > a { margin-left: auto; }
-
-          /* Action buttons stay horizontal on mobile */
-          .table-custom td .d-flex {
-            flex-direction: row;
-            align-items: center;
-            gap: 0.5rem;
-            margin-left: auto;
-            flex-wrap: nowrap;
-          }
-
-          .btn-success-custom,
-          .btn-danger-custom {
-            font-size: 0.75rem !important;
-            padding: 0.4rem 0.7rem !important;
-            white-space: nowrap;
-          }
-
-          .quote-detail-popup { min-width: unset; width: 100%; }
-        }
-
-        @media (max-width: 480px) {
-          .dashboard-main { padding: 4.5rem 0.75rem 1.5rem; }
-          .content-card { padding: 1rem; border-radius: 12px; }
-          .page-title { font-size: 1.2rem; }
-        }
-      `}</style>
-
-      <div className="dashboard-container">
-        {/* Mobile Toggle */}
-        <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
+      {/* Mobile topbar */}
+      <div className="topbar">
+        <button className="hamburger" onClick={() => setSbOpen(!sbOpen)}>
+          <i className={`fas fa-${sbOpen ? 'times' : 'bars'}`}/>
         </button>
+        <span className="topbar-brand">KaaKazini</span>
+        <img src={avi(client.full_name)} alt="" style={{ width:32, height:32, borderRadius:'50%', border:'2px solid rgba(255,215,0,.4)', objectFit:'cover' }}/>
+      </div>
 
-        <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
+      {/* Overlay + mobile sidebar */}
+      <div className={`overlay${sbOpen ? ' show' : ''}`} onClick={() => setSbOpen(false)}/>
+      <nav className={`sb sb-mobile${sbOpen ? ' open' : ''}`} style={{ background:'#0d0d0d' }}>
+        <SidebarContent client={client} tab={tab} setTab={setTab} setSbOpen={setSbOpen}/>
+      </nav>
 
-        {/* Sidebar */}
-        <nav className={`dashboard-sidebar ${sidebarOpen ? 'open' : ''}`}>
-          <div className="sidebar-header">
-            <div className="sidebar-logo">Kaakazini</div>
-            <p className="sidebar-user">Hi, <strong>{client.full_name}</strong> 👋</p>
-          </div>
-          <div className="sidebar-nav">
-            {[
-              { id: "profile",     label: "My Profile",  icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
-              { id: "makeRequest", label: "Make Request", icon: "M12 4v16m8-8H4" },
-              { id: "myRequests",  label: "My Requests",  icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
-              { id: "reviews",     label: "My Reviews",   icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" },
-              { id: "payments",    label: "Payments",     icon: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" }
-            ].map((tab) => (
-              <div className="nav-item-custom" key={tab.id}>
-                <button
-                  className={`nav-btn ${activeTab === tab.id ? "active" : ""}`}
-                  onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                >
-                  <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d={tab.icon} strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {tab.label}
-                </button>
-              </div>
-            ))}
-          </div>
+      <div className="shell">
+        {/* Desktop sidebar */}
+        <nav className="sb" style={{ display:'flex' }}>
+          <SidebarContent client={client} tab={tab} setTab={setTab} setSbOpen={setSbOpen}/>
         </nav>
 
-        {/* Main */}
-        <main className="dashboard-main">
-          <div className="page-header">
-            <h1 className="page-title">
-              {activeTab === "profile"     && "My Profile"}
-              {activeTab === "makeRequest" && "New Request"}
-              {activeTab === "myRequests"  && "My Requests"}
-              {activeTab === "reviews"     && "My Reviews"}
-              {activeTab === "payments"    && "Payments"}
-            </h1>
-          </div>
+        <main className="main">
 
-          {/* ── Profile ── */}
-          {activeTab === "profile" && (
-            <div className="content-card">
-              <h2 className="card-title">Profile Information</h2>
-              <div className="profile-info">
-                {[
-                  { label: "Full Name",     value: client.full_name,                     icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
-                  { label: "Phone Number",  value: client.phone_number || client.phone,  icon: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" },
-                  { label: "Email Address", value: client.email,                          icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
-                ].map(({ label, value, icon }) => (
-                  <div className="profile-item" key={label}>
-                    <div className="profile-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d={icon} strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                    <div className="profile-content">
-                      <div className="profile-label">{label}</div>
-                      <div className="profile-value">{value}</div>
-                    </div>
-                  </div>
-                ))}
+          {/* ━━━━━━━━━━ BROWSE ━━━━━━━━━━ */}
+          {tab === 'browse' && (
+            <>
+              <div className="filter-bar">
+                <div className="srch-wrap">
+                  <i className="fas fa-search srch-ico"/>
+                  <input className="srch" placeholder="Search…"
+                    value={srch} onChange={e => setSrch(e.target.value)}/>
+                </div>
+                <select className="filter-sel" value={trade} onChange={e => setTrade(e.target.value)}>
+                  <option value="All">All trades</option>
+                  {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
-            </div>
-          )}
 
-          {/* ── Make Request ── */}
-          {activeTab === "makeRequest" && (
-            <div className="content-card">
-              <h2 className="card-title">Submit New Service Request</h2>
-              <form onSubmit={handleIndividualSubmit} encType="multipart/form-data">
-                <div className="row g-3 mb-3">
-                  <div className="col-md-6">
-                    <label className="form-label-custom">Your Name</label>
-                    <input type="text" id="name" value={individualForm.name} onChange={handleIndividualChange}
-                      className="form-control form-control-custom" placeholder="Enter your name" required />
+              {filtered.length === 0 ? (
+                <div className="card">
+                  <div className="empty">
+                    <div className="empty-icon"><i className="fas fa-search"/></div>
+                    <h3>No craftsmen found</h3>
+                    <p>Try a broader search or select "All trades"</p>
                   </div>
-                  <div className="col-md-6">
-                    <label className="form-label-custom">Phone Number</label>
-                    <input type="tel" id="phone" value={individualForm.phone} onChange={handleIndividualChange}
-                      className="form-control form-control-custom" placeholder="Phone number" required />
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label-custom">Service Type</label>
-                  <select id="service" value={individualForm.service} onChange={handleIndividualChange}
-                    className="form-select form-select-custom" required>
-                    <option value="">-- Select Service --</option>
-                    {["Plumbing","Electrical","Carpentry","Painting","Masonry","Tiling","Roofing"].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label-custom">Budget (KSh)</label>
-                  <input type="number" id="budget" value={individualForm.budget} onChange={handleIndividualChange}
-                    className="form-control form-control-custom" placeholder="Enter your budget" min="0" required />
-                </div>
-                <div className="row g-3 mb-3">
-                  <div className="col-md-6">
-                    <label className="form-label-custom">Schedule Date & Time</label>
-                    <input type="datetime-local" id="schedule" value={individualForm.schedule} onChange={handleIndividualChange}
-                      className="form-control form-control-custom" required />
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label-custom">Address</label>
-                    <input type="text" id="address" value={individualForm.address} onChange={handleIndividualChange}
-                      className="form-control form-control-custom" placeholder="Your address" required />
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label-custom">Location</label>
-                  <select id="location" value={individualForm.location} onChange={handleIndividualChange}
-                    className="form-select form-select-custom" required>
-                    <option value="">-- Select Location --</option>
-                    {["nairobi","mombasa","kisumu","eldoret","nakuru","thika"].map(l => (
-                      <option key={l} value={l}>{l.charAt(0).toUpperCase()+l.slice(1)}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label-custom">Job Description</label>
-                  <textarea id="description" value={individualForm.description} onChange={handleIndividualChange}
-                    className="form-control form-control-custom" rows="4" placeholder="Describe the work you need done..." required />
-                </div>
-                <div className="mb-3">
-                  <div className="form-check">
-                    <input type="checkbox" className="form-check-input" id="isUrgent"
-                      checked={individualForm.isUrgent} onChange={handleIndividualChange} style={{ accentColor:'#22c55e' }} />
-                    <label className="form-check-label" htmlFor="isUrgent"><strong>Mark as urgent</strong></label>
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <label className="form-label-custom">Upload Image (Optional)</label>
-                  <input type="file" className="form-control form-control-custom" id="media"
-                    accept="image/*" onChange={handleIndividualChange} />
-                </div>
-                <button type="submit" className="btn-primary-custom w-100" style={{ width:'100%' }}>
-                  Submit Request
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* ── My Requests ── */}
-          {activeTab === "myRequests" && (
-            <div className="content-card">
-              <h2 className="card-title">Your Service Requests</h2>
-              {jobs.length === 0 ? (
-                <div className="empty-state">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <p>No service requests submitted yet.</p>
                 </div>
               ) : (
-                <div className="table-responsive">
-                  <table className="table table-custom">
-                    <thead>
-                      <tr>
-                        <th>Service</th>
-                        <th>Budget</th>
-                        <th>Schedule</th>
-                        <th>Status</th>
-                        <th>Quote</th>
-                        <th>Proof Images</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {jobs.map((job) => {
-                        const hasQuote = !!(job.quote_file_url || job.quote_details);
-                        const quoteSubmitted = job.status === "Quote Submitted";
-                        const quoteApproved  = job.status === "Quote Approved";
-
-                        return (
-                          <tr key={job.id}>
-                            <td data-label="Service"><strong>{job.service}</strong></td>
-                            <td data-label="Budget">{job.budget ? `KSh ${job.budget.toLocaleString()}` : "—"}</td>
-                            <td data-label="Schedule">{new Date(job.schedule).toLocaleString()}</td>
-
-                            <td data-label="Status">
-                              <span className={`badge-custom ${
-                                job.status === "Completed" || job.status === "Quote Approved"
-                                  ? "badge-success"
-                                  : job.status === "Cancelled"
-                                  ? "badge-danger"
-                                  : "badge-warning"
-                              }`}>
-                                {job.status === "Quote Submitted" ? "Quote Received"
-                                  : job.status === "Completed"      ? "Work Completed"
-                                  : job.status}
-                              </span>
-                            </td>
-
-                            <td data-label="Quote">
-                              {job.quote_file_url ? (
-                                <div style={{ display:'flex', flexDirection:'column', gap:'0.4rem' }}>
-                                  <a href={job.quote_file_url} target="_blank" rel="noopener noreferrer"
-                                    style={{ color:'#16a34a', fontWeight:'600', wordBreak:'break-all', textDecoration:'underline', fontSize:'0.8rem' }}>
-                                    {job.quote_file_url.split('/').pop()}
-                                  </a>
-                                  {job.quote_file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-                                    <img
-                                      src={job.quote_file_url}
-                                      alt="Quote preview"
-                                      style={{ width:'60px', height:'60px', objectFit:'cover', borderRadius:'8px', border:'2px solid #e5e7eb', cursor:'pointer' }}
-                                      onClick={() => window.open(job.quote_file_url, '_blank')}
-                                    />
-                                  )}
-                                </div>
-                              ) : job.quote_details ? (
-                                <button className="btn-view-quote-detail" data-bs-toggle="modal" data-bs-target="#quoteModal"
-                                  onClick={() => setSelectedQuoteJob(job)}>📋 View Quote</button>
-                              ) : <span style={{ color:'#9ca3af', fontSize:'0.85rem' }}>—</span>}
-                            </td>
-
-                            <td data-label="Proof Images">
-                              {job.proof_images && job.proof_images.length > 0 ? (
-                                <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
-                                  {job.proof_images.map((proofImg, idx) => (
-                                    <img 
-                                      key={proofImg.id || idx} 
-                                      src={proofImg.image} 
-                                      alt={`Proof ${idx+1}`}
-                                      style={{ 
-                                        width:'60px', 
-                                        height:'60px', 
-                                        objectFit:'cover', 
-                                        borderRadius:'8px', 
-                                        border:'2px solid #e5e7eb', 
-                                        cursor:'pointer' 
-                                      }}
-                                      onClick={() => window.open(proofImg.image, '_blank')}
-                                      onError={(e) => {
-                                        console.error("Failed to load image:", proofImg.image);
-                                        e.target.style.border = '2px solid #ef4444';
-                                        e.target.style.opacity = '0.5';
-                                      }}
-                                    />
-                                  ))}
-                                </div>
-                              ) : (
-                                <span style={{ color:'#9ca3af', fontSize:'0.85rem' }}>
-                                  {job.status === "Completed" ? "No proof images" : "—"}
-                                </span>
-                              )}
-                            </td>
-
-                            <td data-label="Actions">
-                              <div className="d-flex gap-2" style={{ flexWrap: 'nowrap' }}>
-                                {quoteSubmitted && hasQuote && (
-                                  <>
-                                    <button className="btn btn-success-custom"
-                                      onClick={() => { if(window.confirm("Approve this quote?")) handleQuoteDecision(job.id, "approve"); }}>
-                                      Approve Quote
-                                    </button>
-                                    <button className="btn btn-danger-custom"
-                                      onClick={() => { if(window.confirm("Reject this quote?")) handleQuoteDecision(job.id, "reject"); }}>
-                                      Reject Quote
-                                    </button>
-                                  </>
-                                )}
-                                {!quoteSubmitted && (
-                                  <>
-                                    <button className="btn btn-success-custom"
-                                      onClick={() => updateJob(job.id, { status:"Completed" })}>Complete</button>
-                                    <button className="btn btn-danger-custom"
-                                      onClick={() => updateJob(job.id, { status:"Cancelled" })}>Cancel</button>
-                                  </>
-                                )}
-                                {quoteApproved && (
-                                  <span style={{ color:'#22c55e', fontSize:'0.875rem', fontWeight:'600' }}>
-                                    ✅ Quote Approved
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="craft-grid">
+                  {filtered.map((c, i) => {
+                    const cover  = imgUrl(c.services?.[0]?.image || c.service_image);
+                    const avatar = imgUrl(c.profile_image || c.avatar) || avi(c.name);
+                    const rating = Number(c.average_rating) || 0;
+                    const ph = `https://placehold.co/400x140/0d0d0d/FFD700?text=${encodeURIComponent(c.primary_service||'')}`;
+                    return (
+                      <div className="craft-card" key={c.id||i}>
+                        <div className="craft-cover">
+                          <img src={cover||ph} alt={c.primary_service} onError={e => { e.target.src = ph; }}/>
+                          <span className="trade-pill">{c.primary_service}</span>
+                          {c.is_available && (
+                            <span className="avail-pill"><span className="avail-dot"/>Available</span>
+                          )}
+                        </div>
+                        <div className="craft-body">
+                          <div className="craft-row">
+                            <img src={avatar} alt={c.name} className="craft-av"
+                              onError={e => { e.target.src = avi(c.name); }}/>
+                            <div style={{ minWidth:0 }}>
+                              <p className="craft-name">{c.name}</p>
+                              {c.location && <p className="craft-loc"><i className="fas fa-map-marker-alt" style={{ marginRight:4 }}/>{c.location}</p>}
+                            </div>
+                          </div>
+                          {rating > 0 && (
+                            <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+                              <Stars r={rating}/>
+                              <span className="craft-rtg">{rating.toFixed(1)}</span>
+                            </div>
+                          )}
+                          {c.description && (
+                            <p className="craft-desc">
+                              {c.description.length > 88 ? c.description.slice(0,88)+'…' : c.description}
+                            </p>
+                          )}
+                          <button className="hire-btn" onClick={() => openHire(c)}>
+                            <i className="fas fa-paper-plane"/>Request {c.name?.split(' ')[0]}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-            </div>
+            </>
           )}
 
-          {/* ── Reviews ── */}
-          {activeTab === "reviews" && (
-            <div className="content-card">
-              <h2 className="card-title">Leave Reviews for Completed Jobs</h2>
-              {jobs.filter((j) => j.status === "Completed").length === 0 ? (
-                <div className="empty-state">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <p>No completed jobs to review yet.</p>
+          {/* ━━━━━━━━━━ HIRE / REQUEST FORM ━━━━━━━━━━ */}
+          {tab === 'hire' && picked && (
+            <>
+              <button className="back-btn" onClick={() => { setTab('browse'); setPicked(null); }}>
+                <i className="fas fa-arrow-left"/>Back to browse
+              </button>
+
+              {jobOk && (
+                <div className="ok-banner">
+                  <i className="fas fa-check-circle" style={{ fontSize:'1.1rem' }}/>
+                  Request sent! {picked.name?.split(' ')[0]} has been notified. Redirecting…
+                </div>
+              )}
+
+              <div className="locked-bar">
+                <img src={imgUrl(picked.profile_image || picked.avatar) || avi(picked.name)}
+                  alt={picked.name} className="locked-av"
+                  onError={e => { e.target.src = avi(picked.name); }}/>
+                <div>
+                  <p className="locked-name">{picked.name}</p>
+                  <p className="locked-meta">
+                    <i className="fas fa-tools" style={{ marginRight:5 }}/>{picked.primary_service}
+                    {picked.location && <> · <i className="fas fa-map-marker-alt" style={{ margin:'0 4px 0 6px' }}/>{picked.location}</>}
+                    {Number(picked.average_rating) > 0 && <> · <Stars r={picked.average_rating}/> {Number(picked.average_rating).toFixed(1)}</>}
+                  </p>
+                </div>
+              </div>
+
+              <div className="card">
+                <form onSubmit={submitHire}>
+                  <div className="form-grid">
+                    <div>
+                      <label className="lbl" htmlFor="service">Service needed</label>
+                      <select id="service" className="sel" value={jf.service} onChange={jfChange} required>
+                        <option value="">Select service…</option>
+                        {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="lbl" htmlFor="budget">Your budget (KSh)</label>
+                      <input id="budget" type="number" min="0" className="inp"
+                        placeholder="e.g. 5,000" value={jf.budget} onChange={jfChange} required/>
+                    </div>
+                    <div>
+                      <label className="lbl" htmlFor="schedule">Preferred date & time</label>
+                      <input id="schedule" type="datetime-local" className="inp"
+                        value={jf.schedule} onChange={jfChange} required/>
+                    </div>
+                    <div>
+                      <label className="lbl" htmlFor="location">County</label>
+                      <select id="location" className="sel" value={jf.location} onChange={jfChange} required>
+                        <option value="">Select county…</option>
+                        {LOCATIONS.map(l => <option key={l} value={l.toLowerCase()}>{l}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ gridColumn:'1 / -1' }}>
+                      <label className="lbl" htmlFor="address">Exact address</label>
+                      <input id="address" type="text" className="inp"
+                        placeholder="e.g. Westlands, Nairobi" value={jf.address} onChange={jfChange} required/>
+                    </div>
+                    <div style={{ gridColumn:'1 / -1' }}>
+                      <label className="lbl" htmlFor="description">Describe the work</label>
+                      <textarea id="description" className="ta" rows={4}
+                        placeholder="Describe the work…"
+                        value={jf.description} onChange={jfChange} required/>
+                    </div>
+                    <div>
+                      <label className="lbl" htmlFor="media">Attach a photo (optional)</label>
+                      <input id="media" type="file" accept="image/*" className="inp" onChange={jfChange}/>
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center' }}>
+                      <div className="ck-row">
+                        <input id="isUrgent" type="checkbox" className="ck" checked={jf.isUrgent} onChange={jfChange}/>
+                        <label className="ck-lbl" htmlFor="isUrgent">⚡ Mark as urgent</label>
+                      </div>
+                    </div>
+                  </div>
+                  <button type="submit" className="submit-btn" disabled={jobBusy}>
+                    {jobBusy
+                      ? <><span className="spinner"/>Sending request…</>
+                      : <><i className="fas fa-paper-plane"/>Send request to {picked.name?.split(' ')[0]}</>
+                    }
+                  </button>
+                </form>
+              </div>
+            </>
+          )}
+
+          {/* ━━━━━━━━━━ MY REQUESTS ━━━━━━━━━━ */}
+          {tab === 'requests' && (
+            <>
+              <div className="card" style={{ padding:0, overflow:'hidden' }}>
+                {jobs.length === 0 ? (
+                  <div style={{ padding:'2.25rem' }}>
+                    <div className="empty">
+                      <div className="empty-icon"><i className="fas fa-clipboard-list"/></div>
+                      <h3>No requests yet</h3>
+                      <p>Find a craftsman and send your first request to get started</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="tbl-wrap">
+                    <table className="tbl">
+                      <thead>
+                        <tr>
+                          <th>Service</th>
+                          <th>Craftsman</th>
+                          <th>Budget</th>
+                          <th>Scheduled</th>
+                          <th>Status</th>
+                          <th>Quote</th>
+                          <th>Proof</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {jobs.map(job => {
+                          const hasQ = !!(job.quote_file_url || job.quote_details);
+                          const isQS = job.status === 'Quote Submitted';
+                          return (
+                            <tr key={job.id}>
+                              <td><strong>{job.service}</strong></td>
+                              <td style={{ fontSize:'.83rem', color:'#64748b', fontWeight:600 }}>{job.craftsman?.name||'—'}</td>
+                              <td style={{ fontWeight:800 }}>{job.budget ? `KSh ${Number(job.budget).toLocaleString()}` : '—'}</td>
+                              <td style={{ fontSize:'.8rem', color:'#64748b' }}>
+                                {job.schedule
+                                  ? new Date(job.schedule).toLocaleDateString('en-KE',{ day:'numeric', month:'short', year:'numeric' })
+                                  : '—'}
+                              </td>
+                              <td>
+                                <span className={badgeCls(job.status)}>
+                                  <span className="bdg-dot"/>
+                                  {job.status==='Quote Submitted' ? 'Quote Received' : job.status||'Pending'}
+                                </span>
+                              </td>
+                              <td>
+                                {job.quote_file_url ? (
+                                  <a href={job.quote_file_url} target="_blank" rel="noopener noreferrer"
+                                    style={{ color:'#15803d', fontWeight:700, fontSize:'.8rem' }}>View file</a>
+                                ) : job.quote_details ? (
+                                  <button className="act act-ok" onClick={() => setQuoteJob(job)}>View Quote</button>
+                                ) : <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>}
+                              </td>
+                              <td>
+                                {job.proof_images?.length > 0 ? (
+                                  <div style={{ display:'flex', gap:4 }}>
+                                    {job.proof_images.slice(0,2).map((img, ix) => (
+                                      <img key={ix} src={img.image} alt="Proof"
+                                        style={{ width:36, height:36, objectFit:'cover', borderRadius:7, border:'2px solid #e2e8f0', cursor:'pointer' }}
+                                        onClick={() => window.open(img.image,'_blank')}
+                                        onError={e => { e.target.style.opacity = '.3'; }}
+                                      />
+                                    ))}
+                                  </div>
+                                ) : <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>}
+                              </td>
+                              <td>
+                                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                                  {/* Quote approve / reject */}
+                                  {isQS && hasQ && (
+                                    <>
+                                      <button className="act act-ok"  onClick={() => quoteDecide(job.id,'approve')}>Approve</button>
+                                      <button className="act act-bad" onClick={() => quoteDecide(job.id,'reject')}>Reject</button>
+                                    </>
+                                  )}
+                                  {/* Pay via M-Pesa */}
+                                  {canPay(job) && !isQS && (
+                                    <button className="act act-pay"
+                                      onClick={() => { setPayJob(job); setPayOk(false); }}>
+                                      <i className="fas fa-mobile-alt" style={{ marginRight:4 }}/>Pay
+                                    </button>
+                                  )}
+                                  {!isQS && !canPay(job) && <span style={{ fontSize:'.8rem', color:'#64748b' }}>—</span>}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ━━━━━━━━━━ REVIEWS ━━━━━━━━━━ */}
+          {tab === 'reviews' && (
+            <>
+              {jobs.filter(j => j.status === 'Completed').length === 0 ? (
+                <div className="card">
+                  <div className="empty">
+                    <div className="empty-icon"><i className="fas fa-star"/></div>
+                    <h3>No completed jobs yet</h3>
+                    <p>Completed jobs will appear here for you to review</p>
+                  </div>
                 </div>
               ) : (
-                <div className="row g-3">
-                  {jobs.filter((j) => j.status === "Completed").map((job) => (
-                    <div key={job.id} className="col-12">
-                      <div className="content-card" style={{ marginBottom:0 }}>
-                        <h5 style={{ fontSize:'1.125rem', fontWeight:'700', marginBottom:'1rem' }}>
-                          {job.service} — {new Date(job.schedule).toLocaleDateString()}
-                        </h5>
-                        <p style={{ marginBottom:'0.75rem' }}><strong>Description:</strong> {job.description}</p>
-                        <p style={{ marginBottom:'1rem' }}><strong>Budget:</strong> {job.budget ? `KSh ${job.budget.toLocaleString()}` : "—"}</p>
-                        <div className="star-rating" style={{ marginBottom:'1rem' }}>
-                          {[1,2,3,4,5].map((star) => (
-                            <span key={star}
-                              className={`star ${reviews[job.id]?.rating >= star ? 'filled' : 'empty'}`}
-                              onClick={() => setReviews((prev) => ({ ...prev, [job.id]: { ...prev[job.id], rating:star } }))}>
-                              ★
-                            </span>
-                          ))}
+                <div className="rev-grid">
+                  {jobs.filter(j => j.status === 'Completed').map(job => (
+                    <div className="rev-card" key={job.id}>
+                      <div className="rev-header">
+                        <div>
+                          <p className="rev-svc">{job.service}</p>
+                          <p className="rev-meta">
+                            {job.schedule && new Date(job.schedule).toLocaleDateString('en-KE',{ day:'numeric', month:'long', year:'numeric' })}
+                            {job.budget && ` · KSh ${Number(job.budget).toLocaleString()}`}
+                          </p>
                         </div>
-                        <textarea rows="3" className="form-control form-control-custom mb-3"
-                          placeholder="Write your review..."
-                          value={reviews[job.id]?.review || ""}
-                          onChange={(e) => setReviews((prev) => ({ ...prev, [job.id]: { ...prev[job.id], review:e.target.value } }))} />
-                        <button className="btn btn-primary-custom"
-                          onClick={() => submitReview(job.id)}>
-                          Submit Review
-                        </button>
+                        <span className="bdg bdg-g"><span className="bdg-dot"/>Completed</span>
                       </div>
+                      {job.craftsman?.name && (
+                        <div className="rev-craft">
+                          <img src={avi(job.craftsman.name)} alt={job.craftsman.name} className="rev-craft-av"/>
+                          <span className="rev-craft-name">{job.craftsman.name}</span>
+                        </div>
+                      )}
+                      <div className="star-row">
+                        {[1,2,3,4,5].map(s => (
+                          <span key={s}
+                            className={`star${(reviews[job.id]?.rating||0) >= s ? ' on' : ''}`}
+                            onClick={() => setReviews(p => ({ ...p, [job.id]: { ...p[job.id], rating:s } }))}>★</span>
+                        ))}
+                        {reviews[job.id]?.rating > 0 && (
+                          <span className="star-val">{reviews[job.id].rating}/5</span>
+                        )}
+                      </div>
+                      <textarea className="ta" rows={3}
+                        placeholder="Your review…"
+                        value={reviews[job.id]?.review || ''}
+                        onChange={e => setReviews(p => ({ ...p, [job.id]: { ...p[job.id], review:e.target.value } }))}
+                        style={{ marginBottom:14, width:'100%' }}
+                      />
+                      <button className="rev-btn" onClick={() => submitReview(job.id)}>
+                        <i className="fas fa-star"/>Submit Review
+                      </button>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
+            </>
           )}
 
-          {/* ── Payments ── */}
-          {activeTab === "payments" && (
-            <div className="content-card">
-              <h2 className="card-title">Payment History</h2>
-              {jobs.length === 0 ? (
-                <div className="empty-state">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <p>No payment records available.</p>
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-custom">
-                    <thead>
-                      <tr>
-                        <th>Service</th><th>Total Amount</th><th>Company Fee</th>
-                        <th>Craftsman Net</th><th>Status</th><th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {jobs.map((job) => {
-                        const companyFee = job.budget ? Math.round(job.budget * 0.1) : 0;
-                        const net  = job.budget ? job.budget - companyFee : 0;
-                        const paid = job.status === "Paid";
-                        return (
-                          <tr key={job.id}>
-                            <td data-label="Service"><strong>{job.service}</strong></td>
-                            <td data-label="Total">{job.budget ? `KSh ${job.budget.toLocaleString()}` : "—"}</td>
-                            <td data-label="Fee">{`KSh ${companyFee.toLocaleString()}`}</td>
-                            <td data-label="Craftsman">{`KSh ${net.toLocaleString()}`}</td>
-                            <td data-label="Status">
-                              <span className={`badge-custom ${paid ? 'badge-success' : 'badge-warning'}`}>
-                                {paid ? "✅ Paid" : "⏳ Pending"}
-                              </span>
-                            </td>
-                            <td data-label="Action">
-                              {!paid && job.status === "Completed" ? (
-                                <button className="btn btn-primary-custom"
-                                  style={{ padding:'0.5rem 1rem', fontSize:'0.875rem' }}
-                                  onClick={() => handlePayment(job.id)}>
-                                  Pay Now
-                                </button>
-                              ) : "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ================= QUOTE MODAL ================= */}
-          <div
-            className="modal fade"
-            id="quoteModal"
-            tabIndex="-1"
-            aria-labelledby="quoteModalLabel"
-            aria-hidden="true"
-          >
-            <div className="modal-dialog modal-dialog-centered modal-lg">
-              <div className="modal-content" style={{ borderRadius:'16px' }}>
-                
-                <div className="modal-header">
-                  <h5 className="modal-title" id="quoteModalLabel">
-                    📋 Quote Summary
-                  </h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Close"
-                  />
-                </div>
-
-                <div className="modal-body">
-                  {selectedQuoteJob?.quote_details ? (
-                    <>
-                      {selectedQuoteJob.quote_details.plumberName && (
-                        <p><strong>From:</strong> {selectedQuoteJob.quote_details.plumberName}</p>
-                      )}
-
-                      {selectedQuoteJob.quote_details.workType && (
-                        <p><strong>Work Type:</strong> {selectedQuoteJob.quote_details.workType}</p>
-                      )}
-
-                      {selectedQuoteJob.quote_details.duration && (
-                        <p><strong>Duration:</strong> {selectedQuoteJob.quote_details.duration}</p>
-                      )}
-
-                      {selectedQuoteJob.quote_details.paymentTerms && (
-                        <p><strong>Payment Terms:</strong> {selectedQuoteJob.quote_details.paymentTerms}</p>
-                      )}
-
-                      <hr />
-
-                      {Array.isArray(selectedQuoteJob.quote_details.items) &&
-                        selectedQuoteJob.quote_details.items.map((item, i) => (
-                          <div key={i} className="d-flex justify-content-between mb-2">
-                            <span>{item.desc || `Item ${i + 1}`}</span>
-                            <strong>
-                              KSh {(item.qty * item.price).toLocaleString()}
-                            </strong>
-                          </div>
-                        ))}
-
-                      {selectedQuoteJob.quote_details.total && (
-                        <>
-                          <hr />
-                          <div className="d-flex justify-content-between">
-                            <strong>Total</strong>
-                            <strong style={{ color:'#16a34a' }}>
-                              KSh {Number(selectedQuoteJob.quote_details.total).toLocaleString()}
-                            </strong>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <p>No quote details available.</p>
-                  )}
-                </div>
-
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    data-bs-dismiss="modal"
-                  >
-                    Close
-                  </button>
-                </div>
-
+          {/* ━━━━━━━━━━ PAYMENTS ━━━━━━━━━━ */}
+          {tab === 'payments' && (
+            <>
+              <div className="pay-grid">
+                {[
+                  { icon:'fas fa-receipt',       l:'Total Requests', v: jobs.length },
+                  { icon:'fas fa-wallet',         l:'Total Spent',    v: `KSh ${totalSpent.toLocaleString()}` },
+                  { icon:'fas fa-check-circle',   l:'Completed',      v: completedCount },
+                  { icon:'fas fa-hourglass-half', l:'Pending',        v: pendingCount },
+                ].map((s, i) => (
+                  <div className="pay-stat" key={i}>
+                    <div className="pay-stat-icon"><i className={s.icon}/></div>
+                    <p className="pay-stat-v">{s.v}</p>
+                    <p className="pay-stat-l">{s.l}</p>
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>
+
+              <div className="card" style={{ padding:0, overflow:'hidden' }}>
+                {jobs.length === 0 ? (
+                  <div style={{ padding:'2.25rem' }}>
+                    <div className="empty">
+                      <div className="empty-icon"><i className="fas fa-receipt"/></div>
+                      <h3>No payment records yet</h3>
+                      <p>Payments will appear here once you hire a craftsman</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="tbl-wrap">
+                    <table className="tbl">
+                      <thead>
+                        <tr>
+                          <th>Service</th>
+                          <th>Total</th>
+                          <th>Platform fee (10%)</th>
+                          <th>Craftsman receives</th>
+                          <th>Status</th>
+                          <th>Pay</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {jobs.map(job => {
+                          const total = Number(job.budget) || 0;
+                          const fee   = Math.round(total * .1);
+                          const net   = total - fee;
+                          const paid  = /paid/i.test(job.status||'');
+                          return (
+                            <tr key={job.id}>
+                              <td>
+                                <strong>{job.service}</strong>
+                                {job.craftsman?.name && <p style={{ fontSize:'.76rem', color:'#64748b', fontWeight:500, marginTop:2 }}>{job.craftsman.name}</p>}
+                              </td>
+                              <td style={{ fontWeight:800 }}>KSh {total.toLocaleString()}</td>
+                              <td style={{ color:'#64748b', fontWeight:600 }}>KSh {fee.toLocaleString()}</td>
+                              <td style={{ fontWeight:800, color:'#15803d' }}>KSh {net.toLocaleString()}</td>
+                              <td>
+                                <span className={`bdg ${paid ? 'bdg-g' : 'bdg-y'}`}>
+                                  <span className="bdg-dot"/>{paid ? 'Paid' : 'Pending'}
+                                </span>
+                              </td>
+                              <td>
+                                {!paid && canPay(job) ? (
+                                  <button className="act act-pay"
+                                    onClick={() => { setPayJob(job); setPayOk(false); }}>
+                                    <i className="fas fa-mobile-alt" style={{ marginRight:4 }}/>M-Pesa
+                                  </button>
+                                ) : paid ? (
+                                  <span style={{ fontSize:'.78rem', color:'#15803d', fontWeight:700 }}>✓ Paid</span>
+                                ) : (
+                                  <span style={{ fontSize:'.78rem', color:'#94a3b8' }}>Awaiting approval</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ━━━━━━━━━━ PROFILE ━━━━━━━━━━ */}
+          {tab === 'profile' && (
+            <>
+              <div className="prof-hero">
+                <div className="prof-top">
+                  <img src={avi(client.full_name)} alt={client.full_name} className="prof-av"/>
+                  <div>
+                    <h2 className="prof-name">{client.full_name||'Client'}</h2>
+                    <span className="prof-role">Client Account</span>
+                    {client.email && <p className="prof-email">{client.email}</p>}
+                  </div>
+                </div>
+                <div className="prof-stats-row">
+                  {[
+                    { v: jobs.length,     l: 'Requests' },
+                    { v: completedCount,  l: 'Completed' },
+                    { v: `KSh ${totalSpent.toLocaleString()}`, l: 'Total Spent' },
+                  ].map((s, i) => (
+                    <div className="prof-stat" key={i}>
+                      <p className="prof-stat-v">{s.v}</p>
+                      <p className="prof-stat-l">{s.l}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="prof-grid" style={{ marginBottom:24 }}>
+                {[
+                  { icon:'fas fa-envelope',       label:'Email',          val: client.email||'—' },
+                  { icon:'fas fa-phone',           label:'Phone',          val: client.phone||client.phone_number||'—' },
+                  { icon:'fas fa-id-badge',        label:'Account type',   val: 'Client' },
+                  { icon:'fas fa-clipboard-list',  label:'Total requests', val: jobs.length },
+                  { icon:'fas fa-check-circle',    label:'Completed jobs', val: completedCount },
+                  { icon:'fas fa-wallet',          label:'Total spent',    val: `KSh ${totalSpent.toLocaleString()}` },
+                ].map((item, i) => (
+                  <div className="prof-item" key={i}>
+                    <div className="prof-item-icon"><i className={item.icon}/></div>
+                    <div>
+                      <p className="prof-item-lbl">{item.label}</p>
+                      <p className="prof-item-val">{item.val}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
         </main>
       </div>
-    </>
-  );
-};
 
-export default HireCraftsmanPage;
+      {/* ══ QUOTE MODAL ══ */}
+      {quoteJob && (
+        <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) setQuoteJob(null); }}>
+          <div className="modal-box">
+            <div className="modal-hd light" style={{ position:'relative' }}>
+              <button className="modal-close" onClick={() => setQuoteJob(null)}>✕</button>
+              <h5>Quote Summary</h5>
+              {quoteJob.craftsman?.name && <p>From {quoteJob.craftsman.name}</p>}
+            </div>
+
+            <div className="modal-body">
+              {quoteJob.quote_details ? (
+                <>
+                  {['plumberName','workType','duration','paymentTerms'].map(k => quoteJob.quote_details[k] && (
+                    <div key={k} style={{ display:'flex', gap:14, marginBottom:10, fontSize:'.88rem' }}>
+                      <span style={{ fontWeight:700, minWidth:125, color:'#64748b', textTransform:'capitalize' }}>
+                        {k==='plumberName'?'From':k==='workType'?'Work type':k==='paymentTerms'?'Payment terms':'Duration'}
+                      </span>
+                      <span style={{ fontWeight:600 }}>{quoteJob.quote_details[k]}</span>
+                    </div>
+                  ))}
+                  {Array.isArray(quoteJob.quote_details.items) && quoteJob.quote_details.items.length > 0 && (
+                    <>
+                      <hr className="modal-hr"/>
+                      <p style={{ fontWeight:700, fontSize:'.72rem', textTransform:'uppercase', letterSpacing:'.06em', color:'#64748b', marginBottom:12 }}>Line items</p>
+                      {quoteJob.quote_details.items.map((item, i) => (
+                        <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:9, fontSize:'.88rem', padding:'9px 0', borderBottom:'1px solid #f1f5f9' }}>
+                          <span>{item.desc||`Item ${i+1}`}</span>
+                          <strong>KSh {(item.qty * item.price).toLocaleString()}</strong>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {quoteJob.quote_details.total && (
+                    <>
+                      <hr className="modal-hr"/>
+                      <div style={{ display:'flex', justifyContent:'space-between', fontWeight:800, fontSize:'1.02rem' }}>
+                        <span>Total</span>
+                        <span style={{ color:'#15803d' }}>KSh {Number(quoteJob.quote_details.total).toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : <p style={{ color:'#64748b' }}>No quote details available.</p>}
+            </div>
+
+            <div className="modal-ft">
+              <button className="mbl mbl-light" onClick={() => setQuoteJob(null)}>Close</button>
+              {jobs.find(j => j.id === quoteJob.id)?.status === 'Quote Submitted' && <>
+                <button className="mbl mbl-red"
+                  onClick={() => quoteDecide(quoteJob.id, 'reject')}>Reject Quote</button>
+                <button className="mbl mbl-gold"
+                  onClick={() => quoteDecide(quoteJob.id, 'approve')}>Approve Quote</button>
+              </>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ M-PESA PAYMENT MODAL ══ */}
+      {payJob && (
+        <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) setPayJob(null); }}>
+          <div className="modal-box">
+            <div className="modal-hd dark" style={{ position:'relative' }}>
+              <button className="modal-close" onClick={() => setPayJob(null)}>✕</button>
+              <h5>Pay via M-Pesa</h5>
+              <p>Job: {payJob.service} · {payJob.craftsman?.name}</p>
+            </div>
+
+            <div className="modal-body">
+              {payOk ? (
+                <div style={{ textAlign:'center', padding:'24px 0' }}>
+                  <div style={{ width:64, height:64, borderRadius:'50%', background:'#f0fdf4', border:'2px solid #22c55e', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                    <i className="fas fa-check" style={{ fontSize:'1.7rem', color:'#16a34a' }}/>
+                  </div>
+                  <p style={{ fontWeight:800, fontSize:'1.1rem', color:'#1e293b', marginBottom:6 }}>STK Push Sent!</p>
+                  <p style={{ fontSize:'.85rem', color:'#64748b', lineHeight:1.7 }}>
+                    Check your phone and enter your M-Pesa PIN to complete payment of{' '}
+                    <strong>KSh {Number(payJob.budget).toLocaleString()}</strong>.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mpesa-logo-row">
+                    <span className="mpesa-logo">M-PESA</span>
+                    <span style={{ fontSize:'.78rem', color:'#64748b', fontWeight:600 }}>Powered by Safaricom</span>
+                  </div>
+
+                  <div className="mpesa-amt">
+                    <div>
+                      <p className="mpesa-amt-lbl">Amount to pay</p>
+                      <p className="mpesa-amt-val">KSh {Number(payJob.budget).toLocaleString()}</p>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <p className="mpesa-amt-lbl">To craftsman</p>
+                      <p style={{ fontSize:'.88rem', fontWeight:700, color:'rgba(255,255,255,.7)' }}>
+                        KSh {Math.round(Number(payJob.budget) * .9).toLocaleString()}
+                      </p>
+                      <p style={{ fontSize:'.68rem', color:'rgba(255,255,255,.35)', marginTop:2 }}>After 10% platform fee</p>
+                    </div>
+                  </div>
+
+                  <div className="mpesa-steps">
+                    {[
+                      { n:1, title:'Enter your M-Pesa number', text:'Use the number registered with M-Pesa (format: 2547XXXXXXXX)' },
+                      { n:2, title:'Check your phone', text:'You\'ll receive an STK push notification from M-Pesa' },
+                      { n:3, title:'Enter your PIN', text:'Confirm the payment by entering your 4-digit M-Pesa PIN' },
+                    ].map(s => (
+                      <div className="mpesa-step" key={s.n}>
+                        <span className="mpesa-num">{s.n}</span>
+                        <div>
+                          <p className="mpesa-step-title">{s.title}</p>
+                          <p className="mpesa-step-text">{s.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mpesa-inp-wrap">
+                    <label className="lbl" style={{ marginBottom:6, display:'block' }}>M-Pesa phone number</label>
+                    <input
+                      type="tel" className="inp"
+                      placeholder="2547XXXXXXXX"
+                      value={payPhone}
+                      onChange={e => setPayPhone(e.target.value.replace(/\D/g,''))}
+                      maxLength={12}
+                    />
+                  </div>
+
+                  <button className="mpesa-btn" onClick={initiateMpesa} disabled={payBusy}>
+                    {payBusy
+                      ? <><span className="spinner-white"/>Sending STK push…</>
+                      : <><i className="fas fa-mobile-alt"/>Send M-Pesa request · KSh {Number(payJob.budget).toLocaleString()}</>
+                    }
+                  </button>
+
+                  <p className="mpesa-note">
+                    Secure payment processed by Safaricom M-Pesa.<br/>
+                    Platform fee of 10% (KSh {Math.round(Number(payJob.budget)*.1).toLocaleString()}) is deducted before craftsman receives payment.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="modal-ft">
+              <button className="mbl mbl-light" onClick={() => setPayJob(null)}>
+                {payOk ? 'Done' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

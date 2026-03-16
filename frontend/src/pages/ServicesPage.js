@@ -25,6 +25,18 @@ const getImageUrl = (path) => {
   if (path.startsWith('http')) return path;
   return `${MEDIA_URL}${path}`;
 };
+
+// ─── Resolve the best cover image from a craftsman object ─────────────────────
+// Priority: first gallery image → service-level image → service_image field
+const getCoverImage = (s) =>
+  getImageUrl(
+    s.gallery_images?.[0]?.image_url ||
+    s.services?.[0]?.image_url       ||
+    s.services?.[0]?.image           ||
+    s.service_image                   ||
+    null
+  );
+
 const PLACEHOLDER = 'https://placehold.co/400x260/e8f5e9/198754?text=KaaKazini';
 
 function StarRating({ rating }) {
@@ -93,6 +105,7 @@ export default function ServicesPage() {
       const q = search.toLowerCase();
       out = out.filter(s =>
         s.name?.toLowerCase().includes(q) ||
+        s.full_name?.toLowerCase().includes(q) ||
         s.primary_service?.toLowerCase().includes(q) ||
         s.location?.toLowerCase().includes(q) ||
         s.description?.toLowerCase().includes(q)
@@ -128,7 +141,6 @@ export default function ServicesPage() {
         body { background:var(--bg); font-family:'DM Sans',sans-serif; color:var(--text); }
         .kk-stars { color:var(--gold); display:inline-flex; gap:2px; font-size:.82rem; }
 
-        /* ═══ Shared Buttons — identical to LandingPage ═══ */
         .kk-btn-gold {
           display:inline-flex; align-items:center; gap:7px;
           background:var(--gold); color:#1a1a2e; border:none; border-radius:12px;
@@ -146,7 +158,6 @@ export default function ServicesPage() {
         .kk-btn-hire-sm:hover { background:var(--green-d); color:#fff; transform:translateY(-1px); }
         .kk-btn-muted { background:#e4e4e4!important; color:#aaa!important; cursor:default!important; transform:none!important; }
 
-        /* ═══ Section Headers — identical to LandingPage ═══ */
         .kk-section-label {
           display:inline-flex; align-items:center; gap:8px;
           background:var(--green-l); border:1.5px solid #c8e6c9; border-radius:50px;
@@ -156,7 +167,6 @@ export default function ServicesPage() {
         .kk-section-title { font-family:'Playfair Display',serif; font-size:clamp(1.7rem,3.5vw,2.4rem); font-weight:800; color:var(--text); margin:0 0 10px; }
         .kk-section-sub   { font-size:.95rem; color:var(--muted); line-height:1.75; margin:0; }
 
-        /* ═══ Cards — identical to LandingPage ═══ */
         .kk-card {
           background:#fff; border-radius:14px; overflow:hidden;
           box-shadow:0 2px 16px rgba(0,0,0,.07);
@@ -184,7 +194,6 @@ export default function ServicesPage() {
         .kk-card-loc  { font-size:.74rem; color:var(--green); display:block; margin-top:1px; }
         .kk-card-desc { font-size:.78rem; color:var(--muted); line-height:1.55; margin:0; flex:1; }
 
-        /* ═══ HERO — dark green gradient (same as CraftsmenList) ═══ */
         .sv-hero {
           background:linear-gradient(135deg,#0d3d21 0%,#145a32 45%,#198754 100%);
           padding:90px 0 64px; position:relative; overflow:hidden;
@@ -224,7 +233,6 @@ export default function ServicesPage() {
         }
         .sv-stat-pill i { color:var(--gold); }
 
-        /* ═══ FILTER BAR — white sticky ═══ */
         .sv-filter {
           background:var(--white); padding:16px 0;
           position:sticky; top:0; z-index:200;
@@ -251,87 +259,43 @@ export default function ServicesPage() {
         }
         .sv-search:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(25,135,84,.1); }
 
-        /* ═══ RESULTS ═══ */
         .sv-section { background:var(--bg); padding:52px 0 72px; }
         .sv-results-bar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:28px; }
         .sv-results-tag { background:var(--green-l); color:var(--green); border:1px solid #a5d6a7; border-radius:20px; padding:5px 18px; font-size:.84rem; font-weight:600; }
         .sv-clear-btn { background:var(--white); border:1.5px solid #e0e0e0; color:var(--muted); border-radius:20px; padding:5px 16px; font-size:.82rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; font-family:'DM Sans',sans-serif; }
         .sv-clear-btn:hover { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
 
-        /* ═══ HOW IT WORKS — white bg, large green circles, pulsing gold numbers ═══ */
         .sv-hiw { background:var(--white); padding:80px 0; border-top:1px solid var(--border); }
-        .sv-hiw-steps {
-          display:flex; justify-content:space-between;
-          align-items:flex-start; position:relative; gap:0;
-        }
-        .sv-hiw-steps::before {
-          content:''; position:absolute; top:52px;
-          left:calc(12.5% + 10px); right:calc(12.5% + 10px); height:2px;
-          background:repeating-linear-gradient(to right,#d4d4d4 0,#d4d4d4 10px,transparent 10px,transparent 20px);
-        }
+        .sv-hiw-steps { display:flex; justify-content:space-between; align-items:flex-start; position:relative; gap:0; }
+        .sv-hiw-steps::before { content:''; position:absolute; top:52px; left:calc(12.5% + 10px); right:calc(12.5% + 10px); height:2px; background:repeating-linear-gradient(to right,#d4d4d4 0,#d4d4d4 10px,transparent 10px,transparent 20px); }
         .sv-hiw-item { flex:1; text-align:center; padding:0 12px; position:relative; z-index:1; }
         .sv-hiw-icon-wrap { position:relative; display:inline-flex; align-items:center; justify-content:center; margin-bottom:20px; }
-        .sv-hiw-circle {
-          width:104px; height:104px; border-radius:50%;
-          background:#fff; border:3px solid var(--gold);
-          display:flex; align-items:center; justify-content:center;
-          font-size:2.2rem; color:#1a1a2e; box-shadow:0 8px 28px rgba(255,215,0,.22);
-          transition:transform .3s,box-shadow .3s;
-        }
+        .sv-hiw-circle { width:104px; height:104px; border-radius:50%; background:#fff; border:3px solid var(--gold); display:flex; align-items:center; justify-content:center; font-size:2.2rem; color:#1a1a2e; box-shadow:0 8px 28px rgba(255,215,0,.22); transition:transform .3s,box-shadow .3s; }
         .sv-hiw-item:hover .sv-hiw-circle { transform:translateY(-5px); box-shadow:0 16px 40px rgba(255,215,0,.42); }
-        .sv-hiw-num {
-          position:absolute; top:-6px; right:-6px;
-          width:28px; height:28px; border-radius:50%;
-          background:var(--gold); color:#1a1a2e;
-          display:flex; align-items:center; justify-content:center;
-          font-size:.78rem; font-weight:800; border:2px solid #fff;
-          animation:pulseRing 2.2s ease-in-out infinite;
-        }
+        .sv-hiw-num { position:absolute; top:-6px; right:-6px; width:28px; height:28px; border-radius:50%; background:var(--gold); color:#1a1a2e; display:flex; align-items:center; justify-content:center; font-size:.78rem; font-weight:800; border:2px solid #fff; animation:pulseRing 2.2s ease-in-out infinite; }
         .sv-hiw-title { font-weight:700; color:var(--text); font-size:1rem; margin:0 0 8px; }
         .sv-hiw-body  { font-size:.86rem; color:var(--muted); line-height:1.7; max-width:200px; margin:0 auto; }
-        @media(max-width:768px){
-          .sv-hiw-steps { flex-direction:column; align-items:center; gap:40px; }
-          .sv-hiw-steps::before { display:none; }
-          .sv-hiw-item { max-width:280px; }
-        }
+        @media(max-width:768px){ .sv-hiw-steps { flex-direction:column; align-items:center; gap:40px; } .sv-hiw-steps::before { display:none; } .sv-hiw-item { max-width:280px; } }
 
-        /* ═══ STATS — white bg, gold-border circles (identical to LandingPage) ═══ */
         .sv-stats-section { background:var(--white); padding:72px 0; border-top:1px solid var(--border); }
-        .sv-stat-circle {
-          width:clamp(140px,17vw,168px); height:clamp(140px,17vw,168px); border-radius:50%;
-          background:#fff; border:4px solid var(--gold);
-          box-shadow:0 6px 28px rgba(0,0,0,.08);
-          display:flex; flex-direction:column; align-items:center; justify-content:center;
-          margin:0 auto; cursor:default; transition:transform .3s,box-shadow .3s;
-        }
+        .sv-stat-circle { width:clamp(140px,17vw,168px); height:clamp(140px,17vw,168px); border-radius:50%; background:#fff; border:4px solid var(--gold); box-shadow:0 6px 28px rgba(0,0,0,.08); display:flex; flex-direction:column; align-items:center; justify-content:center; margin:0 auto; cursor:default; transition:transform .3s,box-shadow .3s; }
         .sv-stat-circle:hover { transform:translateY(-8px); box-shadow:0 18px 44px rgba(255,215,0,.28); }
         .sv-stat-icon  { font-size:1.5rem; color:var(--green); margin-bottom:4px; }
         .sv-stat-value { font-family:'Playfair Display',serif; font-size:1.55rem; font-weight:800; color:var(--gold); margin:0; line-height:1; }
         .sv-stat-label { font-size:.72rem; font-weight:700; color:var(--muted); margin:5px 0 0; text-transform:uppercase; letter-spacing:.05em; }
 
-        /* ═══ JOIN CTA ═══ */
         .sv-cta { background:var(--bg); padding:72px 0; }
-        .sv-cta-inner {
-          background:var(--white); border-radius:20px;
-          padding:56px 48px; position:relative; overflow:hidden;
-          border:2px solid var(--green-l); box-shadow:0 8px 40px rgba(25,135,84,.08);
-        }
-        .sv-cta-inner::after {
-          content:''; position:absolute; top:0; left:0; right:0; height:4px;
-          background:linear-gradient(to right,var(--green),var(--gold));
-          border-radius:20px 20px 0 0;
-        }
+        .sv-cta-inner { background:var(--white); border-radius:20px; padding:56px 48px; position:relative; overflow:hidden; border:2px solid var(--green-l); box-shadow:0 8px 40px rgba(25,135,84,.08); }
+        .sv-cta-inner::after { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(to right,var(--green),var(--gold)); border-radius:20px 20px 0 0; }
         .sv-cta-title { font-family:'Playfair Display',serif; font-size:clamp(1.6rem,3.5vw,2.3rem); font-weight:800; color:var(--text); line-height:1.2; margin:0 0 14px; }
         .sv-cta-sub   { font-size:1rem; color:var(--muted); line-height:1.8; max-width:500px; }
         .sv-cta-img   { width:100%; max-width:380px; border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,.1); object-fit:cover; height:260px; display:block; border:3px solid var(--green-l); }
 
-        /* ═══ EMPTY ═══ */
         .sv-empty { text-align:center; padding:72px 24px; background:var(--white); border-radius:16px; border:1.5px solid var(--border); }
         .sv-empty-icon { font-size:3.5rem; display:block; margin-bottom:16px; }
         .sv-empty h5   { font-family:'Playfair Display',serif; font-size:1.25rem; color:var(--text); font-weight:700; margin-bottom:8px; }
         .sv-empty p    { color:var(--muted); font-size:.93rem; }
 
-        /* ═══ FOOTER — identical to LandingPage ═══ */
         .sv-footer { background:#1a1a2e; color:#bbb; padding:52px 0 26px; font-family:'DM Sans',sans-serif; }
         .sv-footer h5 { color:#fff; font-weight:700; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; margin-bottom:14px; }
         .sv-footer a  { color:#bbb; text-decoration:none; font-size:.85rem; transition:color .15s; }
@@ -341,45 +305,29 @@ export default function ServicesPage() {
         .sv-social a  { font-size:1rem; color:#bbb; margin-right:14px; display:inline-block; transition:color .15s,transform .15s; }
         .sv-social a:hover { color:var(--gold); transform:translateY(-2px); }
 
-        /* ═══ BACK TO TOP ═══ */
         .kk-back-top { position:fixed; bottom:24px; right:24px; width:44px; height:44px; border-radius:50%; background:var(--green); color:#fff; border:none; font-size:.9rem; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 18px rgba(25,135,84,.4); cursor:pointer; transition:all .2s; z-index:9999; opacity:0; pointer-events:none; }
         .kk-back-top.on { opacity:1; pointer-events:auto; }
         .kk-back-top:hover { background:var(--green-d); transform:translateY(-2px); }
 
-        @media(max-width:768px){
-          .sv-hero { padding:70px 0 52px; }
-          .sv-cta-inner { padding:36px 24px; }
-          .sv-hero-btns { flex-direction:column; align-items:flex-start; }
-          .sv-hero > .container > div { flex-direction:column; gap:10px; }
-        }
-        @media(max-width:576px){
-          .sv-cats { gap:6px; }
-          .sv-filter .d-flex { flex-direction:column; align-items:stretch; }
-          .sv-search-wrap { width:100%; }
-        }
+        @media(max-width:768px){ .sv-hero { padding:70px 0 52px; } .sv-cta-inner { padding:36px 24px; } .sv-hero-btns { flex-direction:column; align-items:flex-start; } }
+        @media(max-width:576px){ .sv-cats { gap:6px; } .sv-filter .d-flex { flex-direction:column; align-items:stretch; } .sv-search-wrap { width:100%; } }
       `}</style>
 
-      {/* ╔═══════════╗
-          ║   HERO    ║
-          ╚═══════════╝ */}
       <section className="sv-hero" id="top">
         <div className="sv-hero-pattern" aria-hidden="true"/>
         <div className="sv-hero-glow"    aria-hidden="true"/>
         <div className="container">
           <div style={{position:'relative',zIndex:2,maxWidth:640,animation:'floatUp .9s ease both'}}>
-
             <div className="sv-hero-eyebrow">
               <span className="sv-eyebrow-dot" aria-hidden="true"/>
               Verified Craftsmen · 40+ Kenya Counties
             </div>
-
             <h1 className="sv-hero-title">
               All Trades. Every County.<br/><em>One Platform.</em>
             </h1>
             <p className="sv-hero-sub">
               Find verified plumbers, electricians, carpenters, tailors and more — across 40+ counties in Kenya. Browse real portfolios, read client reviews, and hire directly. No middlemen.
             </p>
-
             <div className="sv-hero-btns">
               <Link to="/craftsmen" className="kk-btn-gold">
                 <i className="fas fa-search"/>Find a Craftsman
@@ -388,7 +336,6 @@ export default function ServicesPage() {
                 <i className="fas fa-user-plus"/>Join as Craftsman — Free
               </Link>
             </div>
-
             <div className="d-flex flex-wrap gap-2 mt-4">
               {[
                 {icon:'fas fa-hard-hat',       label:'100+ Craftsmen'},
@@ -406,9 +353,6 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* ╔══════════════╗
-          ║  FILTER BAR  ║
-          ╚══════════════╝ */}
       <div className="sv-filter" role="navigation" aria-label="Filter by trade">
         <div className="container">
           <div className="d-flex align-items-center justify-content-between flex-wrap gap-3">
@@ -439,9 +383,6 @@ export default function ServicesPage() {
         </div>
       </div>
 
-      {/* ╔══════════════╗
-          ║  GRID        ║
-          ╚══════════════╝ */}
       <section className="sv-section" aria-label="Craftsmen listings" aria-live="polite">
         <div className="container">
           {!loading && (
@@ -478,10 +419,12 @@ export default function ServicesPage() {
           ) : (
             <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
               {filtered.map((s, i) => {
-                const cover  = getImageUrl(s.services?.[0]?.image || s.service_image);
-                const avatar = getImageUrl(s.profile_image || s.avatar);
+                // ✅ FIXED: reads gallery_images[0].image_url (real backend field)
+                const cover  = getCoverImage(s);
+                const avatar = getImageUrl(s.profile_url || s.profile || s.profile_image || s.avatar);
                 const rating = Number(s.average_rating) || 0;
                 const id     = s.slug || s.id || '';
+                const name   = s.full_name || s.name || 'Craftsman';
                 return (
                   <div className="col" key={s.id || i} data-aos="fade-up" data-aos-delay={(i % 4) * 50}>
                     <div className="kk-card">
@@ -497,12 +440,12 @@ export default function ServicesPage() {
                       <div className="kk-card-body">
                         <div className="kk-card-profile">
                           {avatar
-                            ? <img src={avatar} alt={s.name} className="kk-avatar" loading="lazy"
+                            ? <img src={avatar} alt={name} className="kk-avatar" loading="lazy"
                                 onError={e => { e.target.style.display='none'; }}/>
                             : <div className="kk-avatar-fb" aria-hidden="true"><i className="fas fa-hard-hat"/></div>
                           }
                           <div style={{minWidth:0}}>
-                            <p className="kk-card-name">{s.name || 'Craftsman'}</p>
+                            <p className="kk-card-name">{name}</p>
                             {s.location && (
                               <span className="kk-card-loc">
                                 <i className="fas fa-map-marker-alt me-1"/>{s.location}
@@ -537,9 +480,6 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* ╔═══════════════╗
-          ║  HOW IT WORKS ║
-          ╚═══════════════╝ */}
       <section className="sv-hiw" aria-label="How hiring works">
         <div className="container">
           <div className="text-center mb-5" data-aos="fade-up">
@@ -572,9 +512,6 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* ╔═══════════╗
-          ║   STATS   ║
-          ╚═══════════╝ */}
       <section className="sv-stats-section" aria-label="Platform stats">
         <div className="container">
           <div className="text-center mb-5" data-aos="fade-up">
@@ -600,9 +537,6 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* ╔═══════════════════╗
-          ║  JOIN CTA BANNER  ║
-          ╚═══════════════════╝ */}
       <section className="sv-cta" aria-label="Join as craftsman">
         <div className="container">
           <div className="sv-cta-inner" data-aos="fade-up">
@@ -611,7 +545,7 @@ export default function ServicesPage() {
                 <div className="kk-section-label mb-3"><i className="fas fa-hard-hat me-1"/>For Craftsmen</div>
                 <h2 className="sv-cta-title">Are You a Skilled Craftsman?<br/>Get Hired on KaaKazini — Free</h2>
                 <p className="sv-cta-sub">
-                  Register your profile in minutes. Our team reviews and approves every craftsman before they go live. Once approved, clients across Kenya will find you, contact you, and hire you — directly. No fees, no middlemen.
+                  Register your profile in minutes. Our team reviews and approves every craftsman before they go live. Once approved, clients across Kenya will find you, contact you, and hire you — directly.
                 </p>
                 <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:28}}>
                   <Link to="/signup" className="kk-btn-gold" style={{borderRadius:11}}>
@@ -639,9 +573,6 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* ╔════════════╗
-          ║   FOOTER   ║
-          ╚════════════╝ */}
       <footer className="sv-footer" role="contentinfo">
         <div className="container">
           <div className="row g-5">

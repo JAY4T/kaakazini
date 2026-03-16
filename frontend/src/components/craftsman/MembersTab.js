@@ -326,7 +326,7 @@ function MembersTab({ craftsman, addToast }) {
         {/* ── Approval Flow Banner ── */}
         <div className="approval-banner">
           <h6 className="d-flex align-items-center gap-2">
-            <FaShieldAlt/> How Team Approval Works
+             How Team Approval Works
           </h6>
           <div className="flow-diagram">
             <div className="flow-step"><FaEnvelope size={11}/> You invite</div>
@@ -533,8 +533,8 @@ function MembersTab({ craftsman, addToast }) {
               {[
                 { id:"email",    icon:<FaEnvelope/>,  label:"Email"    },
                 { id:"sms",      icon:<FaSms/>,       label:"SMS"      },
-                { id:"whatsapp", icon:<FaWhatsapp/>,  label:"WhatsApp" },
-                { id:"link",     icon:<FaLink/>,      label:"Link"     },
+                // { id:"whatsapp", icon:<FaWhatsapp/>,  label:"WhatsApp" },
+                // { id:"link",     icon:<FaLink/>,      label:"Link"     },
               ].map(m => (
                 <button key={m.id} className={`m-tab ${inviteMethod === m.id ? "act" : ""}`}
                   onClick={() => setInviteMethod(m.id)}>

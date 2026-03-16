@@ -13,6 +13,8 @@ from .models import (
     ContactMessage,
     JobRequest,
     JobProofImage,
+    TeamInvite, 
+    CraftsmanMember 
 )
 
 User = get_user_model()
@@ -244,3 +246,21 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
     def get_quote_file_url(self, obj):
         return build_file_url(obj.quote_file)
+    
+
+
+ 
+class TeamInviteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = TeamInvite
+        fields = ['id', 'name', 'contact', 'method', 'role', 'status', 'created_at']
+        read_only_fields = ['id', 'status', 'created_at']
+ 
+ 
+class CraftsmanMemberSerializer(serializers.ModelSerializer):
+    joined_at = serializers.DateTimeField(format='%d %b %Y', read_only=True)
+ 
+    class Meta:
+        model  = CraftsmanMember
+        fields = ['id', 'full_name', 'email', 'phone', 'role', 'status', 'joined_at']
+        read_only_fields = ['id', 'status', 'joined_at']

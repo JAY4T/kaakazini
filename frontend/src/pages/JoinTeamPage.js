@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/axiosClient";
 
-const ROLE_ICONS  = { helper:"🔧", foreman:"📋", partner:"🤝" };
+const ROLE_ICONS  = { helper:"", foreman:"", partner:"" };
 const ROLE_PERKS  = {
   helper:  ["View assigned jobs","Update job progress","Upload completion photos"],
   foreman: ["Manage job tasks","Update job progress","Communicate with clients"],

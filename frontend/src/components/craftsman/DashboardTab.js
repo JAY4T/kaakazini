@@ -354,7 +354,7 @@ function DashboardTab({ craftsman = {}, jobs = [] }) {
               icon:  <FaBriefcase/>,
               label: "Active Jobs",
               value: stats.active,
-              sub:   stats.active > 0 ? "Keep going 💪" : "No active jobs",
+              sub:   stats.active > 0 ? "Keep going " : "No active jobs",
               subColor: "#6b7280",
             },
             {
@@ -491,7 +491,7 @@ function DashboardTab({ craftsman = {}, jobs = [] }) {
               {/* Tip */}
               {stats.done === 0 && (
                 <div className="db-tip">
-                  <span className="db-tip-icon">💡</span>
+                  <span className="db-tip-icon"></span>
                   <span>
                     <strong>Complete your profile</strong> to start receiving job requests.
                     Add your services, skills, and work photos to get noticed by clients.

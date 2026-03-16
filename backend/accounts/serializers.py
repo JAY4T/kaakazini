@@ -2,9 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import CustomUser
 
-# -----------------------------
-# Base Signup Serializer
-# -----------------------------
+
 class BaseSignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
 
@@ -15,51 +13,51 @@ class BaseSignupSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return CustomUser.objects.create_user(**validated_data)
 
-# -----------------------------
-# Craftsman Signup Serializer
-# -----------------------------
+
 class CraftsmanSignupSerializer(BaseSignupSerializer):
     def create(self, validated_data):
         validated_data['role'] = 'craftsman'
         return super().create(validated_data)
 
-# -----------------------------
-# Client Signup Serializer
-# -----------------------------
+
 class ClientSignupSerializer(BaseSignupSerializer):
     def create(self, validated_data):
         validated_data['role'] = 'client'
         return super().create(validated_data)
 
-# -----------------------------
-# Unified Role-Aware Login Serializer
-# -----------------------------
+
 class RoleLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
-    role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES, required=False)  # optional
+    # role is now REQUIRED — the login endpoint always passes it
+    role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES, required=True)
 
     def validate(self, data):
         email = data['email']
         password = data['password']
-        role = data.get('role')  # optional
+        role = data['role']
 
         user = authenticate(username=email, password=password)
         if not user:
-            raise serializers.ValidationError("Invalid credentials.")
+            raise serializers.ValidationError("Invalid email or password.")
 
-        # Role enforcement only if provided
-        if role == 'admin' and not user.is_staff:
-            raise serializers.ValidationError("You are not authorized as admin.")
-        if role and user.role != role and role != 'admin':
-            raise serializers.ValidationError(f"You are not authorized as {role}.")
+        # ── Strict role gate ──────────────────────────────────────────
+        if role == 'admin':
+            if not (user.is_staff or user.is_superuser):
+                raise serializers.ValidationError(
+                    "Access denied. This account is not an admin."
+                )
+        else:
+            # client trying craftsman login → blocked, and vice versa
+            if user.role != role:
+                raise serializers.ValidationError(
+                    f"Access denied. Please use the {user.role} login page."
+                )
 
         self.context['user'] = user
         return data
 
-# -----------------------------
-# User Profile Serializer
-# -----------------------------
+
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser

@@ -32,22 +32,22 @@ function CraftsmanProfile() {
   }, [slug]);
 
   if (loading) return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#faf9f6'}}>
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f0fdf4'}}>
       <div style={{textAlign:'center'}}>
-        <div style={{width:56,height:56,border:'3px solid #f0ede8',borderTopColor:'#198754',borderRadius:'50%',animation:'spin 0.8s linear infinite',margin:'0 auto'}}/>
-        <p style={{marginTop:16,fontFamily:"'DM Sans',sans-serif",color:'#6c757d',fontWeight:600}}>Loading profile…</p>
+        <div style={{width:52,height:52,border:'3px solid #bbf7d0',borderTopColor:'#16a34a',borderRadius:'50%',animation:'spin 0.8s linear infinite',margin:'0 auto'}}/>
+        <p style={{marginTop:16,fontFamily:"'DM Sans',sans-serif",color:'#15803d',fontWeight:600,fontSize:'.88rem'}}>Loading profile…</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
   );
 
   if (notFound || !craftsman) return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#faf9f6'}}>
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f0fdf4'}}>
       <div style={{textAlign:'center',padding:'40px 24px'}}>
         <div style={{fontSize:'3rem',marginBottom:16}}>🔍</div>
-        <h2 style={{fontFamily:"'Playfair Display',serif",color:'#1a1a2e',marginBottom:8}}>Craftsman Not Found</h2>
-        <p style={{color:'#6c757d',marginBottom:24}}>{errorMsg || 'Please check the URL or select another craftsman.'}</p>
-        <Link to="/craftsmen" style={{background:'#198754',color:'#fff',padding:'12px 28px',borderRadius:10,textDecoration:'none',fontWeight:700}}>Browse Craftsmen</Link>
+        <h2 style={{fontFamily:"'Playfair Display',serif",color:'#1a2e1a',marginBottom:8,fontWeight:800}}>Craftsman Not Found</h2>
+        <p style={{color:'#64748b',marginBottom:24}}>{errorMsg || 'Please check the URL or select another craftsman.'}</p>
+        <Link to="/craftsmen" style={{background:'#FFD700',color:'#1a2e1a',padding:'12px 28px',borderRadius:10,textDecoration:'none',fontWeight:700,boxShadow:'0 3px 14px rgba(255,215,0,.4)'}}>Browse Craftsmen</Link>
       </div>
     </div>
   );
@@ -74,275 +74,318 @@ function CraftsmanProfile() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
         :root {
-          --green:   #198754;
-          --green-d: #145a32;
-          --green-l: #e8f5e9;
+          --green:   #16a34a;
+          --green-d: #15803d;
+          --green-l: #f0fdf4;
+          --green-b: #bbf7d0;
           --gold:    #FFD700;
+          --gold-d:  #e6c200;
           --gold-l:  #fffbea;
-          --bg:      #faf9f6;
           --white:   #ffffff;
-          --text:    #1a1a2e;
-          --muted:   #6c757d;
-          --border:  #e8e4de;
+          --bg:      #f8fafc;
+          --text:    #1a2e1a;
+          --muted:   #64748b;
+          --border:  #e2e8f0;
         }
-        * { box-sizing:border-box; }
-        body { background:var(--bg); font-family:'DM Sans',sans-serif; color:var(--text); }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; }
 
         /* ── Cover ── */
         .cp-cover {
-          height:260px; position:relative; overflow:hidden;
-          background:linear-gradient(135deg,#145a32 0%,#198754 45%,#f59e0b 100%);
+          height: 260px; position: relative; overflow: hidden;
+          background: linear-gradient(135deg, #0a2e1a 0%, #15803d 50%, #16a34a 100%);
         }
         .cp-cover-pattern {
-          position:absolute; inset:0; opacity:.12;
-          background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+          position: absolute; inset: 0; opacity: .08;
+          background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
-        @media(max-width:768px){ .cp-cover{height:160px;} }
+        .cp-cover-glow {
+          position: absolute; top: -80px; right: -80px;
+          width: 400px; height: 400px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(255,215,0,.1) 0%, transparent 65%);
+          pointer-events: none;
+        }
+        @media(max-width:768px){ .cp-cover { height: 160px; } }
 
-        /* ── Profile header ── */
+        /* ── Profile header card ── */
         .cp-header-card {
-          background:var(--white); border-radius:16px;
-          box-shadow:0 4px 30px rgba(0,0,0,.08);
-          margin:0 0 1.5rem;
-          padding:0 0 1.5rem;
-          overflow:hidden;
+          background: var(--white); border-radius: 16px;
+          box-shadow: 0 4px 30px rgba(0,0,0,.08);
+          border: 1.5px solid var(--border);
+          margin: 0 0 1.5rem; overflow: hidden; position: relative;
         }
+        .cp-header-card::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+          background: linear-gradient(90deg, var(--green), var(--gold), var(--green-d));
+        }
+
         .cp-avatar-row {
-          padding:0 2rem 1.5rem;
-          margin-top:-70px;
-          display:flex; align-items:flex-end; gap:1.5rem;
-          flex-wrap:wrap;
+          padding: 0 2rem 1.5rem; margin-top: -70px;
+          display: flex; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap;
         }
-        @media(max-width:576px){ .cp-avatar-row{margin-top:-50px; padding:0 1rem 1.25rem; gap:1rem;} }
+        @media(max-width:576px){ .cp-avatar-row { margin-top: -50px; padding: 0 1rem 1.25rem; gap: 1rem; } }
+
         .cp-avatar {
-          width:140px; height:140px; border-radius:50%;
-          border:5px solid var(--white); box-shadow:0 4px 20px rgba(0,0,0,.15);
-          object-fit:cover; background:var(--white); flex-shrink:0;
+          width: 140px; height: 140px; border-radius: 50%;
+          border: 5px solid var(--white);
+          box-shadow: 0 4px 20px rgba(0,0,0,.15);
+          object-fit: cover; background: var(--white); flex-shrink: 0;
         }
-        @media(max-width:576px){ .cp-avatar{width:100px;height:100px;} }
-        .cp-name-block { flex:1; min-width:200px; padding-top:80px; }
-        @media(max-width:576px){ .cp-name-block{padding-top:60px;} }
-        .cp-name { font-family:'Playfair Display',serif; font-size:2rem; font-weight:800; color:var(--text); margin:0 0 4px; }
-        @media(max-width:576px){ .cp-name{font-size:1.5rem;} }
-        .cp-headline { font-size:.97rem; color:var(--muted); margin:0 0 8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        @media(max-width:576px){ .cp-avatar { width: 100px; height: 100px; } }
+
+        .cp-name-block { flex: 1; min-width: 200px; padding-top: 80px; }
+        @media(max-width:576px){ .cp-name-block { padding-top: 60px; } }
+
+        .cp-name {
+          font-family: 'Playfair Display', serif;
+          font-size: 2rem; font-weight: 800; color: var(--text); margin: 0 0 4px;
+        }
+        @media(max-width:576px){ .cp-name { font-size: 1.5rem; } }
+
+        .cp-headline {
+          font-size: .97rem; color: var(--muted); margin: 0 0 8px;
+          display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        }
+
         .cp-trade-pill {
-          background:var(--green); color:#fff; border-radius:20px;
-          padding:3px 12px; font-size:.75rem; font-weight:700;
-          display:inline-flex; align-items:center; gap:5px;
+          background: var(--green); color: #fff; border-radius: 20px;
+          padding: 3px 12px; font-size: .75rem; font-weight: 700;
+          display: inline-flex; align-items: center; gap: 5px;
         }
+
         .cp-verified-badge {
-          background:var(--gold-l); color:#7c4b00; border:1.5px solid var(--gold);
-          border-radius:20px; padding:3px 12px; font-size:.73rem; font-weight:700;
-          display:inline-flex; align-items:center; gap:5px;
+          background: var(--gold-l); color: #7c4b00;
+          border: 1.5px solid var(--gold); border-radius: 20px;
+          padding: 3px 12px; font-size: .73rem; font-weight: 700;
+          display: inline-flex; align-items: center; gap: 5px;
         }
-        .cp-location { font-size:.87rem; color:var(--muted); display:flex; align-items:center; gap:6px; }
+
+        .cp-location { font-size: .87rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+        .cp-location i { color: var(--green); }
+
         .cp-rating-pill {
-          display:inline-flex; align-items:center; gap:6px;
-          background:var(--gold-l); border:1.5px solid var(--gold);
-          border-radius:20px; padding:5px 14px; font-size:.87rem; font-weight:700;
-          color:#7c4b00; margin-top:8px;
+          display: inline-flex; align-items: center; gap: 6px;
+          background: var(--gold-l); border: 1.5px solid var(--gold);
+          border-radius: 20px; padding: 5px 14px; font-size: .87rem; font-weight: 700;
+          color: #7c4b00; margin-top: 8px;
         }
 
         /* ── Stats row ── */
         .cp-stats {
-          display:flex; gap:0; border-top:1px solid var(--border);
-          margin:0 2rem;
+          display: flex; gap: 0; border-top: 1px solid var(--border);
+          margin: 0 2rem;
         }
-        @media(max-width:576px){ .cp-stats{margin:0 1rem;} }
-        .cp-stat {
-          flex:1; text-align:center; padding:16px 8px;
-          border-right:1px solid var(--border);
-        }
-        .cp-stat:last-child { border-right:none; }
-        .cp-stat-val { display:block; font-size:1.35rem; font-weight:800; color:var(--text); }
-        .cp-stat-lbl { display:block; font-size:.72rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+        @media(max-width:576px){ .cp-stats { margin: 0 1rem; } }
+        .cp-stat { flex: 1; text-align: center; padding: 16px 8px; border-right: 1px solid var(--border); }
+        .cp-stat:last-child { border-right: none; }
+        .cp-stat-val { display: block; font-size: 1.35rem; font-weight: 800; color: var(--text); }
+        .cp-stat-lbl { display: block; font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
 
         /* ── Action buttons ── */
-        .cp-actions {
-          display:flex; gap:10px; flex-wrap:wrap;
-          padding:1.25rem 2rem 0;
-        }
-        @media(max-width:576px){ .cp-actions{padding:1rem 1rem 0; flex-direction:column;} }
+        .cp-actions { display: flex; gap: 10px; flex-wrap: wrap; padding: 1.25rem 2rem 0; }
+        @media(max-width:576px){ .cp-actions { padding: 1rem 1rem 0; flex-direction: column; } }
+
         .cp-btn-hire {
-          flex:1; min-width:180px; display:flex; align-items:center; justify-content:center; gap:8px;
-          background:var(--green); color:#fff;
-          border:none; border-radius:12px; padding:14px 24px;
-          font-family:'DM Sans',sans-serif; font-size:1rem; font-weight:700;
-          cursor:pointer; text-decoration:none;
-          transition:all .2s; box-shadow:0 4px 18px rgba(25,135,84,.3);
+          flex: 1; min-width: 180px;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          background: var(--gold);
+          color: #1a2e1a; border: none; border-radius: 12px; padding: 14px 24px;
+          font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700;
+          cursor: pointer; text-decoration: none; transition: all .2s;
+          box-shadow: 0 4px 18px rgba(255,215,0,.4);
         }
-        .cp-btn-hire:hover { background:var(--green-d); color:#fff; transform:translateY(-2px); box-shadow:0 8px 24px rgba(25,135,84,.4); }
+        .cp-btn-hire:hover { background: var(--gold-d); color: #1a2e1a; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,215,0,.5); }
+
         .cp-btn-contact {
-          display:flex; align-items:center; gap:8px;
-          background:var(--gold); color:#1a1a2e;
-          border:none; border-radius:12px; padding:14px 24px;
-          font-family:'DM Sans',sans-serif; font-size:.97rem; font-weight:700;
-          cursor:pointer; text-decoration:none;
-          transition:all .2s; box-shadow:0 4px 14px rgba(255,215,0,.35);
+          display: flex; align-items: center; gap: 8px;
+          background: var(--green); color: #fff;
+          border: none; border-radius: 12px; padding: 14px 24px;
+          font-family: 'DM Sans', sans-serif; font-size: .97rem; font-weight: 700;
+          cursor: pointer; text-decoration: none; transition: all .2s;
+          box-shadow: 0 4px 14px rgba(22,163,74,.3);
         }
-        .cp-btn-contact:hover { filter:brightness(.9); color:#1a1a2e; transform:translateY(-2px); }
+        .cp-btn-contact:hover { background: var(--green-d); color: #fff; transform: translateY(-2px); }
+
         .cp-btn-share {
-          display:flex; align-items:center; gap:8px;
-          background:var(--white); color:var(--muted);
-          border:1.5px solid var(--border); border-radius:12px; padding:14px 20px;
-          font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:600;
-          cursor:pointer; transition:all .2s;
+          display: flex; align-items: center; gap: 8px;
+          background: var(--white); color: var(--muted);
+          border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px;
+          font-family: 'DM Sans', sans-serif; font-size: .9rem; font-weight: 600;
+          cursor: pointer; transition: all .2s;
         }
-        .cp-btn-share:hover { border-color:var(--green); color:var(--green); }
+        .cp-btn-share:hover { border-color: var(--gold); color: #7c4b00; }
 
         /* ── How to hire banner ── */
         .cp-hire-guide {
-          background:linear-gradient(135deg,var(--green-l) 0%,#fff 100%);
-          border:1.5px solid #c8e6c9; border-radius:14px;
-          padding:20px 24px; margin-bottom:1.5rem;
-          display:flex; align-items:flex-start; gap:16px;
+          background: var(--white); border: 1.5px solid var(--border);
+          border-left: 4px solid var(--gold);
+          border-radius: 14px; padding: 20px 24px; margin-bottom: 1.5rem;
+          display: flex; align-items: flex-start; gap: 16px;
+          box-shadow: 0 2px 12px rgba(0,0,0,.05);
         }
-        .cp-hire-guide-icon { font-size:1.6rem; flex-shrink:0; margin-top:2px; }
-        .cp-hire-guide h4 { font-family:'Playfair Display',serif; font-size:1.05rem; font-weight:700; color:var(--text); margin:0 0 6px; }
-        .cp-hire-guide p { font-size:.84rem; color:var(--muted); margin:0; line-height:1.65; }
-        .cp-hire-steps { display:flex; gap:12px; margin-top:14px; flex-wrap:wrap; }
+        .cp-hire-guide-icon { font-size: 1.6rem; flex-shrink: 0; margin-top: 2px; }
+        .cp-hire-guide h4 { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; color: var(--text); margin: 0 0 6px; }
+        .cp-hire-guide p { font-size: .84rem; color: var(--muted); margin: 0; line-height: 1.65; }
+
+        .cp-hire-steps { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
         .cp-hire-step {
-          display:flex; align-items:center; gap:8px;
-          background:var(--white); border:1px solid #c8e6c9; border-radius:10px;
-          padding:8px 14px; font-size:.78rem; font-weight:600; color:var(--green);
+          display: flex; align-items: center; gap: 8px;
+          background: var(--green-l); border: 1px solid var(--green-b); border-radius: 10px;
+          padding: 8px 14px; font-size: .78rem; font-weight: 600; color: var(--green);
         }
         .cp-hire-step-num {
-          width:22px; height:22px; border-radius:50%; background:var(--green); color:#fff;
-          display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:800; flex-shrink:0;
+          width: 22px; height: 22px; border-radius: 50%;
+          background: var(--green); color: #fff;
+          display: flex; align-items: center; justify-content: center;
+          font-size: .68rem; font-weight: 800; flex-shrink: 0;
         }
 
         /* ── Tabs ── */
         .cp-tabs {
-          display:flex; gap:0; background:var(--white);
-          border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.06);
-          overflow:hidden; margin-bottom:1.5rem;
-          border:1.5px solid var(--border);
+          display: flex; gap: 0; background: var(--white);
+          border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06);
+          overflow: hidden; margin-bottom: 1.5rem; border: 1.5px solid var(--border);
         }
         .cp-tab {
-          flex:1; padding:14px 8px; text-align:center; border:none;
-          background:transparent; font-family:'DM Sans',sans-serif;
-          font-size:.84rem; font-weight:600; color:var(--muted); cursor:pointer;
-          transition:all .18s; border-right:1px solid var(--border); display:flex;
-          align-items:center; justify-content:center; gap:6px;
+          flex: 1; padding: 14px 8px; text-align: center; border: none;
+          background: transparent; font-family: 'DM Sans', sans-serif;
+          font-size: .84rem; font-weight: 600; color: var(--muted); cursor: pointer;
+          transition: all .18s; border-right: 1px solid var(--border);
+          display: flex; align-items: center; justify-content: center; gap: 6px;
         }
-        .cp-tab:last-child { border-right:none; }
-        .cp-tab.active { background:var(--green); color:#fff; }
-        .cp-tab:hover:not(.active) { background:var(--green-l); color:var(--green); }
+        .cp-tab:last-child { border-right: none; }
+        .cp-tab.active { background: var(--green); color: #fff; }
+        .cp-tab:hover:not(.active) { background: var(--green-l); color: var(--green); }
 
         /* ── Section card ── */
         .cp-section {
-          background:var(--white); border-radius:14px;
-          box-shadow:0 2px 16px rgba(0,0,0,.06);
-          padding:1.75rem; margin-bottom:1.5rem;
-          border:1px solid var(--border);
+          background: var(--white); border-radius: 14px;
+          box-shadow: 0 2px 16px rgba(0,0,0,.06);
+          padding: 1.75rem; margin-bottom: 1.5rem;
+          border: 1.5px solid var(--border);
         }
         .cp-section-title {
-          font-family:'Playfair Display',serif; font-size:1.2rem; font-weight:700;
-          color:var(--text); margin:0 0 1.25rem;
-          display:flex; align-items:center; gap:10px;
+          font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700;
+          color: var(--text); margin: 0 0 1.25rem;
+          display: flex; align-items: center; gap: 10px;
         }
         .cp-section-title-icon {
-          width:32px; height:32px; border-radius:8px; background:var(--green-l);
-          color:var(--green); display:flex; align-items:center; justify-content:center;
-          font-size:.88rem; flex-shrink:0;
+          width: 32px; height: 32px; border-radius: 8px;
+          background: var(--green-l); color: var(--green);
+          display: flex; align-items: center; justify-content: center;
+          font-size: .88rem; flex-shrink: 0;
         }
-        .cp-about-text { font-size:.95rem; color:var(--muted); line-height:1.8; }
+        .cp-about-text { font-size: .95rem; color: var(--muted); line-height: 1.8; }
 
         /* ── Gallery ── */
-        .cp-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+        .cp-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
         .cp-gallery-img {
-          width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px;
-          cursor:pointer; transition:transform .25s, box-shadow .25s;
-          box-shadow:0 2px 8px rgba(0,0,0,.1);
+          width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px;
+          cursor: pointer; transition: transform .25s, box-shadow .25s;
+          box-shadow: 0 2px 8px rgba(0,0,0,.1); border: 1.5px solid var(--border);
         }
-        .cp-gallery-img:hover { transform:scale(1.04); box-shadow:0 8px 24px rgba(0,0,0,.2); }
+        .cp-gallery-img:hover { transform: scale(1.04); box-shadow: 0 8px 24px rgba(0,0,0,.2); border-color: var(--gold); }
 
         /* ── Lightbox ── */
         .cp-lightbox {
-          position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.88);
-          display:flex; align-items:center; justify-content:center; padding:20px;
-          cursor:pointer;
+          position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.88);
+          display: flex; align-items: center; justify-content: center; padding: 20px; cursor: pointer;
         }
-        .cp-lightbox img { max-width:90vw; max-height:85vh; border-radius:12px; object-fit:contain; }
+        .cp-lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 12px; object-fit: contain; }
         .cp-lightbox-close {
-          position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%;
-          background:rgba(255,255,255,.15); border:1.5px solid rgba(255,255,255,.3);
-          color:#fff; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
+          position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%;
+          background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.3);
+          color: #fff; font-size: 1.1rem; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
         }
 
         /* ── Skills ── */
-        .cp-skills { display:flex; flex-wrap:wrap; gap:8px; }
+        .cp-skills { display: flex; flex-wrap: wrap; gap: 8px; }
         .cp-skill-tag {
-          background:var(--green-l); color:var(--green); border:1px solid #c8e6c9;
-          border-radius:20px; padding:6px 16px; font-size:.82rem; font-weight:600;
+          background: var(--green-l); color: var(--green);
+          border: 1px solid var(--green-b); border-radius: 20px;
+          padding: 6px 16px; font-size: .82rem; font-weight: 600;
         }
 
         /* ── Reviews ── */
         .cp-review {
-          background:var(--bg); border-radius:12px; padding:1.25rem;
-          border:1px solid var(--border); margin-bottom:12px;
+          background: var(--bg); border-radius: 12px; padding: 1.25rem;
+          border: 1px solid var(--border); margin-bottom: 12px;
         }
-        .cp-review-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
-        .cp-reviewer-name { font-weight:700; color:var(--text); font-size:.95rem; margin:0 0 3px; }
-        .cp-reviewer-loc { font-size:.78rem; color:var(--muted); }
+        .cp-review-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .cp-reviewer-name { font-weight: 700; color: var(--text); font-size: .95rem; margin: 0 0 3px; }
+        .cp-reviewer-loc { font-size: .78rem; color: var(--muted); }
         .cp-rating-badge {
-          background:var(--gold); color:#1a1a2e; border-radius:20px;
-          padding:4px 12px; font-size:.8rem; font-weight:800;
-          display:flex; align-items:center; gap:4px; flex-shrink:0;
+          background: var(--gold); color: #1a2e1a; border-radius: 20px;
+          padding: 4px 12px; font-size: .8rem; font-weight: 800;
+          display: flex; align-items: center; gap: 4px; flex-shrink: 0;
         }
-        .cp-review-text { font-size:.88rem; color:var(--muted); line-height:1.65; margin:0; }
+        .cp-review-text { font-size: .88rem; color: var(--muted); line-height: 1.65; margin: 0; }
 
         /* ── Sidebar ── */
         .cp-sidebar-card {
-          background:var(--white); border-radius:14px;
-          box-shadow:0 2px 16px rgba(0,0,0,.06);
-          padding:1.5rem; margin-bottom:1.5rem;
-          border:1px solid var(--border);
+          background: var(--white); border-radius: 14px;
+          box-shadow: 0 2px 16px rgba(0,0,0,.06);
+          padding: 1.5rem; margin-bottom: 1.5rem; border: 1.5px solid var(--border);
         }
         .cp-contact-item {
-          display:flex; align-items:center; gap:12px;
-          padding:12px 0; border-bottom:1px solid var(--border); font-size:.9rem;
+          display: flex; align-items: center; gap: 12px;
+          padding: 12px 0; border-bottom: 1px solid var(--border); font-size: .9rem;
         }
-        .cp-contact-item:last-child { border-bottom:none; padding-bottom:0; }
+        .cp-contact-item:last-child { border-bottom: none; padding-bottom: 0; }
         .cp-contact-icon {
-          width:36px; height:36px; border-radius:10px; background:var(--green-l);
-          color:var(--green); display:flex; align-items:center; justify-content:center;
-          font-size:.88rem; flex-shrink:0;
+          width: 36px; height: 36px; border-radius: 10px;
+          background: var(--green-l); color: var(--green);
+          display: flex; align-items: center; justify-content: center;
+          font-size: .88rem; flex-shrink: 0;
         }
-        .cp-contact-label { font-size:.73rem; color:var(--muted); display:block; }
-        .cp-contact-value { font-weight:600; color:var(--text); }
+        .cp-contact-label { font-size: .73rem; color: var(--muted); display: block; }
+        .cp-contact-value { font-weight: 600; color: var(--text); }
 
         /* ── Credentials ── */
         .cp-cred-btn {
-          display:flex; align-items:center; gap:10px;
-          background:var(--green-l); color:var(--green);
-          border:1.5px solid #c8e6c9; border-radius:10px; padding:12px 18px;
-          font-weight:700; font-size:.88rem; text-decoration:none; transition:all .18s;
-          width:100%;
+          display: flex; align-items: center; gap: 10px;
+          background: var(--green-l); color: var(--green);
+          border: 1.5px solid var(--green-b); border-radius: 10px; padding: 12px 18px;
+          font-weight: 700; font-size: .88rem; text-decoration: none; transition: all .18s; width: 100%;
         }
-        .cp-cred-btn:hover { background:var(--green); color:#fff; }
+        .cp-cred-btn:hover { background: var(--green); color: #fff; }
 
         /* ── Services list ── */
         .cp-service-item {
-          display:flex; align-items:center; gap:12px; padding:10px 0;
-          border-bottom:1px solid var(--border); font-size:.9rem;
+          display: flex; align-items: center; gap: 12px; padding: 10px 0;
+          border-bottom: 1px solid var(--border); font-size: .9rem;
         }
-        .cp-service-item:last-child { border-bottom:none; }
-        .cp-service-dot { width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0; }
+        .cp-service-item:last-child { border-bottom: none; }
+        .cp-service-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+
+        /* ── Sticky hire CTA ── */
+        .cp-sticky-cta {
+          background: linear-gradient(135deg, var(--green-l) 0%, #fff 100%);
+          border: 2px solid var(--green-b); border-radius: 14px;
+          padding: 1.5rem; margin-bottom: 1.5rem; position: sticky; top: 20px;
+        }
+        .cp-sticky-cta h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+        .cp-sticky-cta p { font-size: .84rem; color: var(--muted); margin-bottom: 16px; line-height: 1.65; }
+        .cp-sticky-note { font-size: .73rem; color: var(--muted); text-align: center; margin-top: 10px; margin-bottom: 0; }
 
         /* ── Footer ── */
-        .cp-footer { background:#1a1a2e; color:#bbb; padding:52px 0 26px; font-family:'DM Sans',sans-serif; }
-        .cp-footer h5 { color:#fff; font-weight:700; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; margin-bottom:14px; }
-        .cp-footer a { color:#bbb; text-decoration:none; font-size:.85rem; transition:color .15s; }
-        .cp-footer a:hover { color:var(--gold); }
-        .cp-footer p { font-size:.85rem; margin-bottom:6px; }
+        .cp-footer { background: #1a1a2e; color: #bbb; padding: 52px 0 26px; font-family: 'DM Sans', sans-serif; }
+        .cp-footer h5 { color: #fff; font-weight: 700; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 14px; }
+        .cp-footer a { color: #bbb; text-decoration: none; font-size: .85rem; transition: color .15s; }
+        .cp-footer a:hover { color: var(--gold); }
+        .cp-footer p { font-size: .85rem; margin-bottom: 6px; }
 
         @media(max-width:768px){
-          .cp-tabs { overflow-x:auto; }
-          .cp-tab { font-size:.75rem; padding:12px 6px; white-space:nowrap; }
-          .cp-hire-steps { flex-direction:column; }
+          .cp-tabs { overflow-x: auto; }
+          .cp-tab { font-size: .75rem; padding: 12px 6px; white-space: nowrap; }
+          .cp-hire-steps { flex-direction: column; }
         }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       {/* Lightbox */}
@@ -356,9 +399,10 @@ function CraftsmanProfile() {
       {/* ── COVER ── */}
       <div className="cp-cover">
         <div className="cp-cover-pattern"/>
+        <div className="cp-cover-glow"/>
       </div>
 
-      <div style={{background:'var(--bg)',padding:'0 0 80px'}}>
+      <div style={{background:'var(--bg)', padding:'0 0 80px'}}>
         <div className="container" style={{maxWidth:1100}}>
 
           {/* ── HOW TO HIRE GUIDE ── */}
@@ -392,7 +436,7 @@ function CraftsmanProfile() {
                 <div className="cp-avatar-row">
                   <img
                     src={profileImage} alt={craftsman.name} className="cp-avatar"
-                    onError={e => { e.target.src='https://placehold.co/140x140/e8f5e9/198754?text=👷'; }}
+                    onError={e => { e.target.src='https://placehold.co/140x140/f0fdf4/16a34a?text=👷'; }}
                   />
                   <div className="cp-name-block">
                     <h1 className="cp-name">{craftsman.name}</h1>
@@ -407,13 +451,13 @@ function CraftsmanProfile() {
                       )}
                     </p>
                     <p className="cp-location">
-                      <i className="fas fa-map-marker-alt" style={{color:'var(--green)'}}/>
+                      <i className="fas fa-map-marker-alt"/>
                       {craftsman.location || 'Kenya'}
                       {craftsman.company_name && <> &nbsp;·&nbsp; {craftsman.company_name}</>}
                     </p>
                     {avgRating && (
                       <div className="cp-rating-pill">
-                        <span style={{color:'#FFD700'}}>★</span>
+                        <span style={{color:'var(--gold)'}}>★</span>
                         <strong>{avgRating}</strong>
                         <span style={{fontWeight:400,opacity:.7}}>({craftsman.reviews.length} reviews)</span>
                       </div>
@@ -461,10 +505,10 @@ function CraftsmanProfile() {
               <div className="cp-tabs">
                 {tabs.map(t => (
                   <button key={t} className={`cp-tab ${activeTab===t?'active':''}`} onClick={() => setActiveTab(t)}>
-                    {t === 'about' && <><i className="fas fa-user"/>About</>}
+                    {t === 'about'     && <><i className="fas fa-user"/>About</>}
                     {t === 'portfolio' && <><i className="fas fa-images"/>Portfolio</>}
-                    {t === 'skills' && <><i className="fas fa-tools"/>Skills</>}
-                    {t === 'reviews' && <><i className="fas fa-star"/>Reviews {craftsman.reviews?.length > 0 && `(${craftsman.reviews.length})`}</>}
+                    {t === 'skills'    && <><i className="fas fa-tools"/>Skills</>}
+                    {t === 'reviews'   && <><i className="fas fa-star"/>Reviews {craftsman.reviews?.length > 0 && `(${craftsman.reviews.length})`}</>}
                   </button>
                 ))}
               </div>
@@ -518,14 +562,14 @@ function CraftsmanProfile() {
                             className="cp-gallery-img"
                             loading="lazy"
                             onClick={() => setLightboxImg(getFullImageUrl(img.image_url))}
-                            onError={e => { e.target.src='https://placehold.co/200x200/e8f5e9/198754?text=Project'; }}
+                            onError={e => { e.target.src='https://placehold.co/200x200/f0fdf4/16a34a?text=Project'; }}
                           />
                         ))}
                       </div>
                     </>
                   ) : (
                     <div style={{textAlign:'center',padding:'40px 20px',color:'var(--muted)'}}>
-                      <div style={{fontSize:'2.5rem',marginBottom:12}}></div>
+                      <div style={{fontSize:'2.5rem',marginBottom:12}}>🖼️</div>
                       <p style={{fontWeight:600}}>No portfolio images yet</p>
                       <p style={{fontSize:'.85rem'}}>This craftsman hasn't uploaded work samples yet — reach out directly to request examples.</p>
                     </div>
@@ -608,13 +652,9 @@ function CraftsmanProfile() {
             <div className="col-lg-4">
 
               {/* Sticky hire CTA */}
-              <div className="cp-sidebar-card" style={{position:'sticky',top:20,background:'linear-gradient(135deg,var(--green-l) 0%,#fff 100%)',border:'2px solid #c8e6c9'}}>
-                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1.1rem',fontWeight:700,marginBottom:6}}>
-                  Ready to hire?
-                </h3>
-                <p style={{fontSize:'.84rem',color:'var(--muted)',marginBottom:16,lineHeight:1.65}}>
-                  {craftsman.name?.split(' ')[0]} is available for work. Click below to start the hiring process.
-                </p>
+              <div className="cp-sticky-cta">
+                <h3>Ready to hire?</h3>
+                <p>{craftsman.name?.split(' ')[0]} is available for work. Click below to start the hiring process.</p>
                 <Link to="/HireLogin" className="cp-btn-hire" style={{display:'flex',width:'100%',justifyContent:'center',marginBottom:10}}>
                   <i className="fas fa-hard-hat"/> Hire {craftsman.name?.split(' ')[0]}
                 </Link>
@@ -623,14 +663,12 @@ function CraftsmanProfile() {
                     <i className="fas fa-phone"/> Call Directly
                   </a>
                 )}
-                <p style={{fontSize:'.73rem',color:'var(--muted)',textAlign:'center',marginTop:10,marginBottom:0}}>
-                  Free to contact · No upfront fees
-                </p>
+                <p className="cp-sticky-note">Free to contact · No upfront fees</p>
               </div>
 
               {/* Contact details */}
               <div className="cp-sidebar-card">
-                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,marginBottom:12}}>Contact Details</h3>
+                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,color:'var(--text)',marginBottom:12}}>Contact Details</h3>
                 {craftsman.phone && (
                   <div className="cp-contact-item">
                     <span className="cp-contact-icon"><i className="fas fa-phone"/></span>
@@ -668,11 +706,12 @@ function CraftsmanProfile() {
               {/* Browse more */}
               <div className="cp-sidebar-card" style={{textAlign:'center'}}>
                 <div style={{fontSize:'1.8rem',marginBottom:8}}>🔍</div>
-                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,marginBottom:6}}>Looking for more options?</h3>
+                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,color:'var(--text)',marginBottom:6}}>Looking for more options?</h3>
                 <p style={{fontSize:'.82rem',color:'var(--muted)',marginBottom:14}}>Browse all verified craftsmen across Kenya and find the perfect match.</p>
-                <Link to="/craftsmen" style={{display:'block',background:'var(--white)',color:'var(--green)',border:'1.5px solid var(--green)',borderRadius:10,padding:'10px',fontWeight:700,fontSize:'.88rem',textDecoration:'none',transition:'all .18s'}}
-                  onMouseOver={e=>{e.target.style.background='var(--green)';e.target.style.color='#fff';}}
-                  onMouseOut={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--green)';}}>
+                <Link to="/craftsmen"
+                  style={{display:'block',background:'#FFD700',color:'#1a2e1a',border:'none',borderRadius:10,padding:'10px',fontWeight:700,fontSize:'.88rem',textDecoration:'none',transition:'all .18s',boxShadow:'0 3px 12px rgba(255,215,0,.35)'}}
+                  onMouseOver={e=>{e.currentTarget.style.background='#e6c200';}}
+                  onMouseOut={e=>{e.currentTarget.style.background='#FFD700';}}>
                   <i className="fas fa-th-list me-2"/>View All Services
                 </Link>
               </div>
@@ -682,7 +721,7 @@ function CraftsmanProfile() {
         </div>
       </div>
 
-      {/* ── FOOTER ── */}
+      {/* ── FOOTER — preserved from original ── */}
       <footer className="cp-footer">
         <div className="container">
           <div className="row g-5">
@@ -698,9 +737,9 @@ function CraftsmanProfile() {
             </div>
             <div className="col-lg-4 col-md-6">
               <h5>Contact Us</h5>
-              <p><i className="fas fa-map-marker-alt me-2" style={{color:'var(--gold)'}}/>Kisumu, Kenya</p>
-              <p><i className="fas fa-envelope me-2" style={{color:'var(--gold)'}}/>support@kaakazini.com</p>
-              <p><i className="fas fa-phone me-2" style={{color:'var(--gold)'}}/>+254 700 000 000</p>
+              <p><i className="fas fa-map-marker-alt me-2" style={{color:'#FFD700'}}/>Kisumu, Kenya</p>
+              <p><i className="fas fa-envelope me-2" style={{color:'#FFD700'}}/>support@kaakazini.com</p>
+              <p><i className="fas fa-phone me-2" style={{color:'#FFD700'}}/>+254 700 000 000</p>
             </div>
             <div className="col-lg-5">
               <h5>Find Us</h5>
@@ -713,7 +752,7 @@ function CraftsmanProfile() {
           <hr style={{borderColor:'rgba(255,255,255,.08)',margin:'26px 0 18px'}}/>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10,fontSize:'.8rem'}}>
             <p style={{margin:0}}>© {new Date().getFullYear()} <strong style={{color:'#fff'}}>KaaKazini</strong>. All rights reserved.</p>
-            <a href="#top" style={{color:'var(--gold)',fontWeight:600}}>Back to top ↑</a>
+            <a href="#top" style={{color:'#FFD700',fontWeight:600}}>Back to top ↑</a>
           </div>
         </div>
       </footer>
