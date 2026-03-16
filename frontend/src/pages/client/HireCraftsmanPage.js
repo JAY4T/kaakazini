@@ -8,6 +8,32 @@ const MEDIA    = process.env.REACT_APP_MEDIA_URL    || 'https://staging.kaakazin
 const imgUrl = p => (!p ? null : p.startsWith('http') ? p : `${MEDIA}${p}`);
 const avi    = name => `https://ui-avatars.com/api/?name=${encodeURIComponent(name||'C')}&background=1a1a1a&color=FFD700&size=80&bold=true`;
 
+// ─── Field helpers — match real backend field names ─────────────────────────
+// Work photo: gallery_images[0].image_url  (NOT services[0].image)
+const getCover = c => {
+  if (!c) return null;
+  if (Array.isArray(c.gallery_images) && c.gallery_images.length)
+    return imgUrl(c.gallery_images[0].image_url || c.gallery_images[0].url || c.gallery_images[0].image);
+  return imgUrl(c.services?.[0]?.image_url || c.services?.[0]?.image || c.service_image || null);
+};
+// Profile photo: profile_url  (NOT profile_image / avatar)
+const getAvatar = c => imgUrl(c?.profile_url || c?.profile || c?.profile_image || c?.avatar || null);
+// Display name: full_name  (NOT name)
+const getName = c => c?.full_name || c?.name || 'Craftsman';
+// Craftsman name from a job row (handles nested obj or flat field)
+const getJobCraftsmanName = job => {
+  if (!job) return '—';
+  const c = job.craftsman;
+  // craftsman may be a nested object OR a plain integer ID
+  if (c && typeof c === 'object') {
+    const name = c.full_name || c.name || c.user?.full_name || c.user?.username || null;
+    if (name) return name;
+  }
+  // Flat fields the serializer may expose directly on the job row
+  return job.craftsman_name || job.craftsman_full_name || '—';
+};
+
+
 const SERVICES  = ["Plumbing","Electrical","Carpentry","Painting","Masonry","Tiling","Roofing","Tailoring","Metalwork","Other"];
 const LOCATIONS = ["Nairobi","Mombasa","Kisumu","Eldoret","Nakuru","Thika","Kisii","Nyeri","Meru","Machakos"];
 
@@ -665,7 +691,6 @@ const CSS = `
 .hcp .mbl-gold  { background: linear-gradient(135deg, var(--yellow), var(--yellow-d)); color: var(--black); box-shadow: 0 4px 14px rgba(255,215,0,.3); font-weight: 800; }
 .hcp .mbl-gold:hover  { filter: brightness(1.06); transform: translateY(-1px); }
 
-/* Divider */
 .hcp .modal-hr { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
 
 /* ══ RESPONSIVE ══ */
@@ -714,14 +739,10 @@ function SidebarContent({ client, tab, setTab, setSbOpen }) {
   return (
     <>
       <div className="sb-head">
-        {/* <div className="brand">
-          <div className="brand-logo"><i className="fas fa-hard-hat"/></div>
-          <span className="brand-name">KaaKazini</span>
-        </div> */}
         <div className="user-row">
           <img src={avi(client.full_name)} alt={client.full_name} className="user-av"/>
           <div>
-            <p className="user-name">{client.full_name||'Client'}</p>
+            <p className="user-name">{client.full_name || 'Client'}</p>
             <span className="user-badge">Client</span>
           </div>
         </div>
@@ -730,7 +751,7 @@ function SidebarContent({ client, tab, setTab, setSbOpen }) {
         <p className="nav-section">Menu</p>
         {TABS.map(t => (
           <button key={t.id}
-            className={`nb${(tab===t.id||(tab==='hire'&&t.id==='browse'))?' on':''}`}
+            className={`nb${(tab === t.id || (tab === 'hire' && t.id === 'browse')) ? ' on' : ''}`}
             onClick={() => { setTab(t.id); setSbOpen(false); }}>
             <span className="nb-icon"><i className={t.icon}/></span>
             {t.label}
@@ -760,10 +781,7 @@ export default function HireCraftsmanPage() {
   const [jobBusy, setJobBusy]     = useState(false);
   const [reviews, setReviews]     = useState({});
 
-  // Quote modal
   const [quoteJob, setQuoteJob]   = useState(null);
-
-  // Payment modal
   const [payJob, setPayJob]       = useState(null);
   const [payPhone, setPayPhone]   = useState('');
   const [payBusy, setPayBusy]     = useState(false);
@@ -785,27 +803,36 @@ export default function HireCraftsmanPage() {
   useEffect(() => {
     fetch(`${API_BASE}/public-craftsman/`)
       .then(r => r.json())
-      .then(d => setCraftsmen((d||[]).filter(c => c.status==='approved' && c.primary_service)))
+      .then(d => setCraftsmen((d || []).filter(c =>
+        c.primary_service &&
+        (c.is_approved === true || c.status === 'approved' || c.is_active === true || !c.status)
+      )))
       .catch(() => {});
   }, []);
 
   const fetchJobs = async id => {
     try {
-      const { data } = await api.get('/job-requests/');
-      const mine = data.filter(j => {
-        if (!j.client) return false;
+      // Pass ?role=client so the backend returns ONLY this client's jobs
+      // (see JobRequestListCreateView.get_queryset — role=client filter)
+      const { data } = await api.get('/job-requests/?role=client');
+      // Also guard client-side in case the backend returns mixed results
+      const mine = (data || []).filter(j => {
+        // If no client field at all, include it (backend already filtered)
+        if (j.client === undefined || j.client === null) return true;
         if (typeof j.client === 'number') return j.client === id;
-        if (j.client?.id) return j.client.id === id;
-        return j.client_id === id;
+        if (j.client?.id !== undefined) return j.client.id === id;
+        if (j.client_id !== undefined) return j.client_id === id;
+        return true;
       });
       setJobs(mine);
       const rv = {};
-      mine.forEach(j => { rv[j.id] = { rating: j.rating||0, review: j.review||'' }; });
+      mine.forEach(j => { rv[j.id] = { rating: j.rating || 0, review: j.review || '' }; });
       setReviews(rv);
-    } catch {}
+    } catch (err) {
+      console.error('fetchJobs error:', err);
+    }
   };
 
-  /* ── Open hire form with pre-filled craftsman data ── */
   const openHire = c => {
     setPicked(c);
     setJf(p => ({
@@ -820,21 +847,20 @@ export default function HireCraftsmanPage() {
   const jfChange = e => {
     const { id, value, type, checked, files } = e.target;
     if (type === 'checkbox') setJf(p => ({ ...p, [id]: checked }));
-    else if (type === 'file')  setJf(p => ({ ...p, [id]: files[0] }));
-    else                       setJf(p => ({ ...p, [id]: value }));
+    else if (type === 'file') setJf(p => ({ ...p, [id]: files[0] }));
+    else                      setJf(p => ({ ...p, [id]: value }));
   };
 
-  /* ── Submit automated job request ── */
   const submitHire = async e => {
     e.preventDefault();
     if (!client?.id) return;
     setJobBusy(true);
     const fd = new FormData();
-    fd.append('client',   client.id);
-    if (picked?.id) fd.append('craftsman', picked.id);   // auto-assigned to this craftsman
-    fd.append('name',  client.full_name || '');
-    fd.append('phone', client.phone || client.phone_number || '');
-    fd.append('status', 'Pending');  // system auto-sets initial status
+    fd.append('client',  client.id);
+    if (picked?.id) fd.append('craftsman', picked.id);
+    fd.append('name',    client.full_name || '');
+    fd.append('phone',   client.phone || client.phone_number || '');
+    fd.append('status',  'Pending');
     Object.entries(jf).forEach(([k, v]) => {
       if (v !== null && v !== '' && k !== 'media')
         fd.append(k, k === 'schedule' ? new Date(v).toISOString() : v);
@@ -850,7 +876,6 @@ export default function HireCraftsmanPage() {
     } finally { setJobBusy(false); }
   };
 
-  /* ── Quote approve / reject ── */
   const quoteDecide = async (jobId, decision) => {
     if (!window.confirm(`${decision === 'approve' ? 'Approve' : 'Reject'} this quote?`)) return;
     try {
@@ -860,7 +885,6 @@ export default function HireCraftsmanPage() {
     } catch { alert(`Could not ${decision} quote.`); }
   };
 
-  /* ── M-Pesa STK push ── */
   const initiateMpesa = async () => {
     if (!payPhone.match(/^2547\d{8}$/)) {
       alert('Enter a valid M-Pesa number in the format 2547XXXXXXXX');
@@ -880,32 +904,36 @@ export default function HireCraftsmanPage() {
     } finally { setPayBusy(false); }
   };
 
-  /* ── Review submit ── */
   const submitReview = async jobId => {
     const r = reviews[jobId] || {};
     if (!r.rating || !r.review?.trim()) return alert('Please fill in rating and review.');
     const job = jobs.find(j => j.id === jobId);
-    if (!job?.craftsman?.id) return alert('Missing craftsman info.');
+    // ✅ FIXED: craftsman id may be nested or flat
+    const craftsmanId = job?.craftsman?.id || job?.craftsman_id;
+    if (!craftsmanId) return alert('Missing craftsman info.');
     try {
       await api.post('/reviews/', {
         rating:   r.rating,
         comment:  r.review.trim(),
         location: job.location || '',
-        craftsman: job.craftsman.id,
+        craftsman: craftsmanId,
       });
       alert('Review submitted!');
       setReviews(p => ({ ...p, [jobId]: { rating: 0, review: '' } }));
     } catch { alert('Failed to submit review.'); }
   };
 
-  /* ── Helpers ── */
+  /* ── Filtered craftsmen list ── */
   const filtered = craftsmen.filter(c => {
-    const q  = srch.toLowerCase();
-    const mt = trade === 'All' || c.primary_service === trade;
-    const mq = !q
-      || (c.name||'').toLowerCase().includes(q)
-      || (c.primary_service||'').toLowerCase().includes(q)
-      || (c.location||'').toLowerCase().includes(q);
+    const q   = srch.toLowerCase();
+    const mt  = trade === 'All' || c.primary_service === trade;
+    // ✅ FIXED: search full_name (real field), not name
+    const mq  = !q
+      || (c.full_name   || '').toLowerCase().includes(q)
+      || (c.name        || '').toLowerCase().includes(q)   // fallback
+      || (c.primary_service || '').toLowerCase().includes(q)
+      || (c.location    || '').toLowerCase().includes(q)
+      || (c.description || '').toLowerCase().includes(q);
     return mt && mq;
   });
 
@@ -921,16 +949,14 @@ export default function HireCraftsmanPage() {
   };
 
   const totalSpent     = jobs.filter(j => j.budget).reduce((a, j) => a + Number(j.budget), 0);
-  const completedCount = jobs.filter(j => /complet|paid/i.test(j.status||'')).length;
-  const pendingCount   = jobs.filter(j => !/complet|paid|cancel/i.test(j.status||'')).length;
+  const completedCount = jobs.filter(j => /complet|paid/i.test(j.status || '')).length;
+  const pendingCount   = jobs.filter(j => !/complet|paid|cancel/i.test(j.status || '')).length;
 
-  /* ── canPay: job is approved and not yet paid ── */
   const canPay = job => {
-    const s = (job.status||'').toLowerCase();
+    const s = (job.status || '').toLowerCase();
     return (s.includes('approv') || s.includes('quot')) && !s.includes('paid');
   };
 
-  /* ── Loading screen ── */
   if (!client) return (
     <div className="hcp">
       <style>{CSS}</style>
@@ -943,7 +969,6 @@ export default function HireCraftsmanPage() {
     </div>
   );
 
-  /* ═══ RENDER ═══ */
   return (
     <div className="hcp">
       <style>{CSS}</style>
@@ -957,14 +982,12 @@ export default function HireCraftsmanPage() {
         <img src={avi(client.full_name)} alt="" style={{ width:32, height:32, borderRadius:'50%', border:'2px solid rgba(255,215,0,.4)', objectFit:'cover' }}/>
       </div>
 
-      {/* Overlay + mobile sidebar */}
       <div className={`overlay${sbOpen ? ' show' : ''}`} onClick={() => setSbOpen(false)}/>
       <nav className={`sb sb-mobile${sbOpen ? ' open' : ''}`} style={{ background:'#0d0d0d' }}>
         <SidebarContent client={client} tab={tab} setTab={setTab} setSbOpen={setSbOpen}/>
       </nav>
 
       <div className="shell">
-        {/* Desktop sidebar */}
         <nav className="sb" style={{ display:'flex' }}>
           <SidebarContent client={client} tab={tab} setTab={setTab} setSbOpen={setSbOpen}/>
         </nav>
@@ -977,7 +1000,7 @@ export default function HireCraftsmanPage() {
               <div className="filter-bar">
                 <div className="srch-wrap">
                   <i className="fas fa-search srch-ico"/>
-                  <input className="srch" placeholder="Search…"
+                  <input className="srch" placeholder="Search by name, trade or location…"
                     value={srch} onChange={e => setSrch(e.target.value)}/>
                 </div>
                 <select className="filter-sel" value={trade} onChange={e => setTrade(e.target.value)}>
@@ -997,14 +1020,17 @@ export default function HireCraftsmanPage() {
               ) : (
                 <div className="craft-grid">
                   {filtered.map((c, i) => {
-                    const cover  = imgUrl(c.services?.[0]?.image || c.service_image);
-                    const avatar = imgUrl(c.profile_image || c.avatar) || avi(c.name);
-                    const rating = Number(c.average_rating) || 0;
-                    const ph = `https://placehold.co/400x140/0d0d0d/FFD700?text=${encodeURIComponent(c.primary_service||'')}`;
+                    // ✅ FIXED: use gallery_images[0].image_url for cover, profile_url for avatar
+                    const cover   = getCover(c);
+                    const avatar  = getAvatar(c);
+                    const cName   = getName(c);
+                    const rating  = Number(c.average_rating) || 0;
+                    const ph = `https://placehold.co/400x140/0d0d0d/FFD700?text=${encodeURIComponent(c.primary_service || '')}`;
                     return (
-                      <div className="craft-card" key={c.id||i}>
+                      <div className="craft-card" key={c.id || i}>
                         <div className="craft-cover">
-                          <img src={cover||ph} alt={c.primary_service} onError={e => { e.target.src = ph; }}/>
+                          <img src={cover || ph} alt={c.primary_service}
+                            onError={e => { e.target.src = ph; }}/>
                           <span className="trade-pill">{c.primary_service}</span>
                           {c.is_available && (
                             <span className="avail-pill"><span className="avail-dot"/>Available</span>
@@ -1012,11 +1038,19 @@ export default function HireCraftsmanPage() {
                         </div>
                         <div className="craft-body">
                           <div className="craft-row">
-                            <img src={avatar} alt={c.name} className="craft-av"
-                              onError={e => { e.target.src = avi(c.name); }}/>
+                            <img
+                              src={avatar || avi(cName)}
+                              alt={cName}
+                              className="craft-av"
+                              onError={e => { e.target.src = avi(cName); }}
+                            />
                             <div style={{ minWidth:0 }}>
-                              <p className="craft-name">{c.name}</p>
-                              {c.location && <p className="craft-loc"><i className="fas fa-map-marker-alt" style={{ marginRight:4 }}/>{c.location}</p>}
+                              <p className="craft-name">{cName}</p>
+                              {c.location && (
+                                <p className="craft-loc">
+                                  <i className="fas fa-map-marker-alt" style={{ marginRight:4 }}/>{c.location}
+                                </p>
+                              )}
                             </div>
                           </div>
                           {rating > 0 && (
@@ -1027,11 +1061,11 @@ export default function HireCraftsmanPage() {
                           )}
                           {c.description && (
                             <p className="craft-desc">
-                              {c.description.length > 88 ? c.description.slice(0,88)+'…' : c.description}
+                              {c.description.length > 88 ? c.description.slice(0, 88) + '…' : c.description}
                             </p>
                           )}
                           <button className="hire-btn" onClick={() => openHire(c)}>
-                            <i className="fas fa-paper-plane"/>Request {c.name?.split(' ')[0]}
+                            <i className="fas fa-paper-plane"/>Request {cName.split(' ')[0]}
                           </button>
                         </div>
                       </div>
@@ -1042,7 +1076,7 @@ export default function HireCraftsmanPage() {
             </>
           )}
 
-          {/* ━━━━━━━━━━ HIRE / REQUEST FORM ━━━━━━━━━━ */}
+          {/* ━━━━━━━━━━ HIRE FORM ━━━━━━━━━━ */}
           {tab === 'hire' && picked && (
             <>
               <button className="back-btn" onClick={() => { setTab('browse'); setPicked(null); }}>
@@ -1052,16 +1086,20 @@ export default function HireCraftsmanPage() {
               {jobOk && (
                 <div className="ok-banner">
                   <i className="fas fa-check-circle" style={{ fontSize:'1.1rem' }}/>
-                  Request sent! {picked.name?.split(' ')[0]} has been notified. Redirecting…
+                  Request sent! {getName(picked).split(' ')[0]} has been notified. Redirecting…
                 </div>
               )}
 
               <div className="locked-bar">
-                <img src={imgUrl(picked.profile_image || picked.avatar) || avi(picked.name)}
-                  alt={picked.name} className="locked-av"
-                  onError={e => { e.target.src = avi(picked.name); }}/>
+                {/* ✅ FIXED: profile_url for avatar */}
+                <img
+                  src={getAvatar(picked) || avi(getName(picked))}
+                  alt={getName(picked)}
+                  className="locked-av"
+                  onError={e => { e.target.src = avi(getName(picked)); }}
+                />
                 <div>
-                  <p className="locked-name">{picked.name}</p>
+                  <p className="locked-name">{getName(picked)}</p>
                   <p className="locked-meta">
                     <i className="fas fa-tools" style={{ marginRight:5 }}/>{picked.primary_service}
                     {picked.location && <> · <i className="fas fa-map-marker-alt" style={{ margin:'0 4px 0 6px' }}/>{picked.location}</>}
@@ -1122,7 +1160,7 @@ export default function HireCraftsmanPage() {
                   <button type="submit" className="submit-btn" disabled={jobBusy}>
                     {jobBusy
                       ? <><span className="spinner"/>Sending request…</>
-                      : <><i className="fas fa-paper-plane"/>Send request to {picked.name?.split(' ')[0]}</>
+                      : <><i className="fas fa-paper-plane"/>Send request to {getName(picked).split(' ')[0]}</>
                     }
                   </button>
                 </form>
@@ -1132,100 +1170,121 @@ export default function HireCraftsmanPage() {
 
           {/* ━━━━━━━━━━ MY REQUESTS ━━━━━━━━━━ */}
           {tab === 'requests' && (
-            <>
-              <div className="card" style={{ padding:0, overflow:'hidden' }}>
-                {jobs.length === 0 ? (
-                  <div style={{ padding:'2.25rem' }}>
-                    <div className="empty">
-                      <div className="empty-icon"><i className="fas fa-clipboard-list"/></div>
-                      <h3>No requests yet</h3>
-                      <p>Find a craftsman and send your first request to get started</p>
-                    </div>
+            <div className="card" style={{ padding:0, overflow:'hidden' }}>
+              {jobs.length === 0 ? (
+                <div style={{ padding:'2.25rem' }}>
+                  <div className="empty">
+                    <div className="empty-icon"><i className="fas fa-clipboard-list"/></div>
+                    <h3>No requests yet</h3>
+                    <p>Find a craftsman and send your first request to get started</p>
                   </div>
-                ) : (
-                  <div className="tbl-wrap">
-                    <table className="tbl">
-                      <thead>
-                        <tr>
-                          <th>Service</th>
-                          <th>Craftsman</th>
-                          <th>Budget</th>
-                          <th>Scheduled</th>
-                          <th>Status</th>
-                          <th>Quote</th>
-                          <th>Proof</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {jobs.map(job => {
-                          const hasQ = !!(job.quote_file_url || job.quote_details);
-                          const isQS = job.status === 'Quote Submitted';
-                          return (
-                            <tr key={job.id}>
-                              <td><strong>{job.service}</strong></td>
-                              <td style={{ fontSize:'.83rem', color:'#64748b', fontWeight:600 }}>{job.craftsman?.name||'—'}</td>
-                              <td style={{ fontWeight:800 }}>{job.budget ? `KSh ${Number(job.budget).toLocaleString()}` : '—'}</td>
-                              <td style={{ fontSize:'.8rem', color:'#64748b' }}>
-                                {job.schedule
-                                  ? new Date(job.schedule).toLocaleDateString('en-KE',{ day:'numeric', month:'short', year:'numeric' })
-                                  : '—'}
-                              </td>
-                              <td>
-                                <span className={badgeCls(job.status)}>
-                                  <span className="bdg-dot"/>
-                                  {job.status==='Quote Submitted' ? 'Quote Received' : job.status||'Pending'}
+                </div>
+              ) : (
+                <div className="tbl-wrap">
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>Service</th>
+                        <th>Craftsman</th>
+                        <th>Budget</th>
+                        <th>Scheduled</th>
+                        <th>Status</th>
+                        <th>Quote</th>
+                        <th>Proof</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {jobs.map(job => {
+                        const hasQ = !!(job.quote_file_url || job.quote_details);
+                        const isQS = job.status === 'Quote Submitted';
+                        // ✅ FIXED: use helper that checks full_name first
+                        // Resolve craftsman name — handles nested obj, flat fields, or integer ID
+                        const craftsmanName = getJobCraftsmanName(job) ||
+                          (job.craftsman && typeof job.craftsman === 'number'
+                            ? `Craftsman #${job.craftsman}`  // ID-only fallback
+                            : '—');
+                        const craftsmanAvatar = getAvatar(job.craftsman) || avi(craftsmanName);
+                        return (
+                          <tr key={job.id}>
+                            <td><strong>{job.service}</strong></td>
+                            <td>
+                              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                {craftsmanName !== '—' && (
+                                  <img
+                                    src={craftsmanAvatar}
+                                    alt={craftsmanName}
+                                    style={{ width:30, height:30, borderRadius:'50%', objectFit:'cover', border:'2px solid #FFD700', flexShrink:0 }}
+                                    onError={e => { e.target.src = avi(craftsmanName); }}
+                                  />
+                                )}
+                                <span style={{ fontSize:'.83rem', color:'#64748b', fontWeight:600 }}>
+                                  {craftsmanName}
                                 </span>
-                              </td>
-                              <td>
-                                {job.quote_file_url ? (
-                                  <a href={job.quote_file_url} target="_blank" rel="noopener noreferrer"
-                                    style={{ color:'#15803d', fontWeight:700, fontSize:'.8rem' }}>View file</a>
-                                ) : job.quote_details ? (
-                                  <button className="act act-ok" onClick={() => setQuoteJob(job)}>View Quote</button>
-                                ) : <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>}
-                              </td>
-                              <td>
-                                {job.proof_images?.length > 0 ? (
-                                  <div style={{ display:'flex', gap:4 }}>
-                                    {job.proof_images.slice(0,2).map((img, ix) => (
-                                      <img key={ix} src={img.image} alt="Proof"
-                                        style={{ width:36, height:36, objectFit:'cover', borderRadius:7, border:'2px solid #e2e8f0', cursor:'pointer' }}
-                                        onClick={() => window.open(img.image,'_blank')}
-                                        onError={e => { e.target.style.opacity = '.3'; }}
-                                      />
-                                    ))}
-                                  </div>
-                                ) : <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>}
-                              </td>
-                              <td>
-                                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                                  {/* Quote approve / reject */}
-                                  {isQS && hasQ && (
-                                    <>
-                                      <button className="act act-ok"  onClick={() => quoteDecide(job.id,'approve')}>Approve</button>
-                                      <button className="act act-bad" onClick={() => quoteDecide(job.id,'reject')}>Reject</button>
-                                    </>
-                                  )}
-                                  {/* Pay via M-Pesa */}
-                                  {canPay(job) && !isQS && (
-                                    <button className="act act-pay"
-                                      onClick={() => { setPayJob(job); setPayOk(false); }}>
-                                      <i className="fas fa-mobile-alt" style={{ marginRight:4 }}/>Pay
-                                    </button>
-                                  )}
-                                  {!isQS && !canPay(job) && <span style={{ fontSize:'.8rem', color:'#64748b' }}>—</span>}
+                              </div>
+                            </td>
+                            <td style={{ fontWeight:800 }}>
+                              {job.budget ? `KSh ${Number(job.budget).toLocaleString()}` : '—'}
+                            </td>
+                            <td style={{ fontSize:'.8rem', color:'#64748b' }}>
+                              {job.schedule
+                                ? new Date(job.schedule).toLocaleDateString('en-KE', { day:'numeric', month:'short', year:'numeric' })
+                                : '—'}
+                            </td>
+                            <td>
+                              <span className={badgeCls(job.status)}>
+                                <span className="bdg-dot"/>
+                                {job.status === 'Quote Submitted' ? 'Quote Received' : job.status || 'Pending'}
+                              </span>
+                            </td>
+                            <td>
+                              {job.quote_file_url ? (
+                                <a href={job.quote_file_url} target="_blank" rel="noopener noreferrer"
+                                  style={{ color:'#15803d', fontWeight:700, fontSize:'.8rem' }}>View file</a>
+                              ) : job.quote_details ? (
+                                <button className="act act-ok" onClick={() => setQuoteJob(job)}>View Quote</button>
+                              ) : <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>}
+                            </td>
+                            <td>
+                              {job.proof_images?.length > 0 ? (
+                                <div style={{ display:'flex', gap:4 }}>
+                                  {job.proof_images.slice(0, 2).map((img, ix) => (
+                                    <img key={ix} src={img.image} alt="Proof"
+                                      style={{ width:36, height:36, objectFit:'cover', borderRadius:7, border:'2px solid #e2e8f0', cursor:'pointer' }}
+                                      onClick={() => window.open(img.image, '_blank')}
+                                      onError={e => { e.target.style.opacity = '.3'; }}
+                                    />
+                                  ))}
                                 </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
+                              ) : <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>}
+                            </td>
+                            <td>
+                              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                                {isQS && hasQ && (
+                                  <>
+                                    <button className="act act-ok"  onClick={() => quoteDecide(job.id, 'approve')}>Approve</button>
+                                    <button className="act act-bad" onClick={() => quoteDecide(job.id, 'reject')}>Reject</button>
+                                  </>
+                                )}
+                                {canPay(job) && !isQS && (
+                                  <button className="act act-pay"
+                                    onClick={() => { setPayJob(job); setPayOk(false); }}>
+                                    <i className="fas fa-mobile-alt" style={{ marginRight:4 }}/>Pay
+                                  </button>
+                                )}
+                                {!isQS && !canPay(job) && (
+                                  <span style={{ fontSize:'.8rem', color:'#64748b' }}>—</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           )}
 
           {/* ━━━━━━━━━━ REVIEWS ━━━━━━━━━━ */}
@@ -1241,45 +1300,49 @@ export default function HireCraftsmanPage() {
                 </div>
               ) : (
                 <div className="rev-grid">
-                  {jobs.filter(j => j.status === 'Completed').map(job => (
-                    <div className="rev-card" key={job.id}>
-                      <div className="rev-header">
-                        <div>
-                          <p className="rev-svc">{job.service}</p>
-                          <p className="rev-meta">
-                            {job.schedule && new Date(job.schedule).toLocaleDateString('en-KE',{ day:'numeric', month:'long', year:'numeric' })}
-                            {job.budget && ` · KSh ${Number(job.budget).toLocaleString()}`}
-                          </p>
+                  {jobs.filter(j => j.status === 'Completed').map(job => {
+                    const cName = getJobCraftsmanName(job);
+                    return (
+                      <div className="rev-card" key={job.id}>
+                        <div className="rev-header">
+                          <div>
+                            <p className="rev-svc">{job.service}</p>
+                            <p className="rev-meta">
+                              {job.schedule && new Date(job.schedule).toLocaleDateString('en-KE', { day:'numeric', month:'long', year:'numeric' })}
+                              {job.budget && ` · KSh ${Number(job.budget).toLocaleString()}`}
+                            </p>
+                          </div>
+                          <span className="bdg bdg-g"><span className="bdg-dot"/>Completed</span>
                         </div>
-                        <span className="bdg bdg-g"><span className="bdg-dot"/>Completed</span>
-                      </div>
-                      {job.craftsman?.name && (
-                        <div className="rev-craft">
-                          <img src={avi(job.craftsman.name)} alt={job.craftsman.name} className="rev-craft-av"/>
-                          <span className="rev-craft-name">{job.craftsman.name}</span>
-                        </div>
-                      )}
-                      <div className="star-row">
-                        {[1,2,3,4,5].map(s => (
-                          <span key={s}
-                            className={`star${(reviews[job.id]?.rating||0) >= s ? ' on' : ''}`}
-                            onClick={() => setReviews(p => ({ ...p, [job.id]: { ...p[job.id], rating:s } }))}>★</span>
-                        ))}
-                        {reviews[job.id]?.rating > 0 && (
-                          <span className="star-val">{reviews[job.id].rating}/5</span>
+                        {cName !== '—' && (
+                          <div className="rev-craft">
+                            <img src={getAvatar(job.craftsman) || avi(cName)} alt={cName} className="rev-craft-av"
+                              onError={e => { e.target.src = avi(cName); }}/>
+                            <span className="rev-craft-name">{cName}</span>
+                          </div>
                         )}
+                        <div className="star-row">
+                          {[1,2,3,4,5].map(s => (
+                            <span key={s}
+                              className={`star${(reviews[job.id]?.rating || 0) >= s ? ' on' : ''}`}
+                              onClick={() => setReviews(p => ({ ...p, [job.id]: { ...p[job.id], rating: s } }))}>★</span>
+                          ))}
+                          {reviews[job.id]?.rating > 0 && (
+                            <span className="star-val">{reviews[job.id].rating}/5</span>
+                          )}
+                        </div>
+                        <textarea className="ta" rows={3}
+                          placeholder="Your review…"
+                          value={reviews[job.id]?.review || ''}
+                          onChange={e => setReviews(p => ({ ...p, [job.id]: { ...p[job.id], review: e.target.value } }))}
+                          style={{ marginBottom:14, width:'100%' }}
+                        />
+                        <button className="rev-btn" onClick={() => submitReview(job.id)}>
+                          <i className="fas fa-star"/>Submit Review
+                        </button>
                       </div>
-                      <textarea className="ta" rows={3}
-                        placeholder="Your review…"
-                        value={reviews[job.id]?.review || ''}
-                        onChange={e => setReviews(p => ({ ...p, [job.id]: { ...p[job.id], review:e.target.value } }))}
-                        style={{ marginBottom:14, width:'100%' }}
-                      />
-                      <button className="rev-btn" onClick={() => submitReview(job.id)}>
-                        <i className="fas fa-star"/>Submit Review
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>
@@ -1330,12 +1393,15 @@ export default function HireCraftsmanPage() {
                           const total = Number(job.budget) || 0;
                           const fee   = Math.round(total * .1);
                           const net   = total - fee;
-                          const paid  = /paid/i.test(job.status||'');
+                          const paid  = /paid/i.test(job.status || '');
+                          const cName = getJobCraftsmanName(job);
                           return (
                             <tr key={job.id}>
                               <td>
                                 <strong>{job.service}</strong>
-                                {job.craftsman?.name && <p style={{ fontSize:'.76rem', color:'#64748b', fontWeight:500, marginTop:2 }}>{job.craftsman.name}</p>}
+                                {cName !== '—' && (
+                                  <p style={{ fontSize:'.76rem', color:'#64748b', fontWeight:500, marginTop:2 }}>{cName}</p>
+                                )}
                               </td>
                               <td style={{ fontWeight:800 }}>KSh {total.toLocaleString()}</td>
                               <td style={{ color:'#64748b', fontWeight:600 }}>KSh {fee.toLocaleString()}</td>
@@ -1375,15 +1441,15 @@ export default function HireCraftsmanPage() {
                 <div className="prof-top">
                   <img src={avi(client.full_name)} alt={client.full_name} className="prof-av"/>
                   <div>
-                    <h2 className="prof-name">{client.full_name||'Client'}</h2>
+                    <h2 className="prof-name">{client.full_name || 'Client'}</h2>
                     <span className="prof-role">Client Account</span>
                     {client.email && <p className="prof-email">{client.email}</p>}
                   </div>
                 </div>
                 <div className="prof-stats-row">
                   {[
-                    { v: jobs.length,     l: 'Requests' },
-                    { v: completedCount,  l: 'Completed' },
+                    { v: jobs.length,    l: 'Requests' },
+                    { v: completedCount, l: 'Completed' },
                     { v: `KSh ${totalSpent.toLocaleString()}`, l: 'Total Spent' },
                   ].map((s, i) => (
                     <div className="prof-stat" key={i}>
@@ -1396,12 +1462,12 @@ export default function HireCraftsmanPage() {
 
               <div className="prof-grid" style={{ marginBottom:24 }}>
                 {[
-                  { icon:'fas fa-envelope',       label:'Email',          val: client.email||'—' },
-                  { icon:'fas fa-phone',           label:'Phone',          val: client.phone||client.phone_number||'—' },
-                  { icon:'fas fa-id-badge',        label:'Account type',   val: 'Client' },
-                  { icon:'fas fa-clipboard-list',  label:'Total requests', val: jobs.length },
-                  { icon:'fas fa-check-circle',    label:'Completed jobs', val: completedCount },
-                  { icon:'fas fa-wallet',          label:'Total spent',    val: `KSh ${totalSpent.toLocaleString()}` },
+                  { icon:'fas fa-envelope',      label:'Email',          val: client.email || '—' },
+                  { icon:'fas fa-phone',          label:'Phone',          val: client.phone || client.phone_number || '—' },
+                  { icon:'fas fa-id-badge',       label:'Account type',   val: 'Client' },
+                  { icon:'fas fa-clipboard-list', label:'Total requests', val: jobs.length },
+                  { icon:'fas fa-check-circle',   label:'Completed jobs', val: completedCount },
+                  { icon:'fas fa-wallet',         label:'Total spent',    val: `KSh ${totalSpent.toLocaleString()}` },
                 ].map((item, i) => (
                   <div className="prof-item" key={i}>
                     <div className="prof-item-icon"><i className={item.icon}/></div>
@@ -1425,9 +1491,8 @@ export default function HireCraftsmanPage() {
             <div className="modal-hd light" style={{ position:'relative' }}>
               <button className="modal-close" onClick={() => setQuoteJob(null)}>✕</button>
               <h5>Quote Summary</h5>
-              {quoteJob.craftsman?.name && <p>From {quoteJob.craftsman.name}</p>}
+              {getJobCraftsmanName(quoteJob) !== '—' && <p>From {getJobCraftsmanName(quoteJob)}</p>}
             </div>
-
             <div className="modal-body">
               {quoteJob.quote_details ? (
                 <>
@@ -1445,7 +1510,7 @@ export default function HireCraftsmanPage() {
                       <p style={{ fontWeight:700, fontSize:'.72rem', textTransform:'uppercase', letterSpacing:'.06em', color:'#64748b', marginBottom:12 }}>Line items</p>
                       {quoteJob.quote_details.items.map((item, i) => (
                         <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:9, fontSize:'.88rem', padding:'9px 0', borderBottom:'1px solid #f1f5f9' }}>
-                          <span>{item.desc||`Item ${i+1}`}</span>
+                          <span>{item.desc || `Item ${i+1}`}</span>
                           <strong>KSh {(item.qty * item.price).toLocaleString()}</strong>
                         </div>
                       ))}
@@ -1463,30 +1528,28 @@ export default function HireCraftsmanPage() {
                 </>
               ) : <p style={{ color:'#64748b' }}>No quote details available.</p>}
             </div>
-
             <div className="modal-ft">
               <button className="mbl mbl-light" onClick={() => setQuoteJob(null)}>Close</button>
-              {jobs.find(j => j.id === quoteJob.id)?.status === 'Quote Submitted' && <>
-                <button className="mbl mbl-red"
-                  onClick={() => quoteDecide(quoteJob.id, 'reject')}>Reject Quote</button>
-                <button className="mbl mbl-gold"
-                  onClick={() => quoteDecide(quoteJob.id, 'approve')}>Approve Quote</button>
-              </>}
+              {jobs.find(j => j.id === quoteJob.id)?.status === 'Quote Submitted' && (
+                <>
+                  <button className="mbl mbl-red"  onClick={() => quoteDecide(quoteJob.id, 'reject')}>Reject Quote</button>
+                  <button className="mbl mbl-gold" onClick={() => quoteDecide(quoteJob.id, 'approve')}>Approve Quote</button>
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ══ M-PESA PAYMENT MODAL ══ */}
+      {/* ══ M-PESA MODAL ══ */}
       {payJob && (
         <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) setPayJob(null); }}>
           <div className="modal-box">
             <div className="modal-hd dark" style={{ position:'relative' }}>
               <button className="modal-close" onClick={() => setPayJob(null)}>✕</button>
               <h5>Pay via M-Pesa</h5>
-              <p>Job: {payJob.service} · {payJob.craftsman?.name}</p>
+              <p>Job: {payJob.service} · {getJobCraftsmanName(payJob)}</p>
             </div>
-
             <div className="modal-body">
               {payOk ? (
                 <div style={{ textAlign:'center', padding:'24px 0' }}>
@@ -1505,7 +1568,6 @@ export default function HireCraftsmanPage() {
                     <span className="mpesa-logo">M-PESA</span>
                     <span style={{ fontSize:'.78rem', color:'#64748b', fontWeight:600 }}>Powered by Safaricom</span>
                   </div>
-
                   <div className="mpesa-amt">
                     <div>
                       <p className="mpesa-amt-lbl">Amount to pay</p>
@@ -1519,12 +1581,11 @@ export default function HireCraftsmanPage() {
                       <p style={{ fontSize:'.68rem', color:'rgba(255,255,255,.35)', marginTop:2 }}>After 10% platform fee</p>
                     </div>
                   </div>
-
                   <div className="mpesa-steps">
                     {[
                       { n:1, title:'Enter your M-Pesa number', text:'Use the number registered with M-Pesa (format: 2547XXXXXXXX)' },
-                      { n:2, title:'Check your phone', text:'You\'ll receive an STK push notification from M-Pesa' },
-                      { n:3, title:'Enter your PIN', text:'Confirm the payment by entering your 4-digit M-Pesa PIN' },
+                      { n:2, title:'Check your phone',         text:"You'll receive an STK push notification from M-Pesa" },
+                      { n:3, title:'Enter your PIN',           text:'Confirm the payment by entering your 4-digit M-Pesa PIN' },
                     ].map(s => (
                       <div className="mpesa-step" key={s.n}>
                         <span className="mpesa-num">{s.n}</span>
@@ -1535,33 +1596,24 @@ export default function HireCraftsmanPage() {
                       </div>
                     ))}
                   </div>
-
                   <div className="mpesa-inp-wrap">
                     <label className="lbl" style={{ marginBottom:6, display:'block' }}>M-Pesa phone number</label>
-                    <input
-                      type="tel" className="inp"
-                      placeholder="2547XXXXXXXX"
-                      value={payPhone}
-                      onChange={e => setPayPhone(e.target.value.replace(/\D/g,''))}
-                      maxLength={12}
-                    />
+                    <input type="tel" className="inp" placeholder="2547XXXXXXXX"
+                      value={payPhone} onChange={e => setPayPhone(e.target.value.replace(/\D/g, ''))} maxLength={12}/>
                   </div>
-
                   <button className="mpesa-btn" onClick={initiateMpesa} disabled={payBusy}>
                     {payBusy
                       ? <><span className="spinner-white"/>Sending STK push…</>
                       : <><i className="fas fa-mobile-alt"/>Send M-Pesa request · KSh {Number(payJob.budget).toLocaleString()}</>
                     }
                   </button>
-
                   <p className="mpesa-note">
                     Secure payment processed by Safaricom M-Pesa.<br/>
-                    Platform fee of 10% (KSh {Math.round(Number(payJob.budget)*.1).toLocaleString()}) is deducted before craftsman receives payment.
+                    Platform fee of 10% (KSh {Math.round(Number(payJob.budget) * .1).toLocaleString()}) is deducted before craftsman receives payment.
                   </p>
                 </>
               )}
             </div>
-
             <div className="modal-ft">
               <button className="mbl mbl-light" onClick={() => setPayJob(null)}>
                 {payOk ? 'Done' : 'Cancel'}
