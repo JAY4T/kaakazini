@@ -13,29 +13,15 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import serializers
 
 from .models import (
-    Craftsman,
-    GalleryImage,
-    JobProofImage,
-    Product,
-    Service,
-    JobRequest,
-    ContactMessage,
-    Review,
-    TeamInvite,        
-    CraftsmanMember
+    Craftsman, GalleryImage, JobProofImage, Product, Service,
+    JobRequest, ContactMessage, Review, TeamInvite, CraftsmanMember,
 )
 from .serializers import (
-    CraftsmanSerializer,
-    ProductSerializer,
-    ServiceSerializer,
-    JobRequestSerializer,
-    ContactMessageSerializer,
-    ReviewSerializer,
-    TeamInviteSerializer,      
-    CraftsmanMemberSerializer, 
+    CraftsmanSerializer, ProductSerializer, ServiceSerializer,
+    JobRequestSerializer, ContactMessageSerializer, ReviewSerializer,
+    TeamInviteSerializer, CraftsmanMemberSerializer,
 )
 from .permissions import IsOwner
-from .payments import send_stk_push
 from api.utils import send_craftsman_approval_email
 from .team_notifications import dispatch_invite_notification
 
@@ -70,149 +56,84 @@ def is_approved_craftsman(user):
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Profile-save helpers
-#
-# The frontend sends multipart/form-data where:
-#   • Scalar strings are plain FormData fields
-#   • skills  is a JSON-encoded array string: '["Wiring","Soldering"]'
-#   • services is a JSON-encoded array string:
-#       '[{"name":"Electrical Wiring","rate":500,"unit":"hour"}]'
-#   • portfolio_remove_ids is a JSON-encoded int-array: '[3, 7]'
-#   • portfolio_images are one or more uploaded File objects
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Every plain-string field the frontend sends that maps 1-to-1 to a model field
 CRAFTSMAN_SCALAR_FIELDS = [
-    'description',
-    'profession',
-    'location',
-    'company_name',
-    'account_type',
-    'experience_level',   # ← new field — must be listed here to be saved
-    'primary_service',
-    'video',
+    'description', 'profession', 'location', 'company_name',
+    'account_type', 'experience_level', 'primary_service', 'video',
 ]
 
 
 def _parse_json_field(request_data, key):
-    """
-    Read `key` from request.data (a QueryDict for multipart requests).
-    Handles:
-      - Key absent                → None
-      - Value is already list/dict (JSON body) → returned as-is
-      - Value is a JSON string    → parsed and returned
-      - Value is a plain string   → returned as-is (caller decides)
-    """
-    # QueryDict.getlist() gets all values for a key (handles repeated keys)
     if hasattr(request_data, 'getlist'):
         values = request_data.getlist(key)
         if not values:
             return None
-        # Single value is the normal case
         raw = values[0] if len(values) == 1 else values
     else:
         raw = request_data.get(key)
         if raw is None:
             return None
 
-    # Already a Python object (application/json body)
     if isinstance(raw, (list, dict)):
         return raw
 
-    # JSON-encoded string → parse it
     if isinstance(raw, str):
         stripped = raw.strip()
         if stripped.startswith('[') or stripped.startswith('{'):
             try:
                 return json.loads(stripped)
             except (json.JSONDecodeError, ValueError):
-                logger.warning(f"[Profile] Failed to JSON-parse field '{key}': {stripped[:100]}")
-        # Return as plain string (e.g. a scalar value)
+                logger.warning(f"[Profile] Failed to JSON-parse '{key}': {stripped[:100]}")
         return stripped
 
     return raw
 
 
 def _save_skills(craftsman, request_data):
-    """
-    Convert the frontend's skills array to a comma-separated string and store it.
-    Handles:
-      • JSON-encoded string  '["Wiring","Soldering"]'
-      • Repeated form keys   skills=Wiring&skills=Soldering
-      • Plain CSV string     'Wiring,Soldering'   (legacy)
-    Does nothing if the 'skills' key was not sent at all.
-    """
     if 'skills' not in request_data:
-        return  # not sent — leave existing value alone
-
+        return
     parsed = _parse_json_field(request_data, 'skills')
-
     if isinstance(parsed, list):
         skills_list = [str(s).strip() for s in parsed if str(s).strip()]
     elif isinstance(parsed, str):
         skills_list = [s.strip() for s in parsed.split(',') if s.strip()]
     else:
         skills_list = []
-
     craftsman.skills = ','.join(skills_list)
     logger.info(f"[Profile] skills → '{craftsman.skills}'")
 
 
 def _save_services(craftsman, services_data):
-    """
-    Full-replace all services for this craftsman.
-    services_data must be a list of dicts: [{name, rate?, unit?}, ...]
-    If None (key absent from request), existing services are left untouched.
-    """
     if services_data is None:
         return
-
     if not isinstance(services_data, list):
         logger.warning(f"[Profile] services is not a list ({type(services_data)}), skipping")
         return
 
-    # Delete everything and rebuild — simple and safe
     craftsman.services.all().delete()
-
     known_choices = {
-        choice[0]
-        for choice in Service._meta.get_field('service_name').flatchoices
+        choice[0] for choice in Service._meta.get_field('service_name').flatchoices
     }
 
     for i, svc in enumerate(services_data):
         if not isinstance(svc, dict):
             continue
-
         name = str(svc.get('name', '')).strip()
         if not name:
             continue
-
-        # Rate: may arrive as float, int, string, None, or "null"
         raw_rate = svc.get('rate')
         try:
             rate = float(raw_rate) if raw_rate not in (None, '', 'null', 'None') else None
         except (ValueError, TypeError):
             rate = None
-
         unit = str(svc.get('unit', 'fixed')).strip() or 'fixed'
 
         if name in known_choices:
-            Service.objects.create(
-                craftsman=craftsman,
-                service_name=name,
-                custom_name=None,
-                rate=rate,
-                unit=unit,
-            )
+            Service.objects.create(craftsman=craftsman, service_name=name, custom_name=None, rate=rate, unit=unit)
         else:
-            Service.objects.create(
-                craftsman=craftsman,
-                service_name=None,
-                custom_name=name,
-                rate=rate,
-                unit=unit,
-            )
+            Service.objects.create(craftsman=craftsman, service_name=None, custom_name=name, rate=rate, unit=unit)
 
-        # Keep legacy primary_service in sync with the first entry
         if i == 0:
             craftsman.primary_service = name if name in known_choices else None
 
@@ -220,11 +141,6 @@ def _save_services(craftsman, services_data):
 
 
 def _save_portfolio(craftsman, request):
-    """
-    Remove gallery images by ID (from portfolio_remove_ids),
-    then add newly uploaded files (from portfolio_images).
-    """
-    # 1. Remove images the user deleted on the frontend
     remove_ids = _parse_json_field(request.data, 'portfolio_remove_ids')
     if remove_ids and isinstance(remove_ids, list):
         int_ids = []
@@ -239,11 +155,9 @@ def _save_portfolio(craftsman, request):
             ).delete()
             logger.info(f"[Profile] Deleted {deleted_count} portfolio images")
 
-    # 2. Add new uploads
     new_images = request.FILES.getlist('portfolio_images')
     for img_file in new_images:
         GalleryImage.objects.create(craftsman=craftsman, image=img_file)
-
     if new_images:
         logger.info(f"[Profile] Added {len(new_images)} portfolio images for craftsman {craftsman.id}")
 
@@ -261,9 +175,8 @@ class CraftsmanListView(generics.ListAPIView):
 class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
     """
     GET  → return the logged-in craftsman's full profile.
-    PATCH → atomically update all profile sections:
-             scalar fields, skills, experience_level,
-             services (full replace), portfolio (add/remove), files.
+    PATCH → update profile. Also creates a payment wallet on first save
+            if the craftsman doesn't have one yet.
     """
     serializer_class = CraftsmanSerializer
     permission_classes = [IsAuthenticated]
@@ -276,17 +189,16 @@ class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
 
     def patch(self, request, *args, **kwargs):
         craftsman = self.get_object()
-        data  = request.data   # QueryDict from multipart parser
-        files = request.FILES  # MultiValueDict
+        data  = request.data
+        files = request.FILES
 
-        # ── 1. All plain-string fields ────────────────────────────────
+        # ── 1. Scalar fields ──────────────────────────────────────────
         for field in CRAFTSMAN_SCALAR_FIELDS:
             if field in data:
                 val = data[field]
-                # Store empty string as None for optional fields
                 setattr(craftsman, field, val if val != '' else None)
 
-        # ── 2. Profile photo — only when a new file is uploaded ───────
+        # ── 2. Profile photo ──────────────────────────────────────────
         if 'profile' in files:
             craftsman.profile = files['profile']
 
@@ -297,23 +209,21 @@ class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
         # ── 4. Skills ─────────────────────────────────────────────────
         _save_skills(craftsman, data)
 
-        # ── 5. Persist all scalar / file changes ─────────────────────
+        # ── 5. Save scalar changes ────────────────────────────────────
         craftsman.save()
 
-        # ── 6. Services (full replace, done after craftsman.save) ─────
+        # ── 6. Services ───────────────────────────────────────────────
         services_data = _parse_json_field(data, 'services')
         _save_services(craftsman, services_data)
-
-        # Persist the primary_service back-compat field set inside _save_services
         if services_data is not None:
             Craftsman.objects.filter(pk=craftsman.pk).update(
                 primary_service=craftsman.primary_service
             )
 
-        # ── 7. Portfolio gallery ───────────────────────────────────────
+        # ── 7. Portfolio ──────────────────────────────────────────────
         _save_portfolio(craftsman, request)
 
-        # ── 8. Return the full refreshed profile ──────────────────────
+        # ── 8. Return refreshed profile ───────────────────────────────
         craftsman.refresh_from_db()
         serializer = self.get_serializer(craftsman)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -343,7 +253,7 @@ class AdminCraftsmanListView(generics.ListAPIView):
     def get_queryset(self):
         queryset = Craftsman.objects.all()
         is_approved = self.request.query_params.get("is_approved")
-        search = self.request.query_params.get("search")
+        search      = self.request.query_params.get("search")
         if is_approved is not None:
             queryset = queryset.filter(is_approved=is_approved.lower() == "true")
         if search:
@@ -358,7 +268,7 @@ class AdminCraftsmanApproveView(APIView):
         craftsman = get_craftsman_or_404(pk)
         if not craftsman:
             return Response({"error": "Craftsman not found"}, status=status.HTTP_404_NOT_FOUND)
-        craftsman.status = "approved"
+        craftsman.status      = "approved"
         craftsman.is_approved = True
         craftsman.save()
         try:
@@ -375,7 +285,7 @@ class AdminCraftsmanRejectView(APIView):
         craftsman = get_craftsman_or_404(pk)
         if not craftsman:
             return Response({"error": "Craftsman not found"}, status=status.HTTP_404_NOT_FOUND)
-        craftsman.status = "rejected"
+        craftsman.status      = "rejected"
         craftsman.is_approved = False
         craftsman.save()
         return Response({"status": "rejected"}, status=status.HTTP_200_OK)
@@ -538,10 +448,9 @@ class JobRequestListCreateView(generics.ListCreateAPIView):
             return JobRequest.objects.filter(craftsman=user.craftsman).order_by("-created_at")
         return JobRequest.objects.filter(client=user).order_by("-created_at")
 
-
-
     def perform_create(self, serializer):
         serializer.save(client=self.request.user)
+
 
 class JobRequestDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = JobRequestSerializer
@@ -572,7 +481,7 @@ class AssignCraftsmanView(APIView):
         if not craftsman:
             return Response({"error": "Craftsman not found"}, status=status.HTTP_404_NOT_FOUND)
         job.craftsman = craftsman
-        job.status = JobRequest.STATUS_ASSIGNED
+        job.status    = JobRequest.STATUS_ASSIGNED
         job.save()
         return Response({"message": "Craftsman assigned successfully"}, status=status.HTTP_200_OK)
 
@@ -602,7 +511,7 @@ class StartJobView(APIView):
             return Response({"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND)
         if not is_approved_craftsman(request.user) or job.craftsman != request.user.craftsman:
             return Response({"error": "This is not your job"}, status=status.HTTP_403_FORBIDDEN)
-        job.status = JobRequest.STATUS_IN_PROGRESS
+        job.status     = JobRequest.STATUS_IN_PROGRESS
         job.start_time = timezone.now()
         job.save()
         return Response(JobRequestSerializer(job).data, status=status.HTTP_200_OK)
@@ -621,7 +530,7 @@ class CompleteJobView(APIView):
         for image in request.FILES.getlist("proof_images"):
             JobProofImage.objects.create(job=job, image=image)
         job.end_time = timezone.now()
-        job.status = JobRequest.STATUS_COMPLETED
+        job.status   = JobRequest.STATUS_COMPLETED
         job.save()
         return Response(
             JobRequestSerializer(job, context={"request": request}).data,
@@ -708,7 +617,7 @@ class SendQuoteView(APIView):
         if not is_approved_craftsman(request.user) or job.craftsman != request.user.craftsman:
             return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
         send_method = request.data.get("send_method", "download")
-        base_url = getattr(settings, "FRONTEND_URL", "https://kaakazini.com")
+        base_url    = getattr(settings, "FRONTEND_URL", "https://kaakazini.com")
         return Response(
             {"success": True, "message": f"Quote prepared for {send_method}",
              "quote_link": f"{base_url}/quotes/{job.id}"},
@@ -744,39 +653,18 @@ class ClientQuoteDecisionView(APIView):
 
 
 # ─────────────────────────────────────────────
-# Payment Views
+# Payment Views (legacy stub — real payment is in payment_views.py)
 # ─────────────────────────────────────────────
 
 class InitiatePaymentView(APIView):
+    """Legacy stub — kept so nothing breaks if still imported anywhere."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        job = get_job_or_404(pk)
-        if not job:
-            return Response({"detail": "Job not found."}, status=status.HTTP_404_NOT_FOUND)
-        user = request.user
-        if not (user.is_staff or (is_approved_craftsman(user) and job.craftsman == user.craftsman)):
-            return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
-        if not job.craftsman:
-            return Response({"detail": "No craftsman assigned."}, status=status.HTTP_400_BAD_REQUEST)
-        if not getattr(job.craftsman, "phone_number", None):
-            return Response({"detail": "Craftsman phone number missing."}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            success, response_data = send_stk_push(job.craftsman.phone_number, job.budget or 0, job.id)
-        except Exception as e:
-            logger.error(f"STK Push error for Job {job.id}: {e}")
-            return Response(
-                {"detail": "Payment initiation failed.", "error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        if success:
-            job.status = JobRequest.STATUS_PAID
-            job.save()
-            return Response(
-                {"detail": "Payment initiated.", "job": JobRequestSerializer(job).data, "response": response_data},
-                status=status.HTTP_200_OK,
-            )
-        return Response({"detail": "Payment failed.", "response": response_data}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "Use POST /job-requests/{pk}/pay/ for M-Pesa payment."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 # ─────────────────────────────────────────────
@@ -813,313 +701,221 @@ class ContactMessageCreateView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
+# ─────────────────────────────────────────────
+# Team: Invites
+# ─────────────────────────────────────────────
 
 class TeamInviteListCreateView(APIView):
-    """
-    GET  /craftsman/invites/   → list all non-revoked invites for this craftsman
-    POST /craftsman/invites/   → send a new invite (email via Brevo, SMS/WhatsApp via Celcom)
-    """
     permission_classes = [IsAuthenticated]
- 
+
     def _get_craftsman(self, user):
         try:
             return Craftsman.objects.get(user=user)
         except Craftsman.DoesNotExist:
             return None
- 
+
     def get(self, request):
         craftsman = self._get_craftsman(request.user)
         if not craftsman:
             return Response([], status=status.HTTP_200_OK)
         invites = TeamInvite.objects.filter(craftsman=craftsman).exclude(status='revoked')
         return Response(TeamInviteSerializer(invites, many=True).data)
- 
+
     def post(self, request):
         craftsman = self._get_craftsman(request.user)
         if not craftsman:
-            return Response(
-                {"detail": "Craftsman profile not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
- 
+            return Response({"detail": "Craftsman profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
         method  = request.data.get("method", "email")
         contact = request.data.get("contact", "").strip()
         name    = request.data.get("name", "").strip()
         role    = request.data.get("role", "helper")
- 
-        # For non-link invites a contact is required
+
         if method != "link" and not contact:
-            return Response(
-                {"detail": "Contact (email or phone) is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
- 
-        # Prevent duplicate active invites to the same contact
+            return Response({"detail": "Contact (email or phone) is required."}, status=status.HTTP_400_BAD_REQUEST)
+
         if contact and TeamInvite.objects.filter(
-            craftsman=craftsman,
-            contact=contact,
+            craftsman=craftsman, contact=contact,
             status__in=["pending_invite", "pending_approval"],
         ).exists():
-            return Response(
-                {"detail": "An active invite already exists for this contact."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
- 
+            return Response({"detail": "An active invite already exists for this contact."}, status=status.HTTP_400_BAD_REQUEST)
+
         invite = TeamInvite.objects.create(
-            craftsman=craftsman,
-            method=method,
-            contact=contact or None,
-            name=name or None,
-            role=role,
-            status="pending_invite",
+            craftsman=craftsman, method=method,
+            contact=contact or None, name=name or None,
+            role=role, status="pending_invite",
         )
- 
-        # ── Fire notification: Brevo email / Celcom SMS or WhatsApp ───
         notification_sent = dispatch_invite_notification(invite)
         if not notification_sent and method != "link":
-            logger.warning(
-                f"[TeamInvite] Notification failed for invite #{invite.id} "
-                f"via {method} to {contact}"
-            )
- 
+            logger.warning(f"[TeamInvite] Notification failed for invite #{invite.id} via {method} to {contact}")
+
         return Response(
-            {
-                **TeamInviteSerializer(invite).data,
-                "notification_sent": notification_sent,
-            },
+            {**TeamInviteSerializer(invite).data, "notification_sent": notification_sent},
             status=status.HTTP_201_CREATED,
         )
- 
- 
+
+
 class TeamInviteDeleteView(APIView):
-    """
-    DELETE /craftsman/invites/{id}/   → revoke an invite
-    """
     permission_classes = [IsAuthenticated]
- 
+
     def delete(self, request, pk):
         try:
             craftsman = Craftsman.objects.get(user=request.user)
         except Craftsman.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
- 
         try:
             invite = TeamInvite.objects.get(pk=pk, craftsman=craftsman)
         except TeamInvite.DoesNotExist:
             return Response({"detail": "Invite not found."}, status=status.HTTP_404_NOT_FOUND)
- 
         invite.status = "revoked"
         invite.save()
         return Response({"detail": "Invite revoked."}, status=status.HTTP_200_OK)
- 
- 
+
+
 # ─────────────────────────────────────────────
-# Team: Member Management
+# Team: Members
 # ─────────────────────────────────────────────
- 
+
 class TeamMemberListView(APIView):
-    """
-    GET /craftsman/members/   → list all accepted members
-    """
     permission_classes = [IsAuthenticated]
- 
+
     def get(self, request):
         try:
             craftsman = Craftsman.objects.get(user=request.user)
         except Craftsman.DoesNotExist:
             return Response([], status=status.HTTP_200_OK)
- 
         members = CraftsmanMember.objects.filter(craftsman=craftsman, status="accepted")
         return Response(CraftsmanMemberSerializer(members, many=True).data)
- 
- 
+
+
 class TeamMemberPendingApprovalView(APIView):
-    """
-    GET /craftsman/members/pending-approval/
-    → members who accepted the invite and are awaiting craftsman approval
-    """
     permission_classes = [IsAuthenticated]
- 
+
     def get(self, request):
         try:
             craftsman = Craftsman.objects.get(user=request.user)
         except Craftsman.DoesNotExist:
             return Response([], status=status.HTTP_200_OK)
- 
-        pending = CraftsmanMember.objects.filter(
-            craftsman=craftsman, status="pending_approval"
-        )
+        pending = CraftsmanMember.objects.filter(craftsman=craftsman, status="pending_approval")
         return Response(CraftsmanMemberSerializer(pending, many=True).data)
- 
- 
+
+
 class TeamMemberApproveView(APIView):
-    """
-    POST /craftsman/members/{id}/approve/
-    """
     permission_classes = [IsAuthenticated]
- 
+
     def post(self, request, pk):
         try:
             craftsman = Craftsman.objects.get(user=request.user)
         except Craftsman.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
- 
         try:
             member = CraftsmanMember.objects.get(pk=pk, craftsman=craftsman)
         except CraftsmanMember.DoesNotExist:
             return Response({"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND)
- 
         if member.status != "pending_approval":
-            return Response(
-                {"detail": f"Member is already '{member.status}'."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
- 
+            return Response({"detail": f"Member is already '{member.status}'."}, status=status.HTTP_400_BAD_REQUEST)
         member.status = "accepted"
         member.save()
- 
         if member.invite:
             member.invite.status = "accepted"
             member.invite.save()
- 
-        # Notify the new member by email that they have been approved
         _notify_member_approved(member)
- 
         return Response(CraftsmanMemberSerializer(member).data, status=status.HTTP_200_OK)
- 
- 
+
+
 class TeamMemberRejectView(APIView):
-    """
-    POST /craftsman/members/{id}/reject/
-    """
     permission_classes = [IsAuthenticated]
- 
+
     def post(self, request, pk):
         try:
             craftsman = Craftsman.objects.get(user=request.user)
         except Craftsman.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
- 
         try:
             member = CraftsmanMember.objects.get(pk=pk, craftsman=craftsman)
         except CraftsmanMember.DoesNotExist:
             return Response({"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND)
- 
         member.status = "rejected"
         member.save()
- 
         if member.invite:
             member.invite.status = "rejected"
             member.invite.save()
- 
         return Response({"detail": "Member rejected."}, status=status.HTTP_200_OK)
- 
- 
+
+
 class TeamMemberDeleteView(APIView):
-    """
-    DELETE /craftsman/members/{id}/   → remove an active member
-    """
     permission_classes = [IsAuthenticated]
- 
+
     def delete(self, request, pk):
         try:
             craftsman = Craftsman.objects.get(user=request.user)
         except Craftsman.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
- 
         try:
             member = CraftsmanMember.objects.get(pk=pk, craftsman=craftsman)
         except CraftsmanMember.DoesNotExist:
             return Response({"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND)
- 
         member.delete()
         return Response({"detail": "Member removed."}, status=status.HTTP_204_NO_CONTENT)
- 
- 
+
+
 # ─────────────────────────────────────────────
-# Public: Accept Invite via Token (link flow)
+# Public: Accept Invite via Token
 # ─────────────────────────────────────────────
- 
+
 class TeamInviteAcceptView(APIView):
-    """
-    POST /craftsman/invites/accept/{token}/
-    Body: { full_name, email, phone }
-    Creates a CraftsmanMember with status='pending_approval'.
-    """
     permission_classes = [IsAuthenticated]
- 
+
     def post(self, request, token):
         try:
             invite = TeamInvite.objects.get(token=token, status="pending_invite")
         except TeamInvite.DoesNotExist:
-            return Response(
-                {"detail": "Invite link is invalid or has already been used."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
- 
+            return Response({"detail": "Invite link is invalid or has already been used."}, status=status.HTTP_404_NOT_FOUND)
+
         if invite.craftsman.user == request.user:
-            return Response(
-                {"detail": "You cannot join your own team."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
- 
-        if CraftsmanMember.objects.filter(
-            craftsman=invite.craftsman, user=request.user
-        ).exists():
-            return Response(
-                {"detail": "You are already a member of this team."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
- 
+            return Response({"detail": "You cannot join your own team."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if CraftsmanMember.objects.filter(craftsman=invite.craftsman, user=request.user).exists():
+            return Response({"detail": "You are already a member of this team."}, status=status.HTTP_400_BAD_REQUEST)
+
         member = CraftsmanMember.objects.create(
             craftsman=invite.craftsman,
             user=request.user,
             invite=invite,
             full_name=request.data.get("full_name") or getattr(request.user, "full_name", ""),
-            email=request.data.get("email")         or request.user.email,
-            phone=request.data.get("phone")         or getattr(request.user, "phone_number", ""),
+            email=request.data.get("email") or request.user.email,
+            phone=request.data.get("phone") or getattr(request.user, "phone_number", ""),
             role=invite.role,
             status="pending_approval",
         )
- 
         invite.status = "pending_approval"
         invite.save()
- 
+
         return Response(
-            {
-                "detail": "Request submitted. You will be notified once the team owner approves you.",
-                "member": CraftsmanMemberSerializer(member).data,
-            },
+            {"detail": "Request submitted. You will be notified once the team owner approves you.",
+             "member": CraftsmanMemberSerializer(member).data},
             status=status.HTTP_201_CREATED,
         )
- 
- 
+
+
 # ─────────────────────────────────────────────
 # Private helper — approval notification email
 # ─────────────────────────────────────────────
- 
+
 def _notify_member_approved(member):
-    """
-    Send a Brevo email to the newly approved team member.
-    Fires-and-forgets: errors are logged but never surface to the caller.
-    """
     import requests as _req
     from django.conf import settings as _s
- 
+
     api_key = getattr(_s, "BREVO_API_KEY", "")
     if not api_key or not member.email:
         return
- 
-    craftsman_name = (
-        member.craftsman.full_name
-        or member.craftsman.user.full_name
-        or "Your team owner"
-    )
-    role          = member.role.capitalize()
-    dashboard_url = f"{getattr(_s, 'FRONTEND_URL', 'https://kaakazini.com')}/dashboard"
-    sender_email  = getattr(_s, "BREVO_SENDER_EMAIL", "noreply@kaakazini.com")
-    sender_name   = getattr(_s, "BREVO_SENDER_NAME",  "KaaKazini")
- 
+
+    craftsman_name = member.craftsman.full_name or member.craftsman.user.full_name or "Your team owner"
+    role           = member.role.capitalize()
+    dashboard_url  = f"{getattr(_s, 'FRONTEND_URL', 'https://kaakazini.com')}/dashboard"
+    sender_email   = getattr(_s, "BREVO_SENDER_EMAIL", "noreply@kaakazini.com")
+    sender_name    = getattr(_s, "BREVO_SENDER_NAME",  "KaaKazini")
+
     html_content = f"""
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;">
       <div style="background:#0d0d0d;padding:24px 32px;border-radius:12px 12px 0 0;">
@@ -1133,28 +929,26 @@ def _notify_member_approved(member):
         </p>
         <p style="color:#374151;">You can now log in and access the team dashboard.</p>
         <div style="text-align:center;margin:32px 0;">
-          <a href="{dashboard_url}"
-             style="background:#FFD700;color:#0d0d0d;padding:14px 32px;
-                    border-radius:10px;text-decoration:none;font-weight:700;
-                    font-size:1rem;display:inline-block;">
+          <a href="{dashboard_url}" style="background:#FFD700;color:#0d0d0d;padding:14px 32px;
+            border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;display:inline-block;">
             Go to Dashboard &rarr;
           </a>
         </div>
       </div>
       <div style="background:#f3f4f6;padding:14px 32px;border-radius:0 0 12px 12px;
-                  font-size:.75rem;color:#9ca3af;text-align:center;">
+        font-size:.75rem;color:#9ca3af;text-align:center;">
         KaaKazini &mdash; Kenya's verified craftsman marketplace
       </div>
     </div>
     """
- 
+
     try:
         _req.post(
             "https://api.brevo.com/v3/smtp/email",
             json={
-                "sender":      {"name": sender_name, "email": sender_email},
-                "to":          [{"email": member.email, "name": member.full_name or ""}],
-                "subject":     f"You've been approved to join {craftsman_name}'s team",
+                "sender": {"name": sender_name, "email": sender_email},
+                "to":     [{"email": member.email, "name": member.full_name or ""}],
+                "subject": f"You've been approved to join {craftsman_name}'s team",
                 "htmlContent": html_content,
             },
             headers={"api-key": api_key, "Content-Type": "application/json"},
