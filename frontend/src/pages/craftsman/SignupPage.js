@@ -21,8 +21,8 @@ const CSS = `
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: 36px 44px;
+  justify-content: center;
+  padding: 28px 44px;
   overflow: hidden;
   border-right: 1px solid rgba(255,215,0,.08);
 }
@@ -55,6 +55,22 @@ const CSS = `
   background-size: 44px 44px;
 }
 
+.cs-logo {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 36px;
+}
+
+.cs-logo-mark {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: rgba(255,215,0,.1);
+  border: 1.5px solid rgba(255,215,0,.25);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.cs-logo-mark i { color: #FFD700; font-size: .9rem; }
+.cs-logo-name { font-size: 1.1rem; font-weight: 800; color: #fff; letter-spacing: -.01em; }
+
 .cs-eyebrow {
   position: relative; z-index: 1;
   display: inline-flex; align-items: center; gap: 8px;
@@ -62,7 +78,7 @@ const CSS = `
   border: 1px solid rgba(255,215,0,.25);
   border-radius: 4px;
   padding: 5px 14px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   font-size: .64rem; font-weight: 700; color: #FFD700;
   letter-spacing: .12em; text-transform: uppercase;
   width: fit-content;
@@ -72,9 +88,9 @@ const CSS = `
 
 .cs-headline {
   position: relative; z-index: 1;
-  font-size: clamp(2rem, 3vw, 2.8rem);
+  font-size: clamp(1.8rem, 2.8vw, 2.6rem);
   font-weight: 900; color: #fff;
-  line-height: 1.1; margin-bottom: 18px;
+  line-height: 1.1; margin-bottom: 16px;
   letter-spacing: -.03em;
 }
 
@@ -83,14 +99,14 @@ const CSS = `
 .cs-desc {
   position: relative; z-index: 1;
   font-size: .86rem; color: rgba(255,255,255,.45);
-  line-height: 1.85; max-width: 360px; margin-bottom: 48px;
+  line-height: 1.85; max-width: 360px; margin-bottom: 36px;
   font-weight: 400;
 }
 
 .cs-perks {
   position: relative; z-index: 1;
   list-style: none;
-  display: flex; flex-direction: column; gap: 13px;
+  display: flex; flex-direction: column; gap: 12px;
 }
 
 .cs-perk {
@@ -111,13 +127,13 @@ const CSS = `
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 68px;
+  padding: 40px 68px;
   overflow-y: auto;
 }
 
 .cs-box { width: 100%; max-width: 420px; }
 
-.cs-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; }
+.cs-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
 
 .cs-brand-mark {
   width: 36px; height: 36px; border-radius: 9px;
@@ -130,7 +146,7 @@ const CSS = `
 .cs-brand-name { font-size: 1.1rem; font-weight: 800; color: #0d0d0d; letter-spacing: -.01em; }
 
 .cs-title { font-size: 2rem; font-weight: 900; color: #0d0d0d; margin-bottom: 5px; letter-spacing: -.03em; }
-.cs-sub   { font-size: .84rem; color: #64748b; margin-bottom: 28px; font-weight: 500; }
+.cs-sub   { font-size: .84rem; color: #64748b; margin-bottom: 24px; font-weight: 500; }
 
 .cs-err {
   background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px;
@@ -161,7 +177,7 @@ const CSS = `
   to   { opacity:1; transform: translate(-50%, 0); }
 }
 
-.cs-field { margin-bottom: 16px; }
+.cs-field { margin-bottom: 15px; }
 
 .cs-lbl {
   display: block;
@@ -219,7 +235,7 @@ const CSS = `
   border-radius: 50%; animation: cs-spin .7s linear infinite;
 }
 
-.cs-div { display: flex; align-items: center; gap: 12px; margin: 22px 0; }
+.cs-div { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
 .cs-div-line { flex: 1; height: 1px; background: #e2e8f0; }
 .cs-div-txt  { font-size: .68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; }
 
@@ -318,13 +334,20 @@ const Signup = () => {
         {/* ── LEFT PANEL ── */}
         <div className="cs-left">
           <div className="cs-grid-lines"/>
+
+          
+
+          
+
           <h1 className="cs-headline">
             Your craft.<br/>Your income.<br/><em>Your platform.</em>
           </h1>
+
           <p className="cs-desc">
             Join Kenya's verified craftsman marketplace. Create your profile,
             showcase your work, and start receiving jobs today.
           </p>
+
           <ul className="cs-perks">
             {[
               'Free to join — no upfront fees',
@@ -343,6 +366,8 @@ const Signup = () => {
         {/* ── RIGHT PANEL ── */}
         <div className="cs-right">
           <div className="cs-box">
+
+           
 
             <h2 className="cs-title">Create account</h2>
             <p className="cs-sub">Join as a craftsman and start earning</p>
