@@ -5,22 +5,17 @@ import api from "../../api/axiosClient";
 const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
 // ── Image URL helpers ──────────────────────────────────────────────────────
-// MEDIA_BASE: strip /api suffix from the API base so we get the root domain
 const MEDIA_BASE = (process.env.REACT_APP_MEDIA_URL || process.env.REACT_APP_API_BASE_URL || '')
   .replace(/\/api\/?$/, '');
 
-// Make any file URL absolute
 const imgUrl = (p) => {
   if (!p) return null;
   if (p.startsWith('http://') || p.startsWith('https://')) return p;
   return `${MEDIA_BASE}${p.startsWith('/') ? '' : '/'}${p}`;
 };
 
-// proof image object → absolute URL
-// Serializer returns { id, image_url, uploaded_at }  ← image_url is the field
 const proofImgUrl = (img) => {
   if (!img) return null;
-  // Handle both {image_url:...} and {image:...} shapes defensively
   const raw = img.image_url || img.image || (typeof img === 'string' ? img : null);
   return imgUrl(raw);
 };
@@ -28,7 +23,6 @@ const proofImgUrl = (img) => {
 const avi = (name) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'C')}&background=1a1a1a&color=FFD700&size=80&bold=true`;
 
-// ── Craftsman field helpers ────────────────────────────────────────────────
 const getCover = (c) => {
   if (!c) return null;
   if (Array.isArray(c.gallery_images) && c.gallery_images.length)
@@ -71,10 +65,8 @@ const CSS = `
 @keyframes pulse  { 0%,100% { opacity:1; } 50% { opacity:.45; } }
 @keyframes mpesa-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.3); } 50% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } }
 
-/* SHELL */
 .hcp .shell { display: flex; min-height: 100vh; position: relative; }
 
-/* SIDEBAR */
 .hcp .sb {
   width: var(--sb-w); min-width: var(--sb-w); background: var(--black);
   display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0;
@@ -112,7 +104,6 @@ const CSS = `
 .hcp .sb-foot a { display: flex; align-items: center; gap: 10px; font-size: .8rem; font-weight: 600; color: rgba(255,255,255,.35); text-decoration: none; padding: 9px 12px; border-radius: 10px; transition: all .15s; }
 .hcp .sb-foot a:hover { color: #fff; background: rgba(255,255,255,.07); }
 
-/* MOBILE */
 .hcp .topbar { display: none; position: fixed; top: 0; left: 0; right: 0; height: 56px; background: var(--black); z-index: 300; align-items: center; padding: 0 16px; gap: 12px; border-bottom: 1px solid rgba(255,215,0,.12); }
 .hcp .topbar-brand { font-size: 1rem; font-weight: 800; color: #fff; flex: 1; }
 .hcp .hamburger { width: 38px; height: 38px; border-radius: 9px; background: rgba(255,215,0,.12); color: var(--yellow); border: 1.5px solid rgba(255,215,0,.25); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .88rem; flex-shrink: 0; }
@@ -121,12 +112,10 @@ const CSS = `
 .hcp .sb-mobile { position: fixed; top: 0; left: 0; bottom: 0; width: 260px; z-index: 500; transform: translateX(-100%); transition: transform .28s cubic-bezier(.4,0,.2,1); }
 .hcp .sb-mobile.open { transform: translateX(0); }
 
-/* MAIN */
 .hcp .main { flex: 1; min-width: 0; padding: 2.25rem 2.25rem 3rem; background: var(--off); }
 .hcp .card { background: #fff; border-radius: 18px; box-shadow: 0 8px 32px rgba(0,0,0,.06); padding: 2.25rem; margin-bottom: 1.75rem; border: 2px solid rgba(255,215,0,.1); position: relative; overflow: hidden; animation: fadeUp .35s ease both; }
 .hcp .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--black), var(--yellow), var(--black)); }
 
-/* FILTER */
 .hcp .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; align-items: center; }
 .hcp .srch-wrap { flex: 1; min-width: 180px; position: relative; }
 .hcp .srch-ico { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: .82rem; pointer-events: none; }
@@ -135,7 +124,6 @@ const CSS = `
 .hcp .filter-sel { padding: 11px 15px; border: 2px solid var(--border); border-radius: 11px; font-size: .88rem; font-family: 'Outfit', sans-serif; outline: none; background: #fff; color: var(--text); cursor: pointer; min-width: 145px; font-weight: 600; transition: border-color .2s; }
 .hcp .filter-sel:focus { border-color: var(--yellow); }
 
-/* CRAFTSMAN GRID */
 .hcp .craft-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
 .hcp .craft-card { background: #fff; border: 2px solid var(--border); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; transition: transform .22s, box-shadow .22s, border-color .2s; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
 .hcp .craft-card:hover { transform: translateY(-5px); box-shadow: 0 18px 44px rgba(0,0,0,.11); border-color: var(--yellow); }
@@ -157,7 +145,6 @@ const CSS = `
 .hcp .hire-btn { display: flex; align-items: center; justify-content: center; gap: 7px; background: linear-gradient(135deg, var(--black), #333); color: var(--yellow); border: none; border-radius: 11px; padding: 10px 0; font-weight: 800; font-size: .82rem; cursor: pointer; margin-top: auto; font-family: 'Outfit', sans-serif; transition: all .2s; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 .hcp .hire-btn:hover { background: linear-gradient(135deg, #1a1a1a, #444); transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.3); }
 
-/* HIRE FORM */
 .hcp .locked-bar { display: flex; align-items: center; gap: 16px; background: linear-gradient(135deg, #0d0d0d, #1a1a2e); border-radius: 14px; padding: 18px 22px; margin-bottom: 20px; border: 1px solid rgba(255,215,0,.15); box-shadow: 0 8px 28px rgba(0,0,0,.2); flex-wrap: wrap; }
 .hcp .locked-av { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid var(--yellow); flex-shrink: 0; }
 .hcp .locked-name { font-weight: 800; font-size: 1.15rem; color: #fff; }
@@ -177,7 +164,6 @@ const CSS = `
 .hcp .submit-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .hcp .ok-banner { background: var(--green-l); border: 2px solid #bbf7d0; border-radius: 13px; padding: 13px 17px; font-size: .88rem; color: var(--green-d); font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
 
-/* TABLE */
 .hcp .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .hcp .tbl { width: 100%; border-collapse: collapse; min-width: 560px; }
 .hcp .tbl th { background: var(--off); font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
@@ -185,7 +171,6 @@ const CSS = `
 .hcp .tbl tr:last-child td { border-bottom: none; }
 .hcp .tbl tbody tr:hover { background: var(--off); }
 
-/* BADGES */
 .hcp .bdg { display: inline-flex; align-items: center; gap: 5px; border-radius: 50px; padding: 4px 11px; font-size: .68rem; font-weight: 700; white-space: nowrap; }
 .hcp .bdg-g  { background: var(--green-l); color: var(--green-d); }
 .hcp .bdg-y  { background: #fef9c3; color: #78350f; }
@@ -194,7 +179,6 @@ const CSS = `
 .hcp .bdg-b  { background: #eff6ff; color: #1d4ed8; }
 .hcp .bdg-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; flex-shrink: 0; }
 
-/* ACTION BUTTONS */
 .hcp .act { padding: 5px 12px; border-radius: 7px; font-size: .72rem; font-weight: 700; cursor: pointer; border: 2px solid; font-family: 'Outfit', sans-serif; transition: all .14s; white-space: nowrap; }
 .hcp .act-ok  { background: var(--green-l); color: var(--green-d); border-color: #bbf7d0; }
 .hcp .act-ok:hover  { background: var(--green); color: #fff; border-color: var(--green); }
@@ -203,7 +187,6 @@ const CSS = `
 .hcp .act-pay { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(22,163,74,.3); animation: mpesa-glow 2s infinite; }
 .hcp .act-pay:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-/* PROOF LIGHTBOX */
 .hcp .proof-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .hcp .proof-lightbox img { max-width: 100%; max-height: 85vh; border-radius: 12px; object-fit: contain; }
 .hcp .proof-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,.1); border: 1.5px solid rgba(255,255,255,.2); color: #fff; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; }
@@ -211,7 +194,6 @@ const CSS = `
 .hcp .proof-thumb:hover { border-color: var(--yellow); transform: scale(1.08); }
 .hcp .proof-broken { width: 38px; height: 38px; border-radius: 7px; border: 2px dashed var(--border); background: var(--off); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .6rem; }
 
-/* M-PESA MODAL */
 .hcp .mpesa-steps { display: flex; flex-direction: column; gap: 14px; margin: 18px 0; }
 .hcp .mpesa-step { display: flex; align-items: flex-start; gap: 13px; padding: 14px; border-radius: 12px; background: var(--off); border: 1.5px solid var(--border); }
 .hcp .mpesa-num { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; background: var(--black); color: var(--yellow); display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 800; }
@@ -228,7 +210,6 @@ const CSS = `
 .hcp .mpesa-logo-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
 .hcp .mpesa-logo { background: #16a34a; color: #fff; border-radius: 8px; padding: 4px 12px; font-size: .78rem; font-weight: 900; letter-spacing: .05em; }
 
-/* REVIEWS */
 .hcp .rev-grid { display: flex; flex-direction: column; gap: 16px; }
 .hcp .rev-card { background: #fff; border: 2px solid var(--border); border-radius: 18px; padding: 24px; box-shadow: 0 6px 22px rgba(0,0,0,.05); position: relative; overflow: hidden; animation: fadeUp .35s ease both; }
 .hcp .rev-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--black), var(--yellow)); }
@@ -245,7 +226,6 @@ const CSS = `
 .hcp .rev-btn { background: linear-gradient(135deg, var(--yellow), var(--yellow-d)); color: var(--black); border: none; border-radius: 9px; padding: 9px 22px; font-weight: 800; font-size: .84rem; cursor: pointer; font-family: 'Outfit', sans-serif; transition: all .18s; box-shadow: 0 4px 14px rgba(255,215,0,.3); display: inline-flex; align-items: center; gap: 7px; }
 .hcp .rev-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,215,0,.4); }
 
-/* PAYMENTS */
 .hcp .pay-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 14px; margin-bottom: 20px; }
 .hcp .pay-stat { background: #fff; border: 2px solid rgba(255,215,0,.12); border-radius: 16px; padding: 20px; box-shadow: 0 4px 18px rgba(0,0,0,.05); transition: transform .2s; }
 .hcp .pay-stat:hover { transform: translateY(-3px); }
@@ -254,7 +234,6 @@ const CSS = `
 .hcp .pay-stat-v { font-size: 1.55rem; font-weight: 800; color: var(--text); margin-bottom: 3px; }
 .hcp .pay-stat-l { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 
-/* PROFILE */
 .hcp .prof-hero { background: linear-gradient(135deg, #0d0d0d, #1a1a2e); border: 1px solid rgba(255,215,0,.12); border-radius: 18px; padding: 28px; margin-bottom: 18px; position: relative; overflow: hidden; box-shadow: 0 18px 48px rgba(0,0,0,.2); animation: fadeUp .35s ease both; }
 .hcp .prof-hero::before { content: ''; position: absolute; top: -80px; right: -80px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(255,215,0,.08) 0%, transparent 65%); pointer-events: none; }
 .hcp .prof-top { position: relative; z-index: 1; display: flex; align-items: center; gap: 18px; margin-bottom: 24px; flex-wrap: wrap; }
@@ -275,18 +254,15 @@ const CSS = `
 .hcp .prof-item-lbl { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 2px; }
 .hcp .prof-item-val { font-size: .88rem; font-weight: 700; color: var(--text); word-break: break-word; }
 
-/* EMPTY */
 .hcp .empty { text-align: center; padding: 56px 20px; }
 .hcp .empty-icon { width: 66px; height: 66px; border-radius: 50%; background: var(--off); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.4rem; color: #cbd5e1; }
 .hcp .empty h3 { font-size: .97rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
 .hcp .empty p  { font-size: .83rem; color: var(--muted); }
 
-/* SPINNERS */
 .hcp .spinner { width: 16px; height: 16px; border: 2.5px solid rgba(0,0,0,.18); border-top-color: var(--black); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: middle; }
 .hcp .spinner-white { width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,.25); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: middle; }
 .hcp .spinner-lg { width: 32px; height: 32px; border: 3px solid rgba(245,158,11,.2); border-top-color: #f59e0b; border-radius: 50%; animation: spin .7s linear infinite; display: block; }
 
-/* MODAL */
 .hcp .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 800; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeUp .2s ease both; }
 .hcp .modal-box { background: #fff; border-radius: 20px; border: 2px solid rgba(255,215,0,.15); font-family: 'Outfit', sans-serif; box-shadow: 0 24px 80px rgba(0,0,0,.25); max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; }
 .hcp .modal-hd { border-bottom: 2px solid #f1f5f9; padding: 20px 26px; border-radius: 18px 18px 0 0; position: relative; }
@@ -309,7 +285,6 @@ const CSS = `
 .hcp .mbl-gold:hover  { filter: brightness(1.06); transform: translateY(-1px); }
 .hcp .modal-hr { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
 
-/* RESPONSIVE */
 @media (max-width: 992px) {
   .hcp .sb { display: none; }
   .hcp .topbar { display: flex; }
@@ -372,20 +347,15 @@ function SidebarContent({ client, tab, setTab, setSbOpen }) {
           </button>
         ))}
       </div>
-      <div className="sb-foot">
-        <Link to="/"><span className="nb-icon"><i className="fas fa-arrow-left"/></span>Back to site</Link>
-      </div>
     </>
   );
 }
 
-/* ── Proof thumbnails row ────────────────────────────────────────────────── */
 function ProofThumbs({ proofs, onOpen }) {
   if (!proofs?.length) return <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>;
   return (
     <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
       {proofs.slice(0, 3).map((img, ix) => {
-        // ✅ FIX: serializer returns image_url, NOT image
         const url = proofImgUrl(img);
         if (!url) return <div key={ix} className="proof-broken"><i className="fas fa-image"/></div>;
         return (
@@ -406,7 +376,6 @@ function ProofThumbs({ proofs, onOpen }) {
   );
 }
 
-/* ── Lightbox ────────────────────────────────────────────────────────────── */
 function Lightbox({ proofs, startIdx, onClose }) {
   const [idx, setIdx] = useState(startIdx);
   const url = proofImgUrl(proofs[idx]);
@@ -443,9 +412,6 @@ function Lightbox({ proofs, startIdx, onClose }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MAIN COMPONENT
-═══════════════════════════════════════════════════════════════════════════ */
 export default function HireCraftsmanPage() {
   const [tab, setTab]             = useState('browse');
   const [sbOpen, setSbOpen]       = useState(false);
@@ -458,27 +424,22 @@ export default function HireCraftsmanPage() {
   const [jobOk, setJobOk]         = useState(false);
   const [jobBusy, setJobBusy]     = useState(false);
   const [reviews, setReviews]     = useState({});
-
   const [quoteJob, setQuoteJob]   = useState(null);
 
-  // ── Payment state ─────────────────────────────────────────────────────────
   const [payJob,   setPayJob]   = useState(null);
   const [payPhone, setPayPhone] = useState('');
   const [payBusy,  setPayBusy]  = useState(false);
-  // payState: 'idle' | 'stk_sent' | 'polling' | 'complete' | 'failed'
   const [payState, setPayState] = useState('idle');
   const [payMsg,   setPayMsg]   = useState('');
   const pollRef = useRef(null);
 
-  // ── Lightbox state ────────────────────────────────────────────────────────
-  const [lightbox, setLightbox] = useState(null); // { proofs:[], idx:0 }
+  const [lightbox, setLightbox] = useState(null);
 
   const [jf, setJf] = useState({
     service:'', budget:'', schedule:'', location:'', address:'',
     description:'', isUrgent: false, media: null,
   });
 
-  // Clear poll on unmount
   useEffect(() => () => clearInterval(pollRef.current), []);
 
   useEffect(() => {
@@ -565,7 +526,7 @@ export default function HireCraftsmanPage() {
     } catch { alert(`Could not ${decision} quote.`); }
   };
 
-  // ── M-Pesa: STK push then poll every 3s ───────────────────────────────────
+  // ── M-Pesa: STK push then poll every 2s ───────────────────────────────────
   const initiateMpesa = async () => {
     const clean = payPhone.replace(/\D/g, '');
     if (!clean.match(/^(2547|2541|07|01)\d{7,8}$/)) {
@@ -582,38 +543,44 @@ export default function HireCraftsmanPage() {
       });
       setPayBusy(false);
       setPayState('stk_sent');
-      setPayMsg('check your phone and enter your M-Pesa PIN.');
+      setPayMsg('Check your phone and enter your M-Pesa PIN.');
 
-      // Poll every 3s up to 20 times (60s)
       let attempts = 0;
       pollRef.current = setInterval(async () => {
         attempts++;
         setPayState('polling');
         try {
           const { data } = await api.get(`/job-requests/${payJob.id}/pay-status/`);
-          const state = (data.payment_status || data.payment_state || '').toUpperCase();
-          if (state === 'COMPLETE') {
+          const txStatus = (data.payment_status || '').toUpperCase();
+
+          if (txStatus === 'COMPLETE') {
             clearInterval(pollRef.current);
             setPayState('complete');
             setPayMsg('Payment confirmed! The craftsman has been notified.');
             await fetchJobs(client.id);
             setTimeout(() => { setPayJob(null); setPayState('idle'); }, 3500);
-          } else if (state === 'FAILED') {
+
+          } else if (txStatus === 'FAIL' || txStatus === 'FAILED') {
             clearInterval(pollRef.current);
             setPayState('failed');
-            setPayMsg('Payment was not completed. Please try again.');
+            // ── Show the actual reason from the gateway ──
+            setPayMsg(data.failure_reason || 'Payment was not completed. Please try again.');
             await fetchJobs(client.id);
-          } else if (attempts >= 20) {
+
+          } else if (attempts >= 30) {
             clearInterval(pollRef.current);
             setPayState('failed');
             setPayMsg('Status unknown — check your M-Pesa messages and refresh the page.');
           }
-        } catch { /* network hiccup — keep polling */ }
-      }, 3000);
+        } catch {
+          // Network hiccup — keep polling
+        }
+      }, 2000);
 
     } catch (err) {
       setPayBusy(false);
       setPayState('failed');
+      // ── Show the actual error from the backend ──
       setPayMsg(err.response?.data?.detail || 'Payment initiation failed. Please try again.');
     }
   };
@@ -682,12 +649,10 @@ export default function HireCraftsmanPage() {
     <div className="hcp">
       <style>{CSS}</style>
 
-      {/* Lightbox */}
       {lightbox && (
         <Lightbox proofs={lightbox.proofs} startIdx={lightbox.idx} onClose={() => setLightbox(null)}/>
       )}
 
-      {/* Mobile topbar */}
       <div className="topbar">
         <button className="hamburger" onClick={() => setSbOpen(!sbOpen)}>
           <i className={`fas fa-${sbOpen ? 'times' : 'bars'}`}/>
@@ -722,7 +687,6 @@ export default function HireCraftsmanPage() {
                   {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-
               {filtered.length === 0 ? (
                 <div className="card"><div className="empty">
                   <div className="empty-icon"><i className="fas fa-search"/></div>
@@ -862,7 +826,6 @@ export default function HireCraftsmanPage() {
                         const isQS = job.status === 'Quote Submitted';
                         const craftsmanName   = getJobCraftsmanName(job) || (job.craftsman && typeof job.craftsman === 'number' ? `Craftsman #${job.craftsman}` : '—');
                         const craftsmanAvatar = getAvatar(job.craftsman) || avi(craftsmanName);
-                        // ✅ proof_images is an array of {id, image_url, uploaded_at}
                         const proofs = job.proof_images || [];
                         return (
                           <tr key={job.id}>
@@ -895,11 +858,7 @@ export default function HireCraftsmanPage() {
                               ) : <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>}
                             </td>
                             <td>
-                              {/* ✅ FIX: use image_url field, display via proofImgUrl() */}
-                              <ProofThumbs
-                                proofs={proofs}
-                                onOpen={(p, i) => setLightbox({ proofs: p, idx: i })}
-                              />
+                              <ProofThumbs proofs={proofs} onOpen={(p, i) => setLightbox({ proofs: p, idx: i })}/>
                             </td>
                             <td>
                               <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
@@ -1031,7 +990,6 @@ export default function HireCraftsmanPage() {
                                   <span className="bdg-dot"/>{paid ? 'Paid' : 'Pending'}
                                 </span>
                               </td>
-                              
                             </tr>
                           );
                         })}
@@ -1160,7 +1118,7 @@ export default function HireCraftsmanPage() {
             </div>
             <div className="modal-body">
 
-              {/* ── COMPLETE ─────────────────────────────────────────────── */}
+              {/* ── COMPLETE ── */}
               {payState === 'complete' && (
                 <div style={{ textAlign:'center', padding:'24px 0' }}>
                   <div style={{ width:64, height:64, borderRadius:'50%', background:'#f0fdf4', border:'2px solid #22c55e', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
@@ -1173,13 +1131,14 @@ export default function HireCraftsmanPage() {
                 </div>
               )}
 
-              {/* ── FAILED ───────────────────────────────────────────────── */}
+              {/* ── FAILED ── */}
               {payState === 'failed' && (
                 <div style={{ textAlign:'center', padding:'24px 0' }}>
                   <div style={{ width:64, height:64, borderRadius:'50%', background:'#fef2f2', border:'2px solid #fca5a5', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
                     <i className="fas fa-times" style={{ fontSize:'1.7rem', color:'#b91c1c' }}/>
                   </div>
                   <p style={{ fontWeight:800, fontSize:'1.05rem', color:'#1e293b', marginBottom:8 }}>Payment not completed</p>
+                  {/* ── Shows the actual gateway reason e.g. "The balance is insufficient" ── */}
                   <p style={{ fontSize:'.85rem', color:'#64748b', lineHeight:1.7, marginBottom:18 }}>{payMsg}</p>
                   <button className="mpesa-btn" onClick={() => setPayState('idle')} style={{ maxWidth:240, margin:'0 auto' }}>
                     <i className="fas fa-redo"/> Try again
@@ -1187,7 +1146,7 @@ export default function HireCraftsmanPage() {
                 </div>
               )}
 
-              {/* ── WAITING FOR PIN ───────────────────────────────────────── */}
+              {/* ── WAITING FOR PIN ── */}
               {(payState === 'stk_sent' || payState === 'polling') && (
                 <div style={{ textAlign:'center', padding:'24px 0' }}>
                   <div style={{ width:64, height:64, borderRadius:'50%', background:'#fffbeb', border:'2px solid #fde68a', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
@@ -1199,11 +1158,11 @@ export default function HireCraftsmanPage() {
                   <p style={{ fontSize:'.85rem', color:'#64748b', lineHeight:1.7 }}>
                     {payMsg || 'Enter your M-Pesa PIN when prompted.'}
                   </p>
-                  <p style={{ fontSize:'.75rem', color:'#94a3b8', marginTop:10 }}>Checking automatically every 3 seconds…</p>
+                  <p style={{ fontSize:'.75rem', color:'#94a3b8', marginTop:10 }}>Checking automatically every 2 seconds…</p>
                 </div>
               )}
 
-              {/* ── IDLE: enter phone ─────────────────────────────────────── */}
+              {/* ── IDLE: enter phone ── */}
               {payState === 'idle' && (
                 <>
                   <div className="mpesa-logo-row">
@@ -1239,17 +1198,17 @@ export default function HireCraftsmanPage() {
                       value={payPhone} onChange={e => setPayPhone(e.target.value.replace(/\D/g, ''))} maxLength={12}/>
                   </div>
                   <button className="mpesa-btn" onClick={initiateMpesa} disabled={payBusy}>
-  {payBusy
-    ? <><span className="spinner-white"/>Sending</>
-    : <>
-        <svg width="100" height="24" viewBox="0 0 260 54" fill="none" style={{flexShrink:0, display:'inline-block', verticalAlign:'middle'}}>
-          <text x="2" y="44" fontFamily="Arial Black, sans-serif" fontSize="48" fontWeight="900" fill="#ffffff">M-</text>
-          <text x="80" y="44" fontFamily="Arial Black, sans-serif" fontSize="48" fontWeight="900" fill="#e8ff00">PESA</text>
-        </svg>
-        Send · KSh {Number(payJob.budget).toLocaleString()}
-      </>
-  }
-</button>
+                    {payBusy
+                      ? <><span className="spinner-white"/>Sending</>
+                      : <>
+                          <svg width="100" height="24" viewBox="0 0 260 54" fill="none" style={{flexShrink:0, display:'inline-block', verticalAlign:'middle'}}>
+                            <text x="2" y="44" fontFamily="Arial Black, sans-serif" fontSize="48" fontWeight="900" fill="#ffffff">M-</text>
+                            <text x="80" y="44" fontFamily="Arial Black, sans-serif" fontSize="48" fontWeight="900" fill="#e8ff00">PESA</text>
+                          </svg>
+                          Send · KSh {Number(payJob.budget).toLocaleString()}
+                        </>
+                    }
+                  </button>
                   <p className="mpesa-note">
                     Secure payment via Safaricom M-Pesa.<br/>
                     Platform fee: KSh {Math.round(Number(payJob.budget) * .1).toLocaleString()} (10%)

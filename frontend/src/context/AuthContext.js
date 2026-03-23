@@ -1,21 +1,23 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import api from "../api/axiosClient"; // your axios instance
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import axios from "axios";
+import api, { API_BASE_URL } from "../api/axiosClient";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true); // wait until we fetch
+  const [user, setUser]       = useState(null);
+  const [loading, setLoading] = useState(true); // renamed: matches ProtectedRoute
 
-  // Fetch logged-in user on mount using cookies
   const fetchUser = async () => {
     try {
-      const res = await api.get("/me/"); 
+      const res = await api.get("/me/");
       setUser(res.data);
     } catch (err) {
+      // Interceptor already attempted a refresh before this catch runs.
+      // If we're here, both access token and refresh token are expired.
       setUser(null);
     } finally {
-      setLoadingUser(false);
+      setLoading(false); // only fires after refresh attempt is complete
     }
   };
 
@@ -24,21 +26,21 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async () => {
-    // After successful login, fetch user from backend
     await fetchUser();
   };
 
   const logout = async () => {
     try {
-      await api.post("/logout/"); 
+      await api.post("/logout/");
     } catch (err) {
       console.error("Logout failed", err);
     }
     setUser(null);
   };
 
+  // Expose 'loading' (not 'loadingUser') to match ProtectedRoute
   return (
-    <AuthContext.Provider value={{ user, login, logout, loadingUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

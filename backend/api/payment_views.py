@@ -1,5 +1,13 @@
-import logging
+# api/payment_views.py
+"""
+URL wiring (urls.py):
+  from .payment_views import ClientPayJobView, PollPaymentStatusView, ConfirmPaymentReceivedView
+  path("job-requests/<int:pk>/pay/",            ClientPayJobView.as_view()),
+  path("job-requests/<int:pk>/pay-status/",      PollPaymentStatusView.as_view()),
+  path("job-requests/<int:pk>/confirm-payment/", ConfirmPaymentReceivedView.as_view()),
+"""
 
+import logging
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -7,7 +15,7 @@ from rest_framework.views import APIView
 
 from .models import JobRequest
 from .serializers import JobRequestSerializer
-from .intasend_service import initiate_stk_push, check_payment_status
+from .intasend_service import initiate_stk_push, check_payment_status, PLATFORM_WALLET_FALLBACK
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +32,6 @@ def _get_job(pk):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class ClientPayJobView(APIView):
-    """
-    Body (JSON): { "phone": "0712345678", "amount": 1000 }
-    amount is optional — defaults to job.budget.
-    phone  is optional — defaults to user.phone_number.
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -42,7 +45,7 @@ class ClientPayJobView(APIView):
         if (job.status or "").lower() == "paid":
             return Response({"detail": "Job already paid."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ── Phone ─────────────────────────────────────────────────────────────
+        # ── Phone ──────────────────────────────────────────────────────────
         phone = (
             request.data.get("phone")
             or request.data.get("phone_number")
@@ -57,7 +60,7 @@ class ClientPayJobView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # ── Amount ────────────────────────────────────────────────────────────
+        # ── Amount ─────────────────────────────────────────────────────────
         try:
             amount = float(request.data.get("amount") or job.budget or 0)
         except (ValueError, TypeError):
@@ -69,11 +72,24 @@ class ClientPayJobView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # ── STK push ──────────────────────────────────────────────────────────
+        # ── Resolve craftsman wallet ────────────────────────────────────────
+        craftsman = job.craftsman
+        if craftsman and getattr(craftsman, "wallet_id", None):
+            wallet_id = craftsman.wallet_id
+            logger.info(f"[Payment] Job #{job.id} → craftsman #{craftsman.id} wallet #{wallet_id}")
+        else:
+            wallet_id = PLATFORM_WALLET_FALLBACK
+            logger.warning(
+                f"[Payment] Job #{job.id} — craftsman has no wallet_id, "
+                f"falling back to platform wallet #{wallet_id}"
+            )
+
+        # ── STK push ───────────────────────────────────────────────────────
         result = initiate_stk_push(
             phone_number=phone,
             amount=amount,
             job_id=job.id,
+            wallet_id=wallet_id,
             narrative=f"KaaKazini – {job.service or 'Service'}",
         )
 
@@ -84,42 +100,41 @@ class ClientPayJobView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # ── Save transaction ID, update status ────────────────────────────────
         transaction_id = result.get("transaction_id", "")
         if not transaction_id:
             logger.error(
                 f"[Payment] STK succeeded but transaction_id is empty! "
-                f"Full gateway response: {result.get('raw')}"
+                f"Gateway raw response: {result.get('raw')}"
             )
             return Response(
-                {"detail": "Payment sent but transaction ID missing — please contact support."},
+                {"detail": "Payment prompt sent but transaction ID missing — contact support."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         job.intasend_invoice_id = transaction_id
         job.status = JobRequest.STATUS_APPROVED
         job.save(update_fields=["intasend_invoice_id", "status"])
-
-        # Verify it actually saved
         job.refresh_from_db()
+
         logger.info(
-            f"[Payment] STK sent ✓ Job #{job.id} | "
-            f"tx={job.intasend_invoice_id} | KES {amount}"
+            f"[Payment] STK sent ✓ Job #{job.id} | tx={job.intasend_invoice_id} | KES {amount}"
         )
 
-        return Response(
-            {
-                "detail":         "M-Pesa prompt sent. Enter your PIN on your phone.",
-                "transaction_id": job.intasend_invoice_id,
-                "amount":         amount,
-                "job":            JobRequestSerializer(job).data,
-            },
-            status=status.HTTP_200_OK,
-        )
+        return Response({
+            "detail":         "M-Pesa prompt sent. Enter your PIN on your phone.",
+            "transaction_id": job.intasend_invoice_id,
+            "amount":         amount,
+            "job":            JobRequestSerializer(job).data,
+        }, status=status.HTTP_200_OK)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2.  POLL STATUS  —  GET /job-requests/{pk}/pay-status/
+#
+#     Frontend polls this every 2 seconds.
+#     Response always contains:
+#       payment_status: "COMPLETE" | "FAIL" | "PENDING"
+#       failure_reason: human-readable string from gateway (only on FAIL)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class PollPaymentStatusView(APIView):
@@ -137,25 +152,34 @@ class PollPaymentStatusView(APIView):
             )
 
         result = check_payment_status(job.intasend_invoice_id)
+        failure_reason = ""
 
         if result["success"]:
-            tx_status = result["status"]
+            tx_status = result["status"]   # COMPLETE | FAIL | PENDING
 
             if tx_status == "COMPLETE" and (job.status or "").lower() != "paid":
                 job.status = JobRequest.STATUS_PAID
                 job.save(update_fields=["status"])
-                logger.info(f"[Poll] Job #{job.id} → PAID")
+                logger.info(f"[Poll] Job #{job.id} → marked PAID ✓")
 
-            elif tx_status == "FAILED":
+            elif tx_status == "FAIL":
+                failure_reason = (
+                    result.get("raw", {}).get("data", {}).get("failureReason", "")
+                    or "Payment was not completed."
+                )
                 job.status = JobRequest.STATUS_QUOTE_APPROVED
                 job.intasend_invoice_id = ""
                 job.save(update_fields=["status", "intasend_invoice_id"])
-                logger.info(f"[Poll] Job #{job.id} payment FAILED — reset to Quote Approved")
+                logger.info(
+                    f"[Poll] Job #{job.id} payment FAILED — "
+                    f"reason: {failure_reason} — reset to Quote Approved"
+                )
 
         return Response({
             "job_id":         pk,
             "transaction_id": job.intasend_invoice_id,
             "payment_status": result.get("status", "PENDING"),
+            "failure_reason": failure_reason,
             "job_status":     job.status,
             "success":        result["success"],
         })

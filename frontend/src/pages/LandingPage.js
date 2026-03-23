@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; // ✅ added
 import heroImage  from '../assets/craftOnline.jpg';
 import heroBottom from '../assets/hero-bottom.svg';
 import CoverFlow  from '../components/CoverFlow.js';
@@ -36,23 +37,19 @@ const imgUrl = (path) => {
 
 const PLACEHOLDER = 'https://placehold.co/400x220/e8f5e9/198754?text=No+Image';
 
-// ─── Image helpers ────────────────────────────────────────────────────────────
-// Resolve the best cover/work photo from a craftsman object.
-// Backend stores work photos in gallery_images[].image_url — NOT services[].image
 const getCover = (c) => imgUrl(
-  c?.gallery_images?.[0]?.image_url ||  // ← real backend field
-  c?.services?.[0]?.image_url       ||  // service-level image if ever added
-  c?.services?.[0]?.image           ||  // older field name
-  c?.service_image                   ||  // legacy
+  c?.gallery_images?.[0]?.image_url ||
+  c?.services?.[0]?.image_url       ||
+  c?.services?.[0]?.image           ||
+  c?.service_image                   ||
   null
 );
 
-// Resolve profile photo — backend returns profile_url (not profile_image)
 const getAvatar = (c) => imgUrl(
-  c?.profile_url   ||  // ← real backend field
-  c?.profile       ||  // raw path
-  c?.profile_image ||  // older field name
-  c?.avatar        ||  // legacy
+  c?.profile_url   ||
+  c?.profile       ||
+  c?.profile_image ||
+  c?.avatar        ||
   null
 );
 
@@ -89,14 +86,11 @@ function SkeletonCard() {
   );
 }
 
-/* ─── Craftsman Search Result Card ─── */
 function CraftsmanCard({ service }) {
-  // ✅ FIXED: uses gallery_images[0].image_url via getCover helper
   const cover  = getCover(service);
   const avatar = getAvatar(service);
   const id     = service.slug || service.id || '';
   const rating = Number(service.average_rating) || 0;
-  // ✅ FIXED: backend returns full_name, not name
   const name   = service.full_name || service.name || 'Craftsman';
   return (
     <div className="kk-card">
@@ -135,9 +129,7 @@ function CraftsmanCard({ service }) {
           </p>
         )}
         {id
-          ? <Link to={`/craftsmen/${id}`} className="kk-btn-hire-sm">
-              View Profile &amp; Hire
-            </Link>
+          ? <Link to={`/craftsmen/${id}`} className="kk-btn-hire-sm">View Profile &amp; Hire</Link>
           : <span className="kk-btn-hire-sm kk-btn-muted">Unavailable</span>
         }
       </div>
@@ -146,7 +138,8 @@ function CraftsmanCard({ service }) {
 }
 
 /* ─── Service Group Modal ─── */
-function ServiceModal({ isOpen, onClose, serviceName, craftsmen, coverImg, navigate }) {
+// ✅ now receives `user` prop so the Hire button routes correctly
+function ServiceModal({ isOpen, onClose, serviceName, craftsmen, coverImg, navigate, user }) {
   const panelRef = useRef(null);
   useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [isOpen]);
   useEffect(() => {
@@ -155,6 +148,9 @@ function ServiceModal({ isOpen, onClose, serviceName, craftsmen, coverImg, navig
     return () => window.removeEventListener('keydown', fn);
   }, [isOpen, onClose]);
   if (!isOpen) return null;
+
+  // ✅ Smart hire destination: client goes to /hire, guest goes to /HireLogin
+  const hireDestination = user?.role === 'client' ? '/hire' : '/HireLogin';
 
   return (
     <div className="kk-modal-backdrop" onClick={e=>{ if(panelRef.current && !panelRef.current.contains(e.target)) onClose(); }}
@@ -182,7 +178,6 @@ function ServiceModal({ isOpen, onClose, serviceName, craftsmen, coverImg, navig
           ) : (
             <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
               {craftsmen.map((c, idx) => {
-                // ✅ FIXED: uses gallery_images[0].image_url via getCover helper
                 const src = getCover(c) || PLACEHOLDER;
                 const av  = getAvatar(c);
                 const cId = c.slug || c.id || '';
@@ -227,7 +222,8 @@ function ServiceModal({ isOpen, onClose, serviceName, craftsmen, coverImg, navig
                             <button className="kk-modal-btn-outline" onClick={()=>{ onClose(); setTimeout(()=>navigate(`/craftsmen/${cId}`),50); }}>
                               <i className="fas fa-user me-1"/>Profile
                             </button>
-                            <button className="kk-modal-btn-hire" onClick={()=>{ onClose(); setTimeout(()=>navigate('/HireLogin'),50); }}>
+                            {/* ✅ Fixed: routes to /hire if already a client, /HireLogin if guest */}
+                            <button className="kk-modal-btn-hire" onClick={()=>{ onClose(); setTimeout(()=>navigate(hireDestination),50); }}>
                               <i className="fas fa-hard-hat me-1"/>Hire {nm.split(' ')[0]}
                             </button>
                           </div>
@@ -250,6 +246,8 @@ function ServiceModal({ isOpen, onClose, serviceName, craftsmen, coverImg, navig
 ═══════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // ✅ get auth state
+
   const [craftsmen,      setCraftsmen]      = useState([]);
   const [loadingCraft,   setLoadingCraft]   = useState(true);
   const [query,          setQuery]          = useState('');
@@ -320,7 +318,6 @@ export default function LandingPage() {
       return;
     }
     const out = craftsmen.filter(s => {
-      // ✅ FIXED: check full_name (backend field) in addition to name
       const n   = (s.full_name || s.name || '').toLowerCase();
       const sv  = (s.primary_service  || '').toLowerCase();
       const lo  = (s.location         || '').toLowerCase();
@@ -354,6 +351,12 @@ export default function LandingPage() {
     {comment:"The tailor made my custom outfit exactly as I described. Very pleased with the quality.",rating:4.5,reviewer:"Linda A.",craftsman_name:"Grace Wanjiku",craftsman_image:'',trade:"Tailoring",location:"Kisumu",_i:2},
   ];
   const shownReviews = (!reviewsLoading && !reviewsError && reviews.length) ? reviews : staticReviews;
+
+  // ✅ Derived auth state used throughout the page
+  const isLoggedIn      = !!user;
+  const isCraftsman     = user?.role === 'craftsman';
+  const isClient        = user?.role === 'client';
+  const dashboardRoute  = isCraftsman ? '/craftsman-dashboard' : isClient ? '/hire' : '/HireLogin';
 
   return (
     <>
@@ -389,16 +392,19 @@ export default function LandingPage() {
         .kk-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.18) 0%,rgba(0,0,0,.42) 100%);}
         .kk-hero-content{position:relative;z-index:2;max-width:780px;padding:0 24px;animation:floatUp .9s ease both;}
         .kk-hero-eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(255,215,0,.18);border:1.5px solid rgba(255,215,0,.5);border-radius:50px;padding:6px 18px;font-size:.75rem;font-weight:700;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px;}
-        .kk-hero-eyebrow-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);display:inline-block;}
         .kk-hero-title{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,5vw,3.6rem);font-weight:800;line-height:1.15;margin:0 0 16px;}
         .kk-hero-sub{font-size:1.1rem;font-weight:400;margin:0 0 32px;color:rgba(255,255,255,.88);line-height:1.8;max-width:560px;margin-left:auto;margin-right:auto;}
         .kk-hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
         .kk-hero-scroll{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;color:rgba(255,255,255,.6);font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;z-index:2;}
         .kk-hero-scroll-line{width:1px;height:36px;background:rgba(255,255,255,.3);}
+        .kk-hero-logged-banner{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);backdrop-filter:blur(8px);border-radius:50px;padding:10px 22px;font-size:.9rem;font-weight:600;color:#fff;margin-bottom:20px;}
+        .kk-hero-logged-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#1a1a2e;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;flex-shrink:0;}
         .kk-btn-gold{display:inline-flex;align-items:center;gap:7px;background:var(--gold);color:#1a1a2e;border:none;border-radius:12px;padding:14px 28px;font-weight:700;font-size:.93rem;text-decoration:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 18px rgba(255,215,0,.35);}
         .kk-btn-gold:hover{background:var(--gold-d);color:#1a1a2e;transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,215,0,.45);}
         .kk-btn-green-outline{display:inline-flex;align-items:center;gap:7px;background:var(--gold);color:#1a1a2e;border:2px solid var(--gold);border-radius:12px;padding:12px 26px;font-weight:700;font-size:.93rem;text-decoration:none;cursor:pointer;transition:all .2s;}
         .kk-btn-green-outline:hover{background:var(--gold-d);color:#1a1a2e;border-color:var(--gold-d);transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,215,0,.45);}
+        .kk-btn-white-outline{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.15);color:#fff;border:2px solid rgba(255,255,255,.6);border-radius:12px;padding:12px 26px;font-weight:700;font-size:.93rem;text-decoration:none;cursor:pointer;transition:all .2s;backdrop-filter:blur(4px);}
+        .kk-btn-white-outline:hover{background:rgba(255,255,255,.28);color:#fff;transform:translateY(-2px);}
         .kk-btn-hire-sm{display:block;text-align:center;background:var(--green);color:#fff;border:none;border-radius:10px;padding:11px 0;font-weight:700;font-size:.86rem;text-decoration:none;cursor:pointer;transition:all .18s;margin-top:auto;}
         .kk-btn-hire-sm:hover{background:var(--green-d);color:#fff;transform:translateY(-1px);}
         .kk-btn-muted{background:#e4e4e4!important;color:#aaa!important;cursor:default!important;transform:none!important;}
@@ -583,22 +589,54 @@ export default function LandingPage() {
         .kk-empty p{color:var(--muted);font-size:.9rem;}
       `}</style>
 
-      <ServiceModal isOpen={modalOpen} onClose={closeModal} serviceName={modalSvcName} craftsmen={modalList} coverImg={modalCover} navigate={navigate}/>
+      {/* ✅ Pass user down so modal knows where to send the Hire button */}
+      <ServiceModal isOpen={modalOpen} onClose={closeModal} serviceName={modalSvcName} craftsmen={modalList} coverImg={modalCover} navigate={navigate} user={user}/>
 
+      {/* ━━━━━━━━━━ HERO ━━━━━━━━━━ */}
       <section className="kk-hero" id="top">
         <div className="kk-hero-bg" style={{backgroundImage:`url(${heroImage})`}} aria-hidden="true"/>
         <div className="kk-hero-overlay" aria-hidden="true"/>
         <div className="kk-hero-content">
+
+          {/* ✅ Logged-in greeting banner */}
+          {isLoggedIn && (
+            <div className="kk-hero-logged-banner">
+              <span className="kk-hero-logged-avatar">
+                {(user.full_name || user.name || 'U').charAt(0).toUpperCase()}
+              </span>
+              Welcome back, {user.full_name?.split(' ')[0] || user.name || 'there'}!
+            </div>
+          )}
+
           <h1 className="kk-hero-title">Find a Trusted Craftsman<br/>for Any Job Near You</h1>
-          <p className="kk-hero-sub">Plumbers, electricians, carpenters, tailors, artisans and more — all verified and ready to work in your county. Search, view their portfolio, and hire in minutes.</p>
+          <p className="kk-hero-sub">Plumbers, electricians, carpenters, tailors, artisans and more — all verified and ready to work in your county.</p>
+
           <div className="kk-hero-btns">
-            <Link to="/craftsmen" className="kk-btn-gold">Find a Craftsman Now</Link>
-            <Link to="/signup" className="kk-btn-green-outline">Join as Craftsman — Free</Link>
+            {/* ✅ Auth-aware hero buttons */}
+            {!isLoggedIn && (
+              <>
+                <Link to="/craftsmen" className="kk-btn-gold"><i className="fas fa-search me-1"/>Find a Craftsman Now</Link>
+                <Link to="/signup" className="kk-btn-green-outline"><i className="fas fa-user-plus me-1"/>Join as Craftsman — Free</Link>
+              </>
+            )}
+            {isCraftsman && (
+              <>
+                <Link to="/craftsman-dashboard" className="kk-btn-gold"><i className="fas fa-th-large me-1"/>Go to My Dashboard</Link>
+                <Link to="/craftsmen" className="kk-btn-white-outline"><i className="fas fa-search me-1"/>Browse Craftsmen</Link>
+              </>
+            )}
+            {isClient && (
+              <>
+                <Link to="/hire" className="kk-btn-gold"><i className="fas fa-hard-hat me-1"/>Hire a Craftsman</Link>
+                <Link to="/craftsmen" className="kk-btn-white-outline"><i className="fas fa-search me-1"/>Browse Craftsmen</Link>
+              </>
+            )}
           </div>
         </div>
         <div className="kk-hero-scroll" aria-hidden="true"><div className="kk-hero-scroll-line"/>Scroll</div>
       </section>
 
+      {/* ━━━━━━━━━━ HOW IT WORKS ━━━━━━━━━━ */}
       <section className="kk-hiw" id="how-it-works" aria-label="How KaaKazini works">
         <div className="container">
           <div className="text-center mb-5" data-aos="fade-up">
@@ -625,6 +663,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ✅ Two-column CTA — hide the "Join as Craftsman" card if user is already a craftsman */}
       <section style={{background:'#fff',borderTop:'3px solid var(--green-l)',padding:'40px 0'}}>
         <div className="container">
           <div className="row g-4 align-items-stretch justify-content-center">
@@ -641,8 +680,9 @@ export default function LandingPage() {
                   <li>Click <strong style={{color:'var(--green)'}}>Hire Now</strong> and describe your job</li>
                   <li>Rate after the job is done</li>
                 </ol>
-                <Link to="/craftsmen" className="kk-btn-gold" style={{borderRadius:10,marginTop:'auto',textAlign:'center',padding:'12px 0'}}>
-                  <i className="fas fa-search me-2"/>Browse Craftsmen
+                {/* ✅ Client goes directly to /hire, guest goes to /craftsmen */}
+                <Link to={isClient ? '/hire' : '/craftsmen'} className="kk-btn-gold" style={{borderRadius:10,marginTop:'auto',textAlign:'center',padding:'12px 0'}}>
+                  <i className="fas fa-search me-2"/>{isClient ? 'Go to My Hire Dashboard' : 'Browse Craftsmen'}
                 </Link>
               </div>
             </div>
@@ -656,17 +696,30 @@ export default function LandingPage() {
                 <div style={{width:48,height:48,borderRadius:12,background:'var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:4}}>
                   <i className="fas fa-hard-hat" style={{color:'#1a1a2e',fontSize:'1.2rem'}}/>
                 </div>
-                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1.15rem',fontWeight:800,color:'var(--text)',margin:0}}>I'm a Craftsman — Join Free</h3>
-                <p style={{fontSize:'.88rem',color:'var(--muted)',lineHeight:1.75,margin:0}}>Create your free profile in minutes. Once approved by our team, you'll appear on the platform and start receiving hire requests from clients across Kenya.</p>
-                <ol style={{fontSize:'.84rem',color:'#4a5568',paddingLeft:20,margin:0,lineHeight:2}}>
-                  <li>Click <strong style={{color:'#c47800'}}>Register below</strong> — it's completely free</li>
-                  <li>Fill in your trade, location &amp; description</li>
-                  <li>Upload your portfolio photos</li>
-                  <li>Wait for approval (usually 1–2 days)</li>
-                </ol>
-                <Link to="/signup" style={{display:'block',background:'var(--gold)',color:'#1a1a2e',border:'none',borderRadius:10,padding:'12px 0',fontWeight:700,fontSize:'.9rem',textDecoration:'none',textAlign:'center',marginTop:'auto',transition:'all .2s'}}>
-                  <i className="fas fa-user-plus me-2"/>Register as Craftsman — Free
-                </Link>
+                {/* ✅ Show different content if already a craftsman */}
+                {isCraftsman ? (
+                  <>
+                    <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1.15rem',fontWeight:800,color:'var(--text)',margin:0}}>Welcome Back, {user.full_name?.split(' ')[0] || 'Craftsman'}!</h3>
+                    <p style={{fontSize:'.88rem',color:'var(--muted)',lineHeight:1.75,margin:0}}>Your profile is live on the platform. Manage your jobs, update your portfolio, and track your earnings from your dashboard.</p>
+                    <Link to="/craftsman-dashboard" style={{display:'block',background:'var(--gold)',color:'#1a1a2e',border:'none',borderRadius:10,padding:'12px 0',fontWeight:700,fontSize:'.9rem',textDecoration:'none',textAlign:'center',marginTop:'auto',transition:'all .2s'}}>
+                      <i className="fas fa-th-large me-2"/>Go to My Dashboard
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1.15rem',fontWeight:800,color:'var(--text)',margin:0}}>I'm a Craftsman — Join Free</h3>
+                    <p style={{fontSize:'.88rem',color:'var(--muted)',lineHeight:1.75,margin:0}}>Create your free profile in minutes. Once approved by our team, you'll appear on the platform and start receiving hire requests from clients across Kenya.</p>
+                    <ol style={{fontSize:'.84rem',color:'#4a5568',paddingLeft:20,margin:0,lineHeight:2}}>
+                      <li>Click <strong style={{color:'#c47800'}}>Register below</strong> — it's completely free</li>
+                      <li>Fill in your trade, location &amp; description</li>
+                      <li>Upload your portfolio photos</li>
+                      <li>Wait for approval (usually 1–2 days)</li>
+                    </ol>
+                    <Link to="/signup" style={{display:'block',background:'var(--gold)',color:'#1a1a2e',border:'none',borderRadius:10,padding:'12px 0',fontWeight:700,fontSize:'.9rem',textDecoration:'none',textAlign:'center',marginTop:'auto',transition:'all .2s'}}>
+                      <i className="fas fa-user-plus me-2"/>Register as Craftsman — Free
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -675,6 +728,7 @@ export default function LandingPage() {
 
       <div style={{background:`url(${heroBottom}) no-repeat center center/cover`,height:'60px',width:'100%'}} aria-hidden="true"/>
 
+      {/* ━━━━━━━━━━ STATS ━━━━━━━━━━ */}
       <section className="kk-stats" id="impact" aria-label="Platform stats">
         <div className="container">
           <div className="text-center mb-5" data-aos="fade-up">
@@ -700,6 +754,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ━━━━━━━━━━ SEARCH ━━━━━━━━━━ */}
       <section className="kk-search-section" aria-label="Search for craftsmen">
         <div className="container">
           <div className="text-center mb-4" data-aos="fade-up">
@@ -775,6 +830,7 @@ export default function LandingPage() {
         </section>
       )}
 
+      {/* ━━━━━━━━━━ SERVICES ━━━━━━━━━━ */}
       <section className="kk-services" id="services" aria-label="Browse by trade">
         <div className="container">
           <div className="text-center mb-5" data-aos="fade-up">
@@ -784,12 +840,10 @@ export default function LandingPage() {
 
           <CoverFlow/>
 
-          {/* Craftsmen scrolling pills */}
           {!loadingCraft && craftsmen.length > 0 && (
             <div className="kk-craft-track-wrap mt-4 mb-2">
               <div className="kk-craft-track">
                 {[...craftsmen,...craftsmen].map((c, i) => {
-                  // ✅ FIXED: profile_url is the real backend field
                   const profileImg = getAvatar(c);
                   const svcImg     = getCover(c);
                   const photo      = profileImg || svcImg || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.full_name||c.name||'C')}&background=e8f5e9&color=198754&size=88`;
@@ -816,7 +870,6 @@ export default function LandingPage() {
             <div className="kk-svc-track-wrap mt-3">
               <div className="kk-svc-track">
                 {[...Object.entries(grouped),...Object.entries(grouped)].map(([tradeName, group], idx) => {
-                  // ✅ FIXED: find first craftsman in group that has a gallery image
                   const srcCraftsman = group.find(c =>
                     c.gallery_images?.[0]?.image_url ||
                     c.services?.[0]?.image_url ||
@@ -862,6 +915,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ━━━━━━━━━━ HIRE SECTION ━━━━━━━━━━ */}
       <section className="kk-hire" aria-label="Hire craftsmen">
         <div className="container">
           <div className="row align-items-center g-5">
@@ -874,7 +928,17 @@ export default function LandingPage() {
               </p>
               <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
                 <Link to="/craftsmen" className="kk-btn-gold" style={{borderRadius:11}}><i className="fas fa-search me-2"/>Find a Craftsman</Link>
-                <Link to="/signup" style={{display:'inline-flex',alignItems:'center',gap:7,background:'transparent',color:'var(--green)',border:'2px solid var(--green)',borderRadius:11,padding:'12px 22px',fontWeight:700,fontSize:'.9rem',textDecoration:'none',transition:'all .2s'}}><i className="fas fa-user-plus"/>Join as Craftsman</Link>
+                {/* ✅ Only show "Join as Craftsman" to non-craftsmen */}
+                {!isCraftsman && (
+                  <Link to="/signup" style={{display:'inline-flex',alignItems:'center',gap:7,background:'transparent',color:'var(--green)',border:'2px solid var(--green)',borderRadius:11,padding:'12px 22px',fontWeight:700,fontSize:'.9rem',textDecoration:'none',transition:'all .2s'}}>
+                    <i className="fas fa-user-plus"/>Join as Craftsman
+                  </Link>
+                )}
+                {isCraftsman && (
+                  <Link to="/craftsman-dashboard" style={{display:'inline-flex',alignItems:'center',gap:7,background:'transparent',color:'var(--green)',border:'2px solid var(--green)',borderRadius:11,padding:'12px 22px',fontWeight:700,fontSize:'.9rem',textDecoration:'none',transition:'all .2s'}}>
+                    <i className="fas fa-th-large"/>My Dashboard
+                  </Link>
+                )}
               </div>
             </div>
             <div className="col-md-6" data-aos="fade-left">
@@ -888,6 +952,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ━━━━━━━━━━ ABOUT ━━━━━━━━━━ */}
       <section className="kk-about" id="about" aria-label="About KaaKazini">
         <div className="container">
           <div className="text-center mb-5" data-aos="fade-up">
@@ -915,6 +980,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ━━━━━━━━━━ TESTIMONIALS ━━━━━━━━━━ */}
       <section className="kk-testi" aria-label="Client testimonials">
         <div className="container">
           <div className="text-center mb-5" data-aos="fade-up">
@@ -958,6 +1024,7 @@ export default function LandingPage() {
         )}
       </section>
 
+      {/* ━━━━━━━━━━ FAQ ━━━━━━━━━━ */}
       <section className="kk-faq" id="faq" aria-label="FAQ">
         <div className="container">
           <div className="text-center mb-5" data-aos="fade-up">
@@ -1006,6 +1073,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ━━━━━━━━━━ FOOTER ━━━━━━━━━━ */}
       <footer className="kk-footer" role="contentinfo">
         <div className="container">
           <div className="row g-5">
@@ -1014,7 +1082,9 @@ export default function LandingPage() {
               <ul className="list-unstyled" style={{lineHeight:'2.2'}}>
                 <li><Link to="/">Home</Link></li>
                 <li><Link to="/services">View All Services</Link></li>
-                <li><Link to="/signup">Become a Craftsman</Link></li>
+                {!isCraftsman && <li><Link to="/signup">Become a Craftsman</Link></li>}
+                {isCraftsman  && <li><Link to="/craftsman-dashboard">My Dashboard</Link></li>}
+                {isClient     && <li><Link to="/hire">My Hire Dashboard</Link></li>}
                 <li><a href="#faq">FAQ</a></li>
               </ul>
             </div>

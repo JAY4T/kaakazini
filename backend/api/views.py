@@ -24,6 +24,7 @@ from .serializers import (
 from .permissions import IsOwner
 from api.utils import send_craftsman_approval_email
 from .team_notifications import dispatch_invite_notification
+from .craftsman_wallet_hook import ensure_craftsman_wallet  # ← new import
 
 logger = logging.getLogger(__name__)
 
@@ -175,8 +176,7 @@ class CraftsmanListView(generics.ListAPIView):
 class CraftsmanDetailView(generics.RetrieveUpdateAPIView):
     """
     GET  → return the logged-in craftsman's full profile.
-    PATCH → update profile. Also creates a payment wallet on first save
-            if the craftsman doesn't have one yet.
+    PATCH → update profile.
     """
     serializer_class = CraftsmanSerializer
     permission_classes = [IsAuthenticated]
@@ -268,13 +268,19 @@ class AdminCraftsmanApproveView(APIView):
         craftsman = get_craftsman_or_404(pk)
         if not craftsman:
             return Response({"error": "Craftsman not found"}, status=status.HTTP_404_NOT_FOUND)
+
         craftsman.status      = "approved"
         craftsman.is_approved = True
         craftsman.save()
+
+        # ── Create gateway wallet so payments route directly to this craftsman ──
+        ensure_craftsman_wallet(craftsman)
+
         try:
             send_craftsman_approval_email(craftsman.user.email, craftsman.user.full_name)
         except Exception as e:
             logger.error(f"Failed to send approval email: {e}")
+
         return Response({"status": "approved"}, status=status.HTTP_200_OK)
 
 
