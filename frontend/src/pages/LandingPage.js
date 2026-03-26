@@ -1,630 +1,1170 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
-import heroImage from '../assets/craftOnline.jpg';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import heroImage  from '../assets/craftOnline.jpg';
 import heroBottom from '../assets/hero-bottom.svg';
-import CoverFlow from '../components/CoverFlow.js';
-
-import c2 from '../assets/c2.png';
-import c3 from '../assets/c3.png';
-import bgImage from '../assets/background.png';
-import client1 from '../assets/68.png';
-import client2 from '../assets/20.png';
-import client3 from '../assets/33.png';
-
+import CoverFlow  from '../components/CoverFlow.js';
+import c2         from '../assets/c2.png';
+import c3         from '../assets/c3.png';
+import bgImage    from '../assets/background.png';
+import client1    from '../assets/68.png';
+import client2    from '../assets/20.png';
+import client3    from '../assets/33.png';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
-
-import { FaFileAlt, FaSearch, FaStar } from 'react-icons/fa';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
-
-// ─── Fallback avatars for reviewers with no profile image ────────────────────
+const API_BASE_URL     = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const MEDIA_URL        = process.env.REACT_APP_MEDIA_URL    || 'https://staging.kaakazini.com';
 const FALLBACK_AVATARS = [client1, client2, client3];
 
-// ─── Star renderer ────────────────────────────────────────────────────────────
+const imgUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${MEDIA_URL}${path}`;
+};
+
+const PLACEHOLDER = 'https://placehold.co/400x220/e8f5e9/198754?text=No+Image';
+
+const getCover = (c) => imgUrl(
+  c?.gallery_images?.[0]?.image_url ||
+  c?.services?.[0]?.image_url       ||
+  c?.services?.[0]?.image           ||
+  c?.service_image                   ||
+  null
+);
+
+const getAvatar = (c) => imgUrl(
+  c?.profile_url   ||
+  c?.profile       ||
+  c?.profile_image ||
+  c?.avatar        ||
+  null
+);
+
 function StarRating({ rating }) {
-  const full = Math.floor(rating);
-  const half = rating % 1 >= 0.5;
-  const empty = 5 - full - (half ? 1 : 0);
+  const n = Number(rating) || 0;
+  const full = Math.floor(n), half = n % 1 >= 0.5, empty = 5 - full - (half ? 1 : 0);
   return (
-    <div className="text-warning">
-      {[...Array(full)].map((_, i) => <i key={`f${i}`} className="fas fa-star" />)}
-      {half && <i className="fas fa-star-half-alt" />}
-      {[...Array(empty)].map((_, i) => <i key={`e${i}`} className="far fa-star" />)}
+    <span className="kk-stars" aria-label={`${n} stars`}>
+      {[...Array(full)].map((_,i)  => <i key={`f${i}`} className="fas fa-star"/>)}
+      {half && <i className="fas fa-star-half-alt"/>}
+      {[...Array(empty)].map((_,i) => <i key={`e${i}`} className="far fa-star"/>)}
+    </span>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div className="col">
+      <div style={{background:'#fff',borderRadius:14,overflow:'hidden',opacity:.7,border:'1.5px solid #eee'}}>
+        <div className="kk-skel" style={{height:200}}/>
+        <div style={{padding:16,display:'flex',flexDirection:'column',gap:10}}>
+          <div style={{display:'flex',gap:10,alignItems:'center'}}>
+            <div className="kk-skel" style={{width:42,height:42,borderRadius:'50%',flexShrink:0}}/>
+            <div style={{flex:1}}>
+              <div className="kk-skel" style={{height:11,width:'65%',borderRadius:6}}/>
+              <div className="kk-skel" style={{height:9,width:'40%',borderRadius:6,marginTop:6}}/>
+            </div>
+          </div>
+          <div className="kk-skel" style={{height:9,borderRadius:6}}/>
+          <div className="kk-skel" style={{height:36,borderRadius:10,marginTop:4}}/>
+        </div>
+      </div>
     </div>
   );
 }
 
-function LandingPage() {
-  const [approvedServices, setApprovedServices] = useState([]);
-  const [searchQuery, setSearchQuery]           = useState('');
-  const [filteredServices, setFilteredServices] = useState([]);
-
-  // ── Dynamic reviews state ──────────────────────────────────────────────────
-  const [reviews, setReviews]               = useState([]);
-  const [reviewsLoading, setReviewsLoading] = useState(true);
-  const [reviewsError, setReviewsError]     = useState(false);
-
-  // ── Fetch approved craftsmen ───────────────────────────────────────────────
-  useEffect(() => {
-    async function fetchApprovedServices() {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/public-craftsman/`);
-        const approved = response.data
-          .filter(item => item.status === 'approved' && item.primary_service)
-          .map(item => ({ ...item, images: item.images || [] }));
-        setApprovedServices(approved);
-        setFilteredServices(approved);
-      } catch (error) {
-        console.error('Error fetching approved services:', error);
-      }
-    }
-    fetchApprovedServices();
-  }, []);
-
-  // ── Fetch real reviews ─────────────────────────────────────────────────────
-  useEffect(() => {
-    async function fetchReviews() {
-      try {
-        setReviewsLoading(true);
-        setReviewsError(false);
-        const res = await axios.get(`${API_BASE_URL}/reviews/public`);
-        // Only show reviews with a comment; cap at 6 for the landing page
-        const valid = (res.data || [])
-          .filter(r => r.comment && r.rating)
-          .slice(0, 6);
-        setReviews(valid);
-      } catch (err) {
-        console.error('Error fetching reviews:', err);
-        setReviewsError(true);
-      } finally {
-        setReviewsLoading(false);
-      }
-    }
-    fetchReviews();
-  }, []);
-
-  // ── AOS init ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    AOS.init({ duration: 1000, once: false });
-  }, []);
-
-  // ── Live search ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const query = searchQuery.toLowerCase();
-    const filtered = approvedServices.filter(service =>
-      service.name?.toLowerCase().includes(query) ||
-      service.primary_service?.toLowerCase().includes(query) ||
-      service.location?.toLowerCase().includes(query)
-    );
-    setFilteredServices(filtered);
-  }, [searchQuery, approvedServices]);
-
-  const handleSearch   = () => {};
-  const handleKeyPress = (e) => { if (e.key === 'Enter') handleSearch(); };
-
-  const getImageUrl = (path) => {
-    if (!path) return "https://via.placeholder.com/300";
-    if (path.startsWith("http")) return path;
-    return `${process.env.REACT_APP_MEDIA_URL || "https://staging.kaakazini.com"}${path}`;
-  };
-
-  // ── Testimonials section ───────────────────────────────────────────────────
-  const renderTestimonials = () => {
-    if (reviewsLoading) {
-      return (
-        <div className="text-center py-5">
-          <div className="spinner-border text-success" role="status">
-            <span className="visually-hidden">Loading reviews…</span>
-          </div>
-          <p className="mt-3 text-muted">Loading client reviews…</p>
-        </div>
-      );
-    }
-
-    if (reviewsError || reviews.length === 0) {
-      // Graceful fallback to static reviews when API is unavailable or empty
-      const staticReviews = [
-        {
-          comment: "The carpenter I hired was extremely professional. Highly recommend!",
-          rating: 4,
-          reviewer: "Sarah M.",
-          location: "Nairobi",
-          _avatarIndex: 0,
-        },
-        {
-          comment: "The metalworker exceeded my expectations. Great job!",
-          rating: 5,
-          reviewer: "James K.",
-          location: "Mombasa",
-          _avatarIndex: 1,
-        },
-        {
-          comment: "The textile artist made a beautiful custom outfit. Loved it!",
-          rating: 3.5,
-          reviewer: "Linda O.",
-          location: "Kisumu",
-          _avatarIndex: 2,
-        },
-      ];
-
-      return (
-        <div className="row justify-content-center">
-          {staticReviews.map((r, idx) => (
-            <TestimonialCard
-              key={idx}
-              comment={r.comment}
-              rating={r.rating}
-              reviewer={r.reviewer}
-              location={r.location}
-              avatar={FALLBACK_AVATARS[r._avatarIndex]}
-              delay={idx * 150}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    return (
-      <div className="row justify-content-center">
-        {reviews.map((r, idx) => (
-          <TestimonialCard
-            key={r.id || idx}
-            comment={r.comment}
-            rating={r.rating}
-            reviewer={r.reviewer || "Anonymous"}
-            location={r.location || ""}
-            avatar={FALLBACK_AVATARS[idx % FALLBACK_AVATARS.length]}
-            delay={idx * 150}
-          />
-        ))}
+function CraftsmanCard({ service }) {
+  const cover  = getCover(service);
+  const avatar = getAvatar(service);
+  const id     = service.slug || service.id || '';
+  const rating = Number(service.average_rating) || 0;
+  const name   = service.full_name || service.name || 'Craftsman';
+  return (
+    <div className="kk-card">
+      <div className="kk-card-cover">
+        <img src={cover || PLACEHOLDER} alt={name} className="kk-card-img" loading="lazy"
+          onError={e=>{ e.target.src=PLACEHOLDER; }}/>
+        <span className="kk-badge-trade">{service.primary_service}</span>
+        {rating >= 4.5 && <span className="kk-badge-top">⭐ Top Rated</span>}
       </div>
-    );
+      <div className="kk-card-body">
+        <div className="kk-card-profile">
+          {avatar
+            ? <img src={avatar} alt={name} className="kk-avatar" loading="lazy"
+                onError={e=>{ e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e8f5e9&color=198754&size=88`; }}/>
+            : <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e8f5e9&color=198754&size=88`}
+                alt={name} className="kk-avatar" loading="lazy"/>
+          }
+          <div style={{minWidth:0}}>
+            <p className="kk-card-name">{name}</p>
+            {service.location && (
+              <span className="kk-card-loc">
+                <i className="fas fa-map-marker-alt me-1"/>{service.location}
+              </span>
+            )}
+          </div>
+        </div>
+        {rating > 0 && (
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <StarRating rating={rating}/>
+            <span style={{fontSize:'.75rem',color:'#6c757d',fontWeight:600}}>{rating.toFixed(1)}</span>
+          </div>
+        )}
+        {service.description && (
+          <p className="kk-card-desc">
+            {service.description.length > 80 ? service.description.slice(0,80)+'…' : service.description}
+          </p>
+        )}
+        {id
+          ? <Link to={`/craftsmen/${id}`} className="kk-btn-hire-sm">View Profile &amp; Hire</Link>
+          : <span className="kk-btn-hire-sm kk-btn-muted">Unavailable</span>
+        }
+      </div>
+    </div>
+  );
+}
+
+function ServiceModal({ isOpen, onClose, serviceName, craftsmen, coverImg, navigate, user }) {
+  const panelRef = useRef(null);
+  useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [isOpen]);
+  useEffect(() => {
+    const fn = e => { if (e.key === 'Escape') onClose(); };
+    if (isOpen) window.addEventListener('keydown', fn);
+    return () => window.removeEventListener('keydown', fn);
+  }, [isOpen, onClose]);
+  if (!isOpen) return null;
+
+  const hireDestination = user?.role === 'client' ? '/hire' : '/HireLogin';
+
+  return (
+    <div className="kk-modal-backdrop" onClick={e=>{ if(panelRef.current && !panelRef.current.contains(e.target)) onClose(); }}
+      role="dialog" aria-modal="true" aria-label={`${serviceName} craftsmen`}>
+      <div className="kk-modal-panel" ref={panelRef}>
+        <div className="kk-modal-hero">
+          <img src={coverImg || PLACEHOLDER} alt={serviceName} className="kk-modal-hero-img"
+            onError={e=>{e.target.src=PLACEHOLDER;}}/>
+          <div className="kk-modal-hero-overlay"/>
+          <div className="kk-modal-hero-content">
+            <span className="kk-modal-badge"><i className="fas fa-hard-hat me-2"/>{serviceName}</span>
+            <h2 className="kk-modal-title">{serviceName} Craftsmen Near You</h2>
+            <p className="kk-modal-sub">{craftsmen.length} verified professional{craftsmen.length!==1?'s':''} available</p>
+          </div>
+          <button className="kk-modal-close" onClick={onClose} aria-label="Close">
+            <i className="fas fa-times"/>
+          </button>
+        </div>
+        <div className="kk-modal-body">
+          {craftsmen.length === 0 ? (
+            <div style={{textAlign:'center',padding:'48px 20px',color:'#6c757d'}}>
+              <div style={{fontSize:'2.5rem',marginBottom:12}}>🔍</div>
+              <p style={{fontWeight:600}}>No craftsmen available here yet — check back soon.</p>
+            </div>
+          ) : (
+            <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+              {craftsmen.map((c, idx) => {
+                const src = getCover(c) || PLACEHOLDER;
+                const av  = getAvatar(c);
+                const cId = c.slug || c.id || '';
+                const nm  = c.full_name || c.name || 'Craftsman';
+                const rt  = Number(c.average_rating) || 0;
+                const getLabel = sv => typeof sv==='string' ? sv : sv?.name||sv?.title||'';
+                return (
+                  <div key={c.id||idx} className="col">
+                    <div className="kk-modal-card">
+                      <div className="kk-modal-card-cover">
+                        <img src={src} alt={c.primary_service} loading="lazy" className="kk-modal-card-img"
+                          onError={e=>{e.target.src=PLACEHOLDER;}}/>
+                        {rt>=4.5 && <span className="kk-badge-top" style={{top:8,right:8}}>⭐ Top Rated</span>}
+                      </div>
+                      <div className="kk-modal-card-body">
+                        <div className="kk-card-profile">
+                          {av
+                            ? <img src={av} alt={nm} className="kk-avatar" loading="lazy"
+                                onError={e=>{ e.target.src=`https://ui-avatars.com/api/?name=${encodeURIComponent(nm)}&background=e8f5e9&color=198754&size=88`; }}/>
+                            : <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(nm)}&background=e8f5e9&color=198754&size=88`}
+                                alt={nm} className="kk-avatar" loading="lazy"/>
+                          }
+                          <div style={{minWidth:0}}>
+                            <p className="kk-card-name">{nm}</p>
+                            {c.location && <span className="kk-card-loc"><i className="fas fa-map-marker-alt me-1"/>{c.location}</span>}
+                          </div>
+                        </div>
+                        {rt>0 && <div style={{display:'flex',alignItems:'center',gap:5,marginTop:4}}><StarRating rating={rt}/><span style={{fontSize:'.72rem',color:'#6c757d',fontWeight:600}}>{rt.toFixed(1)}</span></div>}
+                        {c.description && <p className="kk-card-desc">{c.description.length>90?c.description.slice(0,90)+'…':c.description}</p>}
+                        {c.services?.length>0 && (
+                          <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:4}}>
+                            {c.services.slice(0,3).map((sv,si)=>{ const l=getLabel(sv); return l?<span key={si} className="kk-sub-tag">{l}</span>:null; })}
+                          </div>
+                        )}
+                        {c.phone && (
+                          <a href={`tel:${c.phone}`} className="kk-phone-pill" onClick={e=>e.stopPropagation()}>
+                            <i className="fas fa-phone me-1"/>{c.phone}
+                          </a>
+                        )}
+                        {cId ? (
+                          <div style={{display:'flex',gap:7,marginTop:'auto'}}>
+                            <button className="kk-modal-btn-outline" onClick={()=>{ onClose(); setTimeout(()=>navigate(`/craftsmen/${cId}`),50); }}>
+                              <i className="fas fa-user me-1"/>Profile
+                            </button>
+                            <button className="kk-modal-btn-hire" onClick={()=>{ onClose(); setTimeout(()=>navigate(hireDestination),50); }}>
+                              <i className="fas fa-hard-hat me-1"/>Hire {nm.split(' ')[0]}
+                            </button>
+                          </div>
+                        ) : <span className="kk-btn-hire-sm kk-btn-muted">Unavailable</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function LandingPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [craftsmen,      setCraftsmen]      = useState([]);
+  const [loadingCraft,   setLoadingCraft]   = useState(true);
+  const [query,          setQuery]          = useState('');
+  const [searched,       setSearched]       = useState(false);
+  const [results,        setResults]        = useState([]);
+  const [reviews,        setReviews]        = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsError,   setReviewsError]   = useState(false);
+  const [faqQ,    setFaqQ]    = useState('');
+  const [faqSent, setFaqSent] = useState(false);
+  const [faqBusy, setFaqBusy] = useState(false);
+  const [showTop, setShowTop] = useState(false);
+  const [modalOpen,    setModalOpen]    = useState(false);
+  const [modalSvcName, setModalSvcName] = useState('');
+  const [modalList,    setModalList]    = useState([]);
+  const [modalCover,   setModalCover]   = useState('');
+  const resultsRef = useRef(null);
+
+  useEffect(() => { const fn = ()=>setShowTop(window.scrollY>500); window.addEventListener('scroll',fn,{passive:true}); return ()=>window.removeEventListener('scroll',fn); },[]);
+  useEffect(() => { AOS.init({ duration:700, once:true, offset:40 }); },[]);
+
+  useEffect(() => {
+    axios.get(`${API_BASE_URL}/public-craftsman/`)
+      .then(r => setCraftsmen((r.data||[]).filter(i=>i.status==='approved'&&i.primary_service).map(i=>({...i,images:i.images||[]}))))
+      .catch(console.error)
+      .finally(()=>setLoadingCraft(false));
+  },[]);
+
+  useEffect(() => {
+    axios.get(`${API_BASE_URL}/reviews/public`)
+      .then(r => {
+        const raw = (r.data || []).filter(x => (x.comment || x.review || x.body) && x.rating);
+        const normalized = raw.slice(0, 12).map((x, idx) => ({
+          comment:          x.comment || x.review || x.body || '',
+          rating:           x.rating,
+          reviewer:         x.reviewer || x.client_name || x.reviewed_by || x.user?.name || x.user?.username || 'Client',
+          craftsman_name:   x.craftsman_name || x.craftsman?.name || x.artisan_name || '',
+          craftsman_image:  x.craftsman?.profile_image || x.craftsman?.avatar || x.craftsman_image || x.craftsman_avatar || '',
+          trade:            x.trade || x.service || x.craftsman?.primary_service || x.craftsman?.trade || '',
+          location:         x.location || x.craftsman?.location || '',
+          _i:               idx % 3,
+        }));
+        setReviews(normalized);
+      })
+      .catch(() => setReviewsError(true))
+      .finally(() => setReviewsLoading(false));
+  },[]);
+
+  useEffect(() => { if(!loadingCraft&&searched) doSearch(); },[loadingCraft]); // eslint-disable-line
+
+  const doSearch = (qOv) => {
+    const q = (qOv !== undefined ? qOv : query).trim().toLowerCase();
+    if (!q) return;
+    setSearched(true);
+    if (loadingCraft) {
+      setResults([]);
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:'smooth', block:'start' }), 60);
+      return;
+    }
+    const out = craftsmen.filter(s => {
+      const n   = (s.full_name || s.name || '').toLowerCase();
+      const sv  = (s.primary_service  || '').toLowerCase();
+      const lo  = (s.location         || '').toLowerCase();
+      const de  = (s.description      || '').toLowerCase();
+      const sub = (s.services || []).map(x => typeof x === 'string' ? x : (x?.name || x?.title || '')).join(' ').toLowerCase();
+      return n.includes(q) || sv.includes(q) || lo.includes(q) || de.includes(q) || sub.includes(q);
+    });
+    setResults(out);
+    setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:'smooth', block:'start' }), 60);
   };
+
+  const clearSearch = ()=>{setQuery('');setSearched(false);setResults([]);};
+
+  const sendFaq = async()=>{
+    if(!faqQ.trim()) return;
+    setFaqBusy(true);
+    try{await axios.post(`${API_BASE_URL}/contact/`,{question:faqQ});}catch{}
+    finally{setFaqBusy(false);setFaqSent(true);setFaqQ('');}
+  };
+
+  const grouped = craftsmen.reduce((acc,c)=>{ const s=c.primary_service; if(!s)return acc; if(!acc[s])acc[s]=[]; acc[s].push(c); return acc; },{});
+
+  const openModal = (svcName, cover) => { setModalSvcName(svcName); setModalList(grouped[svcName]||[]); setModalCover(cover); setModalOpen(true); };
+  const closeModal = ()=>{ setModalOpen(false); setModalSvcName(''); setModalList([]); setModalCover(''); };
+
+  const staticReviews = [
+    {comment:"The carpenter was professional, on time and the work was perfect. My furniture looks amazing!",rating:5,reviewer:"Sarah M.",craftsman_name:"James Odhiambo",craftsman_image:'',trade:"Carpentry",location:"Nairobi",_i:0},
+    {comment:"My electrician fixed everything safely and charged a fair price. Would absolutely hire again.",rating:5,reviewer:"Kevin O.",craftsman_name:"Peter Mwangi",craftsman_image:'',trade:"Electrical",location:"Mombasa",_i:1},
+    {comment:"The tailor made my custom outfit exactly as I described. Very pleased with the quality.",rating:4.5,reviewer:"Linda A.",craftsman_name:"Grace Wanjiku",craftsman_image:'',trade:"Tailoring",location:"Kisumu",_i:2},
+  ];
+  const shownReviews = (!reviewsLoading && !reviewsError && reviews.length) ? reviews : staticReviews;
+
+  const isLoggedIn  = !!user;
+  const isCraftsman = user?.role === 'craftsman';
+  const isClient    = user?.role === 'client';
 
   return (
     <>
-      {/* ─── Hero ────────────────────────────────────────────────────────── */}
-      <section
-        className="text-center d-flex align-items-center"
-        style={{
-          background: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${heroImage}) no-repeat center center/cover`,
-          height: '80vh',
-          color: 'white',
-          width: '100%',
-          position: 'relative',
-          paddingTop: '100px',
-          zIndex: 1,
-        }}
-      >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+        @keyframes shimmer   { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        @keyframes heroSlide { 0%{transform:scale(1)} 100%{transform:scale(1.04)} }
+        @keyframes scrollTrack { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        @keyframes pulseRing { 0%{box-shadow:0 0 0 0 rgba(255,215,0,.7)} 70%{box-shadow:0 0 0 14px rgba(255,215,0,0)} 100%{box-shadow:0 0 0 0 rgba(255,215,0,0)} }
+        @keyframes modalIn   { from{opacity:0;transform:translateY(48px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
+        @keyframes floatUp   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+        :root {
+          --green:   #198754;
+          --green-d: #145a32;
+          --green-l: #e8f5e9;
+          --gold:    #FFD700;
+          --gold-d:  #e6ac00;
+          --gold-l:  #fffbea;
+          --bg:      #faf9f6;
+          --white:   #ffffff;
+          --text:    #1a1a2e;
+          --muted:   #6c757d;
+        }
+        *{box-sizing:border-box;}
+        body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);}
+        .kk-skel{background:linear-gradient(90deg,#f0ede8 25%,#e8e4de 50%,#f0ede8 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+        .kk-stars{color:var(--gold);display:inline-flex;gap:2px;font-size:.82rem;}
+
+        /* ── HERO ── */
+        .kk-hero{position:relative;height:88vh;min-height:560px;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;overflow:hidden;}
+        .kk-hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;animation:heroSlide 14s ease-in-out infinite alternate;}
+        .kk-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.18) 0%,rgba(0,0,0,.42) 100%);}
+        .kk-hero-content{position:relative;z-index:2;max-width:780px;padding:0 24px;animation:floatUp .9s ease both;width:100%;}
+        .kk-hero-title{font-family:'Playfair Display',serif;font-size:clamp(1.9rem,5vw,3.6rem);font-weight:800;line-height:1.15;margin:0 0 16px;}
+        .kk-hero-sub{font-size:clamp(.9rem,2vw,1.1rem);font-weight:400;margin:0 0 32px;color:rgba(255,255,255,.88);line-height:1.8;max-width:560px;margin-left:auto;margin-right:auto;}
+        .kk-hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+        .kk-hero-scroll{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;color:rgba(255,255,255,.6);font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;z-index:2;}
+        .kk-hero-scroll-line{width:1px;height:36px;background:rgba(255,255,255,.3);}
+        .kk-hero-logged-banner{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);backdrop-filter:blur(8px);border-radius:50px;padding:10px 22px;font-size:.9rem;font-weight:600;color:#fff;margin-bottom:20px;}
+        .kk-hero-logged-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#1a1a2e;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;flex-shrink:0;}
+
+        /* ── BUTTONS ── */
+        .kk-btn-gold{display:inline-flex;align-items:center;gap:7px;background:var(--gold);color:#1a1a2e;border:none;border-radius:12px;padding:14px 28px;font-weight:700;font-size:.93rem;text-decoration:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 18px rgba(255,215,0,.35);}
+        .kk-btn-gold:hover{background:var(--gold-d);color:#1a1a2e;transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,215,0,.45);}
+        .kk-btn-green-outline{display:inline-flex;align-items:center;gap:7px;background:var(--gold);color:#1a1a2e;border:2px solid var(--gold);border-radius:12px;padding:12px 26px;font-weight:700;font-size:.93rem;text-decoration:none;cursor:pointer;transition:all .2s;}
+        .kk-btn-green-outline:hover{background:var(--gold-d);color:#1a1a2e;border-color:var(--gold-d);transform:translateY(-2px);}
+        .kk-btn-white-outline{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.15);color:#fff;border:2px solid rgba(255,255,255,.6);border-radius:12px;padding:12px 26px;font-weight:700;font-size:.93rem;text-decoration:none;cursor:pointer;transition:all .2s;backdrop-filter:blur(4px);}
+        .kk-btn-white-outline:hover{background:rgba(255,255,255,.28);color:#fff;transform:translateY(-2px);}
+        .kk-btn-hire-sm{display:block;text-align:center;background:var(--green);color:#fff;border:none;border-radius:10px;padding:11px 0;font-weight:700;font-size:.86rem;text-decoration:none;cursor:pointer;transition:all .18s;margin-top:auto;}
+        .kk-btn-hire-sm:hover{background:var(--green-d);color:#fff;transform:translateY(-1px);}
+        .kk-btn-muted{background:#e4e4e4!important;color:#aaa!important;cursor:default!important;transform:none!important;}
+
+        /* ══════════════════════════════════════════════════
+           SEARCH SECTION
+           The pill is a FLEX ROW at ALL screen sizes.
+           Input grows, icon is left-padded, button is right.
+           Nothing breaks out on mobile — it just gets smaller.
+        ══════════════════════════════════════════════════ */
+        .kk-search-section{background:var(--green-d);padding:52px 0 56px;}
+        .kk-search-heading{color:#fff;font-family:'Playfair Display',serif;font-size:clamp(1.3rem,3vw,2rem);font-weight:800;margin:0 0 6px;}
+        .kk-search-sub{color:rgba(255,255,255,.75);font-size:.93rem;margin:0 0 28px;}
+
+        /* Outer wrapper — max-width, centred */
+        .kk-pill-wrap{
+          width:100%; max-width:660px; margin:0 auto;
+        }
+
+        /* The pill itself — always a flex row, white bg, rounded */
+        .kk-pill-row{
+          display:flex; align-items:center;
+          background:#fff;
+          border:2px solid #e7e5e4;
+          border-radius:50px;
+          box-shadow:0 3px 16px rgba(0,0,0,.1);
+          overflow:hidden;          /* keeps button corners clipped */
+          transition:border-color .18s, box-shadow .18s;
+        }
+        .kk-pill-row:focus-within{
+          border-color:var(--gold);
+          box-shadow:0 0 0 4px rgba(255,215,0,.18), 0 3px 16px rgba(0,0,0,.08);
+        }
+
+        /* Search icon on left */
+        .kk-pill-ico{
+          flex-shrink:0;
+          padding:0 4px 0 18px;
+          color:#a8a29e;
+          font-size:.92rem;
+          pointer-events:none;
+        }
+
+        /* The text input — grows to fill space */
+        .kk-pill-input{
+          flex:1;
+          border:none; outline:none; background:transparent;
+          font-family:'DM Sans',sans-serif;
+          font-size:.95rem; font-weight:500;
+          color:var(--text);
+          padding:14px 10px;
+          min-width:0;            /* allows shrinking */
+        }
+        .kk-pill-input::placeholder{color:#a8a29e;}
+
+        /* Gold button on the right — always inside, never outside */
+        .kk-pill-btn{
+          flex-shrink:0;
+          background:var(--gold);
+          color:#1a1a2e;
+          border:none;
+          border-radius:0 48px 48px 0;   /* only right side rounded */
+          padding:0 22px;
+          height:100%;
+          min-height:50px;
+          font-family:'DM Sans',sans-serif;
+          font-weight:700;
+          font-size:.88rem;
+          cursor:pointer;
+          display:flex; align-items:center; gap:6px;
+          white-space:nowrap;
+          transition:background .18s;
+        }
+        .kk-pill-btn:hover:not(:disabled){ background:var(--gold-d); }
+        .kk-pill-btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+        /* On very small screens, shrink the button text gracefully */
+        @media(max-width:400px){
+          .kk-pill-btn{ padding:0 14px; font-size:.82rem; }
+          .kk-pill-btn .kk-btn-label{ display:none; }  /* hide "Search" text, keep icon */
+          .kk-pill-input{ font-size:.88rem; padding:12px 8px; }
+          .kk-pill-ico{ padding:0 2px 0 14px; }
+        }
+
+        .kk-search-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1.5px solid rgba(255,255,255,.3);border-radius:30px;padding:8px 20px;font-size:.82rem;font-weight:600;text-decoration:none;transition:all .2s;margin-top:16px;}
+        .kk-search-pill:hover{background:rgba(255,255,255,.22);color:#fff;transform:translateY(-2px);}
+
+        /* ── RESULTS ── */
+        .kk-results-section{background:#f5f5f0;padding:0 0 60px;}
+        .kk-results-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:22px 0 20px;border-bottom:1.5px solid #e4e4e4;margin-bottom:28px;}
+        .kk-results-tag{background:var(--green-l);color:var(--green);border:1px solid #a5d6a7;border-radius:20px;padding:5px 18px;font-size:.84rem;font-weight:600;}
+        .kk-clear-btn{background:#fff;border:1.5px solid #e0e0e0;color:var(--muted);border-radius:20px;padding:5px 16px;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;}
+        .kk-clear-btn:hover{background:#fee2e2;color:#dc2626;border-color:#fca5a5;}
+
+        /* ── CARDS ── */
+        .kk-card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.07);transition:transform .25s,box-shadow .25s,border-color .2s;display:flex;flex-direction:column;height:100%;border:1.5px solid #ede9e2;position:relative;}
+        .kk-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(to right,var(--green),var(--gold));transform:scaleX(0);transform-origin:left;transition:transform .3s;z-index:1;}
+        .kk-card:hover{transform:translateY(-5px);box-shadow:0 12px 36px rgba(0,0,0,.12);border-color:#c8e6c9;}
+        .kk-card:hover::before{transform:scaleX(1);}
+        .kk-card-cover{position:relative;height:200px;overflow:hidden;flex-shrink:0;}
+        .kk-card-img{width:100%;height:100%;object-fit:cover;transition:transform .4s;}
+        .kk-card:hover .kk-card-img{transform:scale(1.06);}
+        .kk-badge-trade{position:absolute;top:10px;left:10px;background:rgba(25,135,84,.88);color:#fff;border-radius:20px;padding:3px 11px;font-size:.7rem;font-weight:700;backdrop-filter:blur(4px);}
+        .kk-badge-top{position:absolute;top:10px;right:10px;background:rgba(255,215,0,.93);color:#1a1a2e;border-radius:20px;padding:3px 10px;font-size:.67rem;font-weight:800;}
+        .kk-card-body{padding:16px;display:flex;flex-direction:column;gap:9px;flex:1;}
+        .kk-card-profile{display:flex;align-items:center;gap:10px;}
+        .kk-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2.5px solid var(--gold);flex-shrink:0;}
+        .kk-card-name{font-size:.93rem;font-weight:700;color:var(--text);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .kk-card-loc{font-size:.74rem;color:var(--green);display:block;margin-top:1px;}
+        .kk-card-desc{font-size:.78rem;color:var(--muted);line-height:1.55;margin:0;flex:1;}
+        .kk-sub-tag{background:var(--green-l);color:var(--green);border-radius:20px;padding:2px 9px;font-size:.69rem;font-weight:600;}
+        .kk-phone-pill{display:inline-flex;align-items:center;background:#f1f3f5;color:#495057;border-radius:20px;padding:4px 12px;font-size:.74rem;font-weight:600;text-decoration:none;transition:all .15s;width:fit-content;margin-top:2px;}
+        .kk-phone-pill:hover{background:var(--green);color:#fff;}
+
+        /* ── HOW IT WORKS ── */
+        .kk-hiw{background:var(--gold-l);padding:80px 0;border-top:3px solid rgba(255,215,0,.3);border-bottom:3px solid rgba(255,215,0,.3);}
+        .kk-hiw-steps{display:flex;justify-content:space-between;align-items:flex-start;position:relative;}
+        .kk-hiw-steps::before{content:'';position:absolute;top:52px;left:calc(12.5% + 10px);right:calc(12.5% + 10px);height:2px;background:repeating-linear-gradient(to right,rgba(255,215,0,.6) 0,rgba(255,215,0,.6) 10px,transparent 10px,transparent 20px);}
+        .kk-hiw-item{flex:1;text-align:center;padding:0 12px;position:relative;z-index:1;}
+        .kk-hiw-icon-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;}
+        .kk-hiw-circle{width:104px;height:104px;border-radius:50%;background:#fff;border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:2.2rem;color:#1a1a2e;box-shadow:0 8px 28px rgba(255,215,0,.22);transition:transform .3s,box-shadow .3s;}
+        .kk-hiw-item:hover .kk-hiw-circle{transform:translateY(-5px);box-shadow:0 16px 48px rgba(255,215,0,.42);}
+        .kk-hiw-num{position:absolute;top:-6px;right:-6px;width:28px;height:28px;border-radius:50%;background:var(--gold);color:#1a1a2e;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;border:2px solid #fff;animation:pulseRing 2.2s infinite;}
+        .kk-hiw-title{font-weight:700;color:var(--text);font-size:1rem;margin:0 0 8px;}
+        .kk-hiw-body{font-size:.86rem;color:var(--muted);line-height:1.7;max-width:200px;margin:0 auto;}
+
+        /* ── STATS ── */
+        .kk-stats{background:#fff;padding:72px 0;}
+        .kk-stat-item{text-align:center;}
+        .kk-stat-circle{width:clamp(130px,18vw,175px);height:clamp(130px,18vw,175px);border-radius:50%;background:#fff;border:4px solid var(--gold);box-shadow:0 6px 28px rgba(0,0,0,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto;cursor:default;transition:transform .3s,box-shadow .3s;}
+        .kk-stat-circle:hover{transform:translateY(-8px);box-shadow:0 18px 44px rgba(255,215,0,.28);}
+        .kk-stat-icon{font-size:1.5rem;color:var(--green);margin-bottom:4px;}
+        .kk-stat-value{font-family:'Playfair Display',serif;font-size:clamp(1.2rem,3vw,1.6rem);font-weight:800;color:var(--gold);margin:0;line-height:1;}
+        .kk-stat-label{font-size:.68rem;font-weight:700;color:var(--muted);margin:5px 0 0;text-transform:uppercase;letter-spacing:.05em;}
+        .kk-stats-title{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,3vw,2.2rem);font-weight:800;color:var(--text);}
+        .kk-stats-sub{color:var(--muted);font-size:.95rem;}
+
+        /* ── SERVICES ── */
+        .kk-services{background:#f5f5f0;padding:72px 0;}
+        .kk-svc-card{width:100%;cursor:pointer;border-radius:14px;outline:none;background:none;border:none;padding:0;display:block;}
+        .kk-svc-inner{border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);transition:transform .25s,box-shadow .25s;background:#fff;border:1.5px solid #ede9e2;}
+        .kk-svc-card:hover .kk-svc-inner{transform:translateY(-6px);box-shadow:0 14px 36px rgba(0,0,0,.14);}
+        .kk-svc-img-wrap{position:relative;height:220px;overflow:hidden;}
+        .kk-svc-img{width:100%;height:100%;object-fit:cover;transition:transform .4s;}
+        .kk-svc-card:hover .kk-svc-img{transform:scale(1.06);}
+        .kk-svc-overlay{position:absolute;inset:0;background:rgba(25,135,84,0);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:background .25s;pointer-events:none;}
+        .kk-svc-card:hover .kk-svc-overlay{background:rgba(25,135,84,.62);}
+        .kk-svc-overlay-label{opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;background:rgba(0,0,0,.3);color:#fff;border-radius:20px;padding:7px 18px;font-size:.85rem;font-weight:700;display:flex;align-items:center;gap:6px;}
+        .kk-svc-overlay-count{opacity:0;transform:translateY(10px);transition:opacity .2s .06s,transform .2s .06s;background:var(--gold);color:#1a1a2e;border-radius:20px;padding:3px 14px;font-size:.75rem;font-weight:800;}
+        .kk-svc-card:hover .kk-svc-overlay-label,.kk-svc-card:hover .kk-svc-overlay-count{opacity:1;transform:translateY(0);}
+        .kk-svc-body{padding:16px;text-align:center;}
+        .kk-svc-name{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:0 0 4px;}
+        .kk-svc-loc{font-size:.8rem;color:var(--green);font-weight:600;display:block;margin-bottom:10px;}
+        .kk-svc-cta{background:var(--green);color:#fff;border-radius:8px;padding:9px 0;font-size:.82rem;font-weight:700;text-align:center;transition:background .18s;}
+        .kk-svc-card:hover .kk-svc-cta{background:var(--green-d);}
+        .kk-svc-track-wrap{overflow:hidden;position:relative;margin:0 -12px;padding:20px 0 24px;-webkit-mask:linear-gradient(to right,transparent 0%,#f5f5f0 7%,#f5f5f0 93%,transparent 100%);mask:linear-gradient(to right,transparent 0%,#f5f5f0 7%,#f5f5f0 93%,transparent 100%);}
+        .kk-svc-track-wrap:hover .kk-svc-track{animation-play-state:paused;}
+        .kk-svc-track{display:flex;gap:22px;width:max-content;animation:scrollTrack 40s linear infinite;padding:0 12px;}
+        .kk-svc-track-item{width:280px;flex-shrink:0;}
+
+        /* ── MODAL ── */
+        .kk-modal-backdrop{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s ease;padding:0;}
+        .kk-modal-panel{background:#f4f6f8;border-radius:22px 22px 0 0;width:100%;max-width:1140px;max-height:92vh;display:flex;flex-direction:column;animation:modalIn .3s cubic-bezier(.34,1.4,.64,1);overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.25);}
+        .kk-modal-hero{position:relative;height:175px;flex-shrink:0;overflow:hidden;}
+        .kk-modal-hero-img{width:100%;height:100%;object-fit:cover;display:block;}
+        .kk-modal-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05) 0%,rgba(0,0,0,.72) 100%);}
+        .kk-modal-hero-content{position:absolute;bottom:0;left:0;right:0;padding:18px 22px;display:flex;flex-direction:column;gap:6px;}
+        .kk-modal-badge{display:inline-flex;align-items:center;background:var(--gold);color:#1a1a2e;border-radius:20px;padding:3px 13px;font-size:.72rem;font-weight:800;width:fit-content;}
+        .kk-modal-title{font-family:'Playfair Display',serif;font-size:clamp(1.2rem,3vw,1.9rem);font-weight:800;color:#fff;margin:0;}
+        .kk-modal-sub{font-size:.82rem;color:rgba(255,255,255,.82);margin:0;}
+        .kk-modal-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.18);backdrop-filter:blur(6px);border:1.5px solid rgba(255,255,255,.35);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.88rem;cursor:pointer;transition:all .15s;z-index:2;}
+        .kk-modal-close:hover{background:rgba(220,38,38,.85);border-color:transparent;}
+        .kk-modal-body{overflow-y:auto;padding:24px;flex:1;min-height:0;}
+        .kk-modal-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);transition:transform .25s,box-shadow .25s;display:flex;flex-direction:column;height:100%;}
+        .kk-modal-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,.12);}
+        .kk-modal-card-cover{position:relative;height:150px;overflow:hidden;flex-shrink:0;}
+        .kk-modal-card-img{width:100%;height:100%;object-fit:cover;transition:transform .4s;}
+        .kk-modal-card:hover .kk-modal-card-img{transform:scale(1.06);}
+        .kk-modal-card-body{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1;}
+        .kk-modal-btn-outline{flex:1;text-align:center;background:var(--green-l);color:var(--green);border:1.5px solid var(--green);border-radius:9px;padding:9px 0;font-weight:700;font-size:.8rem;text-decoration:none;transition:all .18s;cursor:pointer;font-family:'DM Sans',sans-serif;}
+        .kk-modal-btn-outline:hover{background:var(--green);color:#fff;}
+        .kk-modal-btn-hire{flex:1;text-align:center;background:var(--green);color:#fff;border:none;border-radius:9px;padding:9px 0;font-weight:700;font-size:.8rem;text-decoration:none;transition:background .18s;cursor:pointer;font-family:'DM Sans',sans-serif;}
+        .kk-modal-btn-hire:hover{background:var(--green-d);color:#fff;}
+
+        /* ── ABOUT / HIRE / TESTI ── */
+        .kk-about{background:var(--white);padding:72px 0;}
+        .kk-carousel-wrap{height:400px;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.1);}
+        .kk-carousel-img{width:100%;height:100%;object-fit:cover;display:block;}
+        .kk-hire{background:#f5f5f0;padding:72px 0;}
+        .kk-hire-img-wrap{position:relative;min-height:300px;}
+        .kk-hire-main{border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.1);width:100%;max-height:360px;object-fit:cover;display:block;}
+        .kk-hire-f1{position:absolute;top:-18px;right:-8px;width:44%;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.1);}
+        .kk-hire-f2{position:absolute;bottom:-18px;left:-8px;width:44%;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.1);}
+        .kk-testi{background:var(--white);padding:72px 0;overflow:hidden;}
+        .kk-testi-track-wrap{overflow:hidden;position:relative;-webkit-mask:linear-gradient(to right,transparent 0%,#fff 8%,#fff 92%,transparent 100%);mask:linear-gradient(to right,transparent 0%,#fff 8%,#fff 92%,transparent 100%);}
+        .kk-testi-track-wrap:hover .kk-testi-track{animation-play-state:paused;}
+        .kk-testi-track{display:flex;gap:22px;width:max-content;animation:scrollTrack 32s linear infinite;}
+        .kk-testi-card{background:#fff;border-radius:14px;padding:22px;box-shadow:0 2px 16px rgba(0,0,0,.07);width:clamp(240px,80vw,300px);flex-shrink:0;border:1.5px solid #ede9e2;transition:transform .3s,box-shadow .3s;}
+        .kk-testi-card:hover{transform:translateY(-5px);box-shadow:0 12px 36px rgba(255,215,0,.2);}
+        .kk-testi-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+        .kk-testi-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);flex-shrink:0;}
+        .kk-testi-name{font-weight:700;color:var(--text);margin:0 0 1px;font-size:.88rem;}
+        .kk-testi-loc{font-size:.72rem;color:var(--muted);margin:0 0 3px;}
+        .kk-testi-comment{font-size:.84rem;color:#495057;font-style:italic;line-height:1.65;margin:0;}
+
+        /* ── CRAFTSMAN PILLS ── */
+        .kk-craft-track-wrap{overflow:hidden;position:relative;-webkit-mask:linear-gradient(to right,transparent 0%,#f5f5f0 6%,#f5f5f0 94%,transparent 100%);mask:linear-gradient(to right,transparent 0%,#f5f5f0 6%,#f5f5f0 94%,transparent 100%);}
+        .kk-craft-track-wrap:hover .kk-craft-track{animation-play-state:paused;}
+        .kk-craft-track{display:flex;gap:18px;width:max-content;animation:scrollTrack 38s linear infinite;}
+        .kk-craft-pill{background:#fff;border-radius:60px;padding:10px 18px 10px 10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 14px rgba(0,0,0,.07);border:1.5px solid #ede9e2;flex-shrink:0;transition:transform .25s,box-shadow .25s;cursor:pointer;text-decoration:none;}
+        .kk-craft-pill:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(255,215,0,.22);border-color:var(--gold);}
+        .kk-craft-pill-img{width:52px;height:52px;border-radius:50%;object-fit:cover;border:2.5px solid var(--gold);flex-shrink:0;}
+        .kk-craft-pill-name{font-weight:700;font-size:.88rem;color:var(--text);margin:0;white-space:nowrap;}
+        .kk-craft-pill-trade{font-size:.72rem;color:var(--green);font-weight:600;margin:2px 0 0;white-space:nowrap;}
+
+        /* ── FAQ ── */
+        .kk-faq{background:#f5f5f0;padding:72px 0;}
+        .kk-faq-item{border:none!important;border-radius:12px!important;margin-bottom:10px;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;transition:transform .2s,box-shadow .2s;}
+        .kk-faq-item:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.09);}
+        .kk-faq-btn{background:#fff!important;font-weight:600;font-size:.93rem;padding:17px 22px;border:none;font-family:'DM Sans',sans-serif;}
+        .accordion-button:not(.collapsed){color:var(--green)!important;box-shadow:none!important;}
+        .accordion-button::after{background-image:none!important;content:"+";font-size:1.35rem;font-weight:700;color:var(--green);}
+        .accordion-button:not(.collapsed)::after{content:"−";}
+        .kk-faq-body{background:#fff;color:var(--muted);padding:4px 22px 20px;font-size:.88rem;line-height:1.75;}
+        .kk-q-card{background:#fff;border-radius:20px;padding:32px 26px;max-width:420px;margin:0 auto;box-shadow:0 2px 20px rgba(0,0,0,.08);}
+        .kk-q-blob{width:110px;height:96px;background:var(--gold);border-radius:40% 60% 50% 50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;transition:transform .3s;cursor:default;}
+        .kk-q-blob:hover{transform:scale(1.06) rotate(-3deg);}
+        .kk-q-mark{font-size:3.4rem;font-weight:900;color:#fff;line-height:1;}
+        .kk-q-area{border-radius:10px;padding:12px 14px;border:1.5px solid #e9ecef;width:100%;resize:vertical;font-size:.9rem;transition:border-color .2s,box-shadow .2s;font-family:'DM Sans',sans-serif;}
+        .kk-q-area:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(25,135,84,.1);outline:none;}
+        .kk-q-send{background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:.92rem;width:100%;margin-top:12px;cursor:pointer;transition:background .18s;font-family:'DM Sans',sans-serif;}
+        .kk-q-send:hover:not(:disabled){background:var(--green-d);}
+        .kk-q-send:disabled{opacity:.55;cursor:not-allowed;}
+        .kk-q-success{background:var(--green-l);color:var(--green);border-radius:10px;padding:14px;text-align:center;font-weight:600;font-size:.88rem;}
+
+        /* ── SECTION HELPERS ── */
+        .kk-section-title{font-family:'Playfair Display',serif;font-size:clamp(1.5rem,3.5vw,2.4rem);font-weight:800;color:var(--text);margin:0 0 10px;}
+        .kk-section-sub{font-size:.95rem;color:var(--muted);line-height:1.75;margin:0;}
+
+        /* ── FOOTER ── */
+        .kk-footer{background:#1a1a2e;color:#bbb;padding:52px 0 26px;font-family:'DM Sans',sans-serif;}
+        .kk-footer h5{color:#fff;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;}
+        .kk-footer a{color:#bbb;text-decoration:none;font-size:.85rem;transition:color .15s;}
+        .kk-footer a:hover{color:var(--gold);}
+        .kk-footer p{font-size:.85rem;margin-bottom:6px;}
+        .kk-footer-hr{border-color:rgba(255,255,255,.08);margin:26px 0 18px;}
+        .kk-footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;font-size:.8rem;}
+        .kk-social a{font-size:1rem;color:#bbb;margin-right:14px;display:inline-block;transition:color .15s,transform .15s;}
+        .kk-social a:hover{color:var(--gold);transform:translateY(-2px);}
+        .kk-map-wrap{border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3);}
+        .kk-back-top{position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;border:none;font-size:.9rem;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(25,135,84,.4);cursor:pointer;transition:all .2s;z-index:9999;opacity:0;pointer-events:none;}
+        .kk-back-top.on{opacity:1;pointer-events:auto;}
+        .kk-back-top:hover{background:var(--green-d);transform:translateY(-2px);}
+        .kk-empty{text-align:center;padding:56px 20px;}
+        .kk-empty-icon{font-size:3rem;margin-bottom:14px;display:block;}
+        .kk-empty h5{font-weight:700;color:var(--muted);}
+        .kk-empty p{color:var(--muted);font-size:.9rem;}
+
+        /* ══════════════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════════════ */
+        @media(max-width:992px){
+          .kk-hero{height:75vh;min-height:480px;}
+          .kk-hiw-steps{flex-direction:column;align-items:center;gap:40px;}
+          .kk-hiw-steps::before{display:none;}
+          .kk-hiw-item{max-width:320px;width:100%;}
+          .kk-hire-img-wrap{margin-top:20px;}
+        }
+        @media(max-width:768px){
+          .kk-hero{height:auto;min-height:520px;padding:100px 0 60px;}
+          .kk-hero-content{padding:0 16px;}
+          .kk-hero-btns{flex-direction:column;align-items:center;gap:10px;}
+          .kk-btn-gold,.kk-btn-green-outline,.kk-btn-white-outline{width:100%;max-width:320px;justify-content:center;}
+          .kk-hiw,.kk-stats,.kk-services,.kk-hire,.kk-about,.kk-testi,.kk-faq{padding:52px 0;}
+          .kk-hire-f1,.kk-hire-f2{display:none;}
+          .kk-carousel-wrap{height:240px;}
+          .kk-search-section{padding:36px 0 40px;}
+          .kk-modal-backdrop{padding:0;}
+          .kk-modal-panel{border-radius:20px 20px 0 0;max-height:94vh;}
+        }
+        @media(max-width:576px){
+          .kk-hero-title{font-size:1.8rem;}
+          .kk-hero-sub{font-size:.88rem;}
+          .kk-stat-circle{width:110px;height:110px;}
+          .kk-stat-value{font-size:1.1rem;}
+          .kk-section-title{font-size:1.5rem;}
+          .kk-results-bar{flex-direction:column;align-items:flex-start;}
+          .kk-footer-bottom{flex-direction:column;text-align:center;}
+          .kk-q-card{padding:24px 18px;}
+        }
+        @media(min-width:768px){
+          .kk-modal-backdrop{align-items:center;padding:20px;}
+          .kk-modal-panel{border-radius:20px;max-height:90vh;}
+          .kk-modal-hero{height:210px;}
+        }
+      `}</style>
+
+      <ServiceModal isOpen={modalOpen} onClose={closeModal} serviceName={modalSvcName} craftsmen={modalList} coverImg={modalCover} navigate={navigate} user={user}/>
+
+      {/* ━━━━━━━━━━ HERO ━━━━━━━━━━ */}
+      <section className="kk-hero" id="top">
+        <div className="kk-hero-bg" style={{backgroundImage:`url(${heroImage})`}} aria-hidden="true"/>
+        <div className="kk-hero-overlay" aria-hidden="true"/>
+        <div className="kk-hero-content">
+          {isLoggedIn && (
+            <div className="kk-hero-logged-banner">
+              <span className="kk-hero-logged-avatar">
+                {(user.full_name || user.name || 'U').charAt(0).toUpperCase()}
+              </span>
+              Welcome back, {user.full_name?.split(' ')[0] || user.name || 'there'}!
+            </div>
+          )}
+          <h1 className="kk-hero-title">Find a Trusted Craftsman<br/>for Any Job Near You</h1>
+          <p className="kk-hero-sub">Plumbers, electricians, carpenters, tailors, artisans and more — all verified and ready to work in your county.</p>
+          <div className="kk-hero-btns">
+            {!isLoggedIn && (<>
+              <Link to="/craftsmen" className="kk-btn-gold"><i className="fas fa-search me-1"/>Find a Craftsman Now</Link>
+              <Link to="/signup" className="kk-btn-green-outline"><i className="fas fa-user-plus me-1"/>Join as Craftsman — Free</Link>
+            </>)}
+            {isCraftsman && (<>
+              <Link to="/craftsman-dashboard" className="kk-btn-gold"><i className="fas fa-th-large me-1"/>Go to My Dashboard</Link>
+              <Link to="/craftsmen" className="kk-btn-white-outline"><i className="fas fa-search me-1"/>Browse Craftsmen</Link>
+            </>)}
+            {isClient && (<>
+              <Link to="/hire" className="kk-btn-gold"><i className="fas fa-hard-hat me-1"/>Hire a Craftsman</Link>
+              <Link to="/craftsmen" className="kk-btn-white-outline"><i className="fas fa-search me-1"/>Browse Craftsmen</Link>
+            </>)}
+          </div>
+        </div>
+        <div className="kk-hero-scroll" aria-hidden="true"><div className="kk-hero-scroll-line"/>Scroll</div>
+      </section>
+
+      {/* ━━━━━━━━━━ HOW IT WORKS ━━━━━━━━━━ */}
+      <section className="kk-hiw" id="how-it-works">
         <div className="container">
-          <h1
-            className="display-4 fw-bold moving-text hero-title"
-            style={{ animation: 'slide 5s infinite alternate', fontSize: '2.8rem' }}
-          >
-            Empowering Local Craftsmen
-          </h1>
-          <p className="lead mt-3 fw-semibold hero-subtitle" style={{ fontSize: '1.4rem' }}>
-            Manage clients, showcase your work, and grow your trade — all in one platform.
-          </p>
-          <div className="d-flex justify-content-center align-items-center gap-3 mb-4 hero-buttons">
-            <Link to="/login"     className="btn btn-yellow-solid btn-lg fw-bold">Become A Craftsman</Link>
-            <Link to="/Hirelogin" className="btn btn-yellow-solid btn-lg fw-bold">Hire a Craftsman</Link>
+          <div className="text-center mb-5" data-aos="fade-up">
+            <h2 className="kk-section-title">How It Works</h2>
+            <p className="kk-section-sub">Get the right craftsman for your job in 4 simple steps</p>
+          </div>
+          <div className="kk-hiw-steps">
+            {[
+              {n:1,icon:'fas fa-search',title:'Search a Trade',body:'Type the trade you need and your county to find verified craftsmen near you.'},
+              {n:2,icon:'fas fa-user-circle',title:'View Their Profile',body:'Browse their portfolio, read real client reviews, and check their ratings.'},
+              {n:3,icon:'fas fa-hard-hat',title:'Hire Them',body:'Click Hire Now on their profile page and agree on the job and price directly.'},
+              {n:4,icon:'fas fa-star',title:'Rate & Review',body:'After the job, leave a review so other Kenyans can find the best craftsmen.'},
+            ].map(({n,icon,title,body})=>(
+              <div className="kk-hiw-item" key={n} data-aos="fade-up" data-aos-delay={n*90}>
+                <div className="kk-hiw-icon-wrap">
+                  <div className="kk-hiw-circle"><i className={icon}/></div>
+                  <span className="kk-hiw-num">{n}</span>
+                </div>
+                <h3 className="kk-hiw-title">{title}</h3>
+                <p className="kk-hiw-body">{body}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Decoration ──────────────────────────────────────────────────── */}
-      <section style={{ background: `url(${heroBottom}) no-repeat center center/cover`, height: '10vh', width: '100%' }} />
-
-      {/* ─── Stats ───────────────────────────────────────────────────────── */}
-      <section className="py-5 bg-white text-center" id="impact">
+      {/* ━━━━━━━━━━ TWO-COLUMN CTA ━━━━━━━━━━ */}
+      <section style={{background:'#fff',borderTop:'3px solid var(--green-l)',padding:'40px 0'}}>
         <div className="container">
+          <div className="row g-4 align-items-stretch justify-content-center">
+            <div className="col-md-5" data-aos="fade-right">
+              <div style={{background:'var(--green-l)',border:'2px solid #c8e6c9',borderRadius:16,padding:'28px',height:'100%',display:'flex',flexDirection:'column',gap:12}}>
+                <div style={{width:48,height:48,borderRadius:12,background:'var(--green)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:4}}>
+                  <i className="fas fa-user" style={{color:'#fff',fontSize:'1.2rem'}}/>
+                </div>
+                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1.15rem',fontWeight:800,color:'var(--text)',margin:0}}>I Need to Hire a Craftsman</h3>
+                <p style={{fontSize:'.88rem',color:'var(--muted)',lineHeight:1.75,margin:0}}>No registration needed to browse. Search by trade, view profiles and reviews, then click <strong>Hire Now</strong> to get started.</p>
+                <ol style={{fontSize:'.84rem',color:'#4a5568',paddingLeft:20,margin:0,lineHeight:2}}>
+                  <li>Search or browse craftsmen below</li>
+                  <li>Click a card to view their full profile</li>
+                  <li>Click <strong style={{color:'var(--green)'}}>Hire Now</strong> and describe your job</li>
+                  <li>Rate after the job is done</li>
+                </ol>
+                <Link to={isClient ? '/hire' : '/craftsmen'} className="kk-btn-gold" style={{borderRadius:10,marginTop:'auto',textAlign:'center',padding:'12px 0'}}>
+                  <i className="fas fa-search me-2"/>{isClient ? 'Go to My Hire Dashboard' : 'Browse Craftsmen'}
+                </Link>
+              </div>
+            </div>
+            <div className="col-md-1 d-none d-md-flex align-items-center justify-content-center">
+              <div style={{width:1,height:'80%',background:'#e0e0e0',position:'relative'}}>
+                <span style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',background:'#fff',padding:'6px 4px',color:'var(--muted)',fontSize:'.75rem',fontWeight:700,border:'1.5px solid #e0e0e0',borderRadius:20,whiteSpace:'nowrap'}}>OR</span>
+              </div>
+            </div>
+            <div className="col-md-5" data-aos="fade-left">
+              <div style={{background:'#fffbea',border:'2px solid var(--gold)',borderRadius:16,padding:'28px',height:'100%',display:'flex',flexDirection:'column',gap:12}}>
+                <div style={{width:48,height:48,borderRadius:12,background:'var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:4}}>
+                  <i className="fas fa-hard-hat" style={{color:'#1a1a2e',fontSize:'1.2rem'}}/>
+                </div>
+                {isCraftsman ? (<>
+                  <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1.15rem',fontWeight:800,color:'var(--text)',margin:0}}>Welcome Back, {user.full_name?.split(' ')[0] || 'Craftsman'}!</h3>
+                  <p style={{fontSize:'.88rem',color:'var(--muted)',lineHeight:1.75,margin:0}}>Your profile is live. Manage your jobs, update your portfolio, and track your earnings from your dashboard.</p>
+                  <Link to="/craftsman-dashboard" style={{display:'block',background:'var(--gold)',color:'#1a1a2e',border:'none',borderRadius:10,padding:'12px 0',fontWeight:700,fontSize:'.9rem',textDecoration:'none',textAlign:'center',marginTop:'auto'}}>
+                    <i className="fas fa-th-large me-2"/>Go to My Dashboard
+                  </Link>
+                </>) : (<>
+                  <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1.15rem',fontWeight:800,color:'var(--text)',margin:0}}>I'm a Craftsman — Join Free</h3>
+                  <p style={{fontSize:'.88rem',color:'var(--muted)',lineHeight:1.75,margin:0}}>Create your free profile in minutes. Once approved, you'll appear on the platform and start receiving hire requests.</p>
+                  <ol style={{fontSize:'.84rem',color:'#4a5568',paddingLeft:20,margin:0,lineHeight:2}}>
+                    <li>Register below — it's completely free</li>
+                    <li>Fill in your trade, location &amp; description</li>
+                    <li>Upload your portfolio photos</li>
+                    <li>Wait for approval (usually 1–2 days)</li>
+                  </ol>
+                  <Link to="/signup" style={{display:'block',background:'var(--gold)',color:'#1a1a2e',border:'none',borderRadius:10,padding:'12px 0',fontWeight:700,fontSize:'.9rem',textDecoration:'none',textAlign:'center',marginTop:'auto'}}>
+                    <i className="fas fa-user-plus me-2"/>Register as Craftsman — Free
+                  </Link>
+                </>)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div style={{background:`url(${heroBottom}) no-repeat center center/cover`,height:'60px',width:'100%'}} aria-hidden="true"/>
+
+      {/* ━━━━━━━━━━ STATS ━━━━━━━━━━ */}
+      <section className="kk-stats" id="impact">
+        <div className="container">
+          <div className="text-center mb-5" data-aos="fade-up">
+            <h2 className="kk-stats-title">Growing Kenya's Craft Economy</h2>
+            <p className="kk-stats-sub mt-2">Real numbers from real craftsmen and happy clients</p>
+          </div>
           <div className="row justify-content-center g-4">
             {[
-              { icon: "bi-people-fill",      value: "100+", label: "Active Craftsmen" },
-              { icon: "bi-clipboard-check",  value: "50+",  label: "Jobs Completed"  },
-              { icon: "bi-emoji-smile",       value: "30+",  label: "Happy Clients"   },
-              { icon: "bi-shop",              value: "100+", label: "Shops Connected" },
-            ].map((item, idx) => (
-              <div key={idx} className="col-6 col-md-3 d-flex justify-content-center">
-                <div className="impact-circle">
-                  <i className={`bi ${item.icon} impact-icon`}></i>
-                  <h3 className="impact-value">{item.value}</h3>
-                  <p className="impact-label">{item.label}</p>
+              {icon:'bi-people-fill',value:'100+',label:'Active Craftsmen'},
+              {icon:'bi-clipboard-check',value:'50+',label:'Jobs Completed'},
+              {icon:'bi-emoji-smile',value:'30+',label:'Happy Clients'},
+              {icon:'bi-shop',value:'8+',label:'Trades Available'},
+            ].map((s,i)=>(
+              <div key={i} className="col-6 col-sm-3 kk-stat-item" data-aos="zoom-in" data-aos-delay={i*80}>
+                <div className="kk-stat-circle">
+                  <i className={`bi ${s.icon} kk-stat-icon`}/>
+                  <h3 className="kk-stat-value">{s.value}</h3>
+                  <p className="kk-stat-label">{s.label}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <style>{`
-          .impact-circle {
-            width: 170px; height: 170px; border-radius: 50%;
-            border: 4px solid #f4c430;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            background: #fff; transition: transform 0.3s ease, box-shadow 0.3s ease;
-          }
-          .impact-circle:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(0,0,0,0.15); }
-          .impact-icon  { font-size: 1.6rem; color: #212529; margin-bottom: 4px; }
-          .impact-value { margin: 0; font-weight: 700; color: #f4c430; }
-          .impact-label { margin: 0; font-size: 0.85rem; font-weight: 600; color: #212529; }
-        `}</style>
       </section>
 
-      {/* ─── Decoration ──────────────────────────────────────────────────── */}
-      <section style={{ background: `url(${heroBottom}) no-repeat center center/cover`, height: '10vh', width: '100%' }} />
-
-      {/* ─── About ───────────────────────────────────────────────────────── */}
-      <section className="py-5 bg-light">
+      {/* ━━━━━━━━━━ SEARCH ━━━━━━━━━━ */}
+      <section className="kk-search-section" aria-label="Search for craftsmen">
         <div className="container">
-          <div className="text-center mb-5">
-            <h2 className="fw-bold text-success display-6" data-aos="fade-left">About Us</h2>
-            <p className="text-muted fs-5" data-aos="fade-right">Empowering local craftsmen to grow, showcase their work, and reach the world.</p>
+          <div className="text-center mb-4" data-aos="fade-up">
+            <h2 className="kk-search-heading">Search for a Craftsman</h2>
+            <p className="kk-search-sub">Type a trade, name or county — we'll show you verified craftsmen near you.</p>
           </div>
-          <div className="row align-items-center">
-            <div className="col-lg-6 mb-4 mb-lg-0" data-aos="fade-right">
-              <p className="fs-5 lh-lg">
-                At KaaKazini, we are passionate about supporting local craftsmen by providing
-                a platform that helps them manage projects, showcase their unique handmade
-                products, and grow their business. We believe in the power of craftsmanship
-                to bring one-of-a-kind creations to the world while fostering community and opportunity.
-              </p>
-              <p className="fs-5 lh-lg">
-                From connecting with clients to managing orders seamlessly, our platform is
-                designed to elevate the craft and empower artisans to succeed.
-              </p>
+
+          {loadingCraft && (
+            <p style={{textAlign:'center',color:'rgba(255,255,255,.7)',fontSize:'.82rem',marginBottom:10}}>
+              <span className="spinner-border spinner-border-sm me-2" style={{color:'#fff'}} role="status" aria-hidden="true"/>
+              Loading craftsmen…
+            </p>
+          )}
+
+          {/* ── Single pill — button always INSIDE ── */}
+          <div className="kk-pill-wrap">
+            <div className="kk-pill-row">
+              <span className="kk-pill-ico" aria-hidden="true">
+                <i className="fas fa-search"/>
+              </span>
+              <input
+                type="search"
+                className="kk-pill-input"
+                placeholder="Search by trade, name or location…"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && doSearch(query)}
+                aria-label="Search craftsmen"
+              />
+              <button
+                className="kk-pill-btn"
+                onClick={() => doSearch(query)}
+                disabled={!query.trim()}
+                aria-label="Search"
+              >
+                <i className="fas fa-search"/>
+                <span className="kk-btn-label">Search</span>
+              </button>
             </div>
-            <div className="col-lg-6" data-aos="fade-left">
-              <div id="aboutCarousel" className="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
-                <div className="carousel-inner carousel-fixed-height rounded shadow-lg">
-                  <div className="carousel-item active">
-                    <img src="https://www.ariseiip.com/wp-content/uploads/2022/06/textile.png" className="d-block w-100 carousel-img" alt="Textile craftsmanship" />
-                  </div>
-                  <div className="carousel-item">
-                    <img src={c2} className="d-block w-100 carousel-img" alt="Plumbing craftsmanship" />
-                  </div>
-                  <div className="carousel-item">
-                    <img src={c3} className="d-block w-100 carousel-img" alt="Carpentry craftsmanship" />
-                  </div>
-                </div>
-                <button className="carousel-control-prev" type="button" data-bs-target="#aboutCarousel" data-bs-slide="prev">
-                  <span className="carousel-control-prev-icon" />
-                </button>
-                <button className="carousel-control-next" type="button" data-bs-target="#aboutCarousel" data-bs-slide="next">
-                  <span className="carousel-control-next-icon" />
-                </button>
-              </div>
-            </div>
+          </div>
+
+          <div className="text-center">
+            <Link to="/craftsmen" className="kk-search-pill">
+              <i className="fas fa-th-list me-1"/>Or browse all craftsmen by service
+            </Link>
           </div>
         </div>
-        <style>{`
-          .carousel-fixed-height { height: 400px; }
-          .carousel-fixed-height .carousel-item { height: 100%; }
-          .carousel-img { height: 100%; width: 100%; object-fit: cover; }
-          @media (max-width: 768px) { .carousel-fixed-height { height: 280px; } }
-        `}</style>
       </section>
 
-      {/* ─── Services ────────────────────────────────────────────────────── */}
-      <section className="py-5 bg-light" id="services">
-        <div className="container overflow-hidden">
-          <h2 className="text-center fw-bold text-success display-6">Explore Our Services</h2>
-          <p className="text-center fs-5 lh-lg">Discover skilled services offered by experienced craftsmen.</p>
-          <CoverFlow />
-          {filteredServices.length === 0 ? (
-            <p className="text-center">No services found.</p>
-          ) : (
-            <>
+      <div ref={resultsRef} style={{scrollMarginTop:'80px'}}/>
+      {searched && (
+        <section className="kk-results-section" aria-label="Search results" aria-live="polite">
+          <div className="container">
+            <div className="kk-results-bar">
+              <span className="kk-results-tag">
+                {loadingCraft ? 'Searching…'
+                  : results.length > 0
+                    ? <><strong>{results.length}</strong> craftsman{results.length!==1?'en':''} found for "<em>{query}</em>"</>
+                    : <>No results for "{query}"</>
+                }
+              </span>
+              <button className="kk-clear-btn" onClick={clearSearch}><i className="fas fa-times"/>Clear search</button>
+            </div>
+            {loadingCraft ? (
+              <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">{[1,2,3].map(i=><SkeletonCard key={i}/>)}</div>
+            ) : results.length === 0 ? (
+              <div className="kk-empty">
+                <span className="kk-empty-icon" role="img">🔍</span>
+                <h5>No craftsmen match your search</h5>
+                <p>Try a broader term — e.g. "plumber" or "Nairobi".</p>
+                <Link to="/services" className="kk-btn-hire-sm" style={{display:'inline-block',width:'auto',padding:'11px 24px',marginTop:12}}>
+                  <i className="fas fa-th-list me-2"/>View All Services
+                </Link>
+              </div>
+            ) : (
               <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
-                {filteredServices.map((service, idx) => {
-                  const imageUrl =
-                    service.services?.[0]?.image ||
-                    service.service_image ||
-                    "https://via.placeholder.com/300";
+                {results.map((s,i)=><div key={s.id||i} className="col"><CraftsmanCard service={s}/></div>)}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ━━━━━━━━━━ SERVICES ━━━━━━━━━━ */}
+      <section className="kk-services" id="services">
+        <div className="container">
+          <div className="text-center mb-5" data-aos="fade-up">
+            <h2 className="kk-section-title">Explore Our Services</h2>
+            <p className="kk-section-sub">Click any trade card to see all verified craftsmen available in that category.</p>
+          </div>
+          <CoverFlow/>
+          {!loadingCraft && craftsmen.length > 0 && (
+            <div className="kk-craft-track-wrap mt-4 mb-2">
+              <div className="kk-craft-track">
+                {[...craftsmen,...craftsmen].map((c,i)=>{
+                  const photo = getAvatar(c)||getCover(c)||`https://ui-avatars.com/api/?name=${encodeURIComponent(c.full_name||c.name||'C')}&background=e8f5e9&color=198754&size=88`;
+                  const cId   = c.slug||c.id||'';
                   return (
-                    <div key={idx} className="col d-flex justify-content-center">
-                      <div className="card border-0 shadow" style={{ width: "18rem" }}>
-                        <div className="position-relative">
-                          <img src={getImageUrl(imageUrl)} alt={service.primary_service}
-                            className="card-img-top" style={{ height: "300px", objectFit: "cover" }} />
-                          <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center text-white bg-dark bg-opacity-50 overlay">
-                            <h5 className="fw-bold">{service.primary_service}</h5>
+                    <div key={`${c.id||i}-${i}`} className="kk-craft-pill" onClick={()=>cId&&navigate(`/craftsmen/${cId}`)} role="button" tabIndex={0} onKeyDown={e=>(e.key==='Enter'||e.key===' ')&&cId&&navigate(`/craftsmen/${cId}`)}>
+                      <img src={photo} alt={c.full_name||c.name} className="kk-craft-pill-img" loading="lazy" onError={e=>{ e.target.src=`https://ui-avatars.com/api/?name=${encodeURIComponent(c.full_name||c.name||'C')}&background=e8f5e9&color=198754&size=88`; }}/>
+                      <div>
+                        <p className="kk-craft-pill-name">{c.full_name||c.name||'Craftsman'}</p>
+                        <p className="kk-craft-pill-trade">{c.primary_service}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {loadingCraft ? (
+            <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4 mt-3">{[...Array(6)].map((_,i)=><SkeletonCard key={i}/>)}</div>
+          ) : Object.keys(grouped).length === 0 ? (
+            <div className="kk-empty mt-4"><span className="kk-empty-icon">🔍</span><h5>No craftsmen available yet</h5><p>Check back soon.</p></div>
+          ) : (
+            <div className="kk-svc-track-wrap mt-3">
+              <div className="kk-svc-track">
+                {[...Object.entries(grouped),...Object.entries(grouped)].map(([tradeName,group],idx)=>{
+                  const src  = getCover(group.find(c=>c.gallery_images?.[0]?.image_url||c.services?.[0]?.image_url||c.services?.[0]?.image||c.service_image))||PLACEHOLDER;
+                  const locs = [...new Set(group.map(c=>c.location).filter(Boolean))];
+                  const locLabel = locs.length?locs.slice(0,2).join(', ')+(locs.length>2?` +${locs.length-2} more`:''):null;
+                  const count = group.length;
+                  return (
+                    <div key={`${tradeName}-${idx}`} className="kk-svc-track-item">
+                      <div className="kk-svc-card" role="button" tabIndex={0} onClick={()=>openModal(tradeName,src)} onKeyDown={e=>(e.key==='Enter'||e.key===' ')&&openModal(tradeName,src)}>
+                        <div className="kk-svc-inner">
+                          <div className="kk-svc-img-wrap">
+                            <img src={src} alt={tradeName} className="kk-svc-img" loading="lazy" onError={e=>{e.target.src=PLACEHOLDER;}}/>
+                            <div className="kk-svc-overlay" aria-hidden="true">
+                              <span className="kk-svc-overlay-label"><i className="fas fa-users me-1"/>See Craftsmen</span>
+                              <span className="kk-svc-overlay-count">{count} available</span>
+                            </div>
+                            <span style={{position:'absolute',top:10,right:10,background:'rgba(255,215,0,.93)',color:'#1a1a2e',borderRadius:20,padding:'3px 11px',fontSize:'.7rem',fontWeight:800,pointerEvents:'none'}}>{count} {count===1?'craftsman':'craftsmen'}</span>
                           </div>
-                        </div>
-                        <div className="card-body text-center">
-                          <h5 className="fw-bold mb-1">{service.service || service.primary_service}</h5>
-                          {service.location && (
-                            <p className="mb-0">
-                              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.location)}`}
-                                target="_blank" rel="noopener noreferrer"
-                                className="text-success fw-bold text-decoration-none">
-                                <i className="fas fa-map-marker-alt me-1"></i>{service.location}
-                              </a>
-                            </p>
-                          )}
+                          <div className="kk-svc-body">
+                            <p className="kk-svc-name">{tradeName}</p>
+                            {locLabel&&<span className="kk-svc-loc"><i className="fas fa-map-marker-alt me-1"/>{locLabel}</span>}
+                            <div className="kk-svc-cta"><i className="fas fa-users me-2"/>View {tradeName} Craftsmen</div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <div className="text-center mt-4">
-                <a href="/services" className="btn btn-success btn-lg fw-bold">View Our Services</a>
-              </div>
-            </>
+            </div>
           )}
-          <style>{`
-            .overlay { opacity: 0; transition: opacity 0.4s ease; }
-            .position-relative:hover .overlay { opacity: 1; }
-          `}</style>
+          <div className="text-center mt-5" data-aos="fade-up">
+            <Link to="/services" className="kk-btn-gold" style={{borderRadius:12,padding:'14px 42px'}}>
+              <i className="fas fa-th-list me-2"/>View All Services
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* ─── How It Works ────────────────────────────────────────────────── */}
-      <section className="py-5 bg-light" id="how-it-works">
+      {/* ━━━━━━━━━━ HIRE ━━━━━━━━━━ */}
+      <section className="kk-hire">
         <div className="container">
-          <h2 className="text-center fw-bold text-success display-6 mb-5" data-aos="fade-left">How It Works</h2>
-          <div className="row text-center d-flex justify-content-center">
-            <div className="col-12">
-              <div className="how-it-works-steps">
-                {[
-                  { num: 1, icon: "bi-file-earmark-plus", title: "Post Project",    body: "Tell us about your project, and skilled craftsmen will start responding within 24 hours." },
-                  { num: 2, icon: "bi-search",            title: "Browse Quotes",   body: "Review applications and quotes from various craftsmen to find the best fit for you." },
-                  { num: 3, icon: "bi-chat-right-dots",   title: "Leave Review",    body: "After the job is complete, you can rate the craftsman's work and provide valuable feedback." },
-                ].map(({ num, icon, title, body }) => (
-                  <div className="step-item" key={num}>
-                    <div className="step-icon-wrapper">
-                      <span className="step-number">{num}</span>
-                      <div className="step-icon"><i className={`bi ${icon}`}></i></div>
-                    </div>
-                    <div className="step-content">
-                      <h5 className="fw-bold" data-aos="fade-left">{title}</h5>
-                      <p className="text-center fs-5 lh-lg" data-aos="fade-right">{body}</p>
+          <div className="row align-items-center g-5">
+            <div className="col-md-6" data-aos="fade-right">
+              <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(1.5rem,3.5vw,2.4rem)',fontWeight:800,color:'#145a32',marginBottom:16}}>
+                Hire Skilled Craftsmen in Your County — Effortlessly
+              </h2>
+              <p style={{color:'var(--muted)',fontSize:'1rem',lineHeight:'1.85',marginBottom:20}}>Every craftsman on KaaKazini is manually reviewed and approved before listing. Browse their portfolio, read real reviews, and hire directly.</p>
+              <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                <Link to="/craftsmen" className="kk-btn-gold" style={{borderRadius:11}}><i className="fas fa-search me-2"/>Find a Craftsman</Link>
+                {!isCraftsman && <Link to="/signup" style={{display:'inline-flex',alignItems:'center',gap:7,background:'transparent',color:'var(--green)',border:'2px solid var(--green)',borderRadius:11,padding:'12px 22px',fontWeight:700,fontSize:'.9rem',textDecoration:'none'}}><i className="fas fa-user-plus"/>Join as Craftsman</Link>}
+                {isCraftsman  && <Link to="/craftsman-dashboard" style={{display:'inline-flex',alignItems:'center',gap:7,background:'transparent',color:'var(--green)',border:'2px solid var(--green)',borderRadius:11,padding:'12px 22px',fontWeight:700,fontSize:'.9rem',textDecoration:'none'}}><i className="fas fa-th-large"/>My Dashboard</Link>}
+              </div>
+            </div>
+            <div className="col-md-6" data-aos="fade-left">
+              <div className="kk-hire-img-wrap">
+                <img src="https://couplingz.com/wp-content/uploads/2025/01/Couplingz-Plumbers-12.jpg" className="kk-hire-main" alt="Skilled plumber" loading="lazy"/>
+                <img src="https://www.wilsonmclain.com/wp-content/uploads/2013/03/2-resized.png" className="kk-hire-f1" alt="Craftsman tools" loading="lazy"/>
+                <img src={c3} className="kk-hire-f2" alt="Carpentry work" loading="lazy"/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━ ABOUT ━━━━━━━━━━ */}
+      <section className="kk-about" id="about">
+        <div className="container">
+          <div className="text-center mb-5" data-aos="fade-up">
+            <h2 className="kk-section-title">About KaaKazini</h2>
+            <p className="kk-section-sub">Connecting skilled craftsmen and artisans with the clients who need them — across every county in Kenya.</p>
+          </div>
+          <div className="row align-items-center g-5">
+            <div className="col-lg-6" data-aos="fade-right">
+              <p style={{fontSize:'1.02rem',lineHeight:'1.9',color:'#4a5568',marginBottom:16}}><strong>KaaKazini</strong> is a Kenyan platform built to solve a real problem: clients struggle to find trusted craftsmen and artisans, and skilled professionals struggle to find reliable clients.</p>
+              <p style={{fontSize:'1.02rem',lineHeight:'1.9',color:'#4a5568'}}>Every craftsman and artisan is manually verified before they appear on the platform. You see their real portfolio, real reviews, and real contact details. From Nairobi to Kisumu — one skilled job at a time.</p>
+              <Link to="/services" className="kk-btn-gold" style={{borderRadius:11,marginTop:20,display:'inline-flex',alignItems:'center',gap:8}}><i className="fas fa-th-list"/>View All Services</Link>
+            </div>
+            <div className="col-lg-6" data-aos="fade-left">
+              <div id="aboutCarousel" className="carousel slide kk-carousel-wrap" data-bs-ride="carousel" data-bs-interval="3500">
+                <div className="carousel-inner h-100">
+                  {[{src:'https://www.ariseiip.com/wp-content/uploads/2022/06/textile.png',alt:'Textile'},{src:c2,alt:'Craftsman'},{src:c3,alt:'Carpentry'}].map((img,i)=>(
+                    <div key={i} className={`carousel-item h-100 ${i===0?'active':''}`}><img src={img.src} className="kk-carousel-img" alt={img.alt} loading="lazy"/></div>
+                  ))}
+                </div>
+                <button className="carousel-control-prev" type="button" data-bs-target="#aboutCarousel" data-bs-slide="prev"><span className="carousel-control-prev-icon"/></button>
+                <button className="carousel-control-next" type="button" data-bs-target="#aboutCarousel" data-bs-slide="next"><span className="carousel-control-next-icon"/></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━ TESTIMONIALS ━━━━━━━━━━ */}
+      <section className="kk-testi">
+        <div className="container">
+          <div className="text-center mb-5" data-aos="fade-up">
+            <h2 className="kk-section-title">What Our Clients Say</h2>
+            <p className="kk-section-sub">Real feedback from people who found and hired craftsmen through KaaKazini</p>
+          </div>
+        </div>
+        {reviewsLoading ? (
+          <div className="text-center py-4"><div className="spinner-border text-success" role="status"><span className="visually-hidden">Loading…</span></div></div>
+        ) : (
+          <div className="kk-testi-track-wrap" style={{backgroundImage:`url(${bgImage})`,backgroundRepeat:'repeat',backgroundSize:'200px',padding:'28px 0'}}>
+            <div className="kk-testi-track">
+              {[...shownReviews,...shownReviews].map((r,i)=>(
+                <div className="kk-testi-card" key={i}>
+                  <div className="kk-testi-top">
+                    <img src={FALLBACK_AVATARS[(r._i!==undefined?r._i:i%shownReviews.length)%3]} alt={r.reviewer||'Client'} className="kk-testi-avatar" loading="lazy"/>
+                    <div>
+                      <p className="kk-testi-name">{r.reviewer||'Anonymous'}</p>
+                      {r.location&&<p className="kk-testi-loc">{r.location}</p>}
+                      <StarRating rating={Number(r.rating)}/>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <p className="kk-testi-comment">"{r.comment}"</p>
+                  {(r.craftsman_name||r.trade)&&(
+                    <div style={{display:'flex',alignItems:'center',gap:9,marginTop:10,borderTop:'1px solid #f0f0f0',paddingTop:10}}>
+                      {r.craftsman_name&&<img src={r.craftsman_image?imgUrl(r.craftsman_image):`https://ui-avatars.com/api/?name=${encodeURIComponent(r.craftsman_name)}&background=e8f5e9&color=198754&size=64`} alt={r.craftsman_name} style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',border:'2px solid var(--gold)',flexShrink:0}} loading="lazy" onError={e=>{ e.target.src=`https://ui-avatars.com/api/?name=${encodeURIComponent(r.craftsman_name)}&background=e8f5e9&color=198754&size=64`; }}/>}
+                      <div>
+                        {r.craftsman_name&&<p style={{fontSize:'.72rem',color:'var(--green)',fontWeight:700,margin:0}}>{r.craftsman_name}</p>}
+                        {r.trade&&<p style={{fontSize:'.68rem',color:'var(--muted)',margin:0}}>{r.trade}</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-        <style>{`
-          .how-it-works-steps { display:flex; justify-content:space-between; align-items:flex-start; position:relative; padding-bottom:2rem; }
-          .how-it-works-steps::before { content:''; position:absolute; top:30px; left:10%; right:10%; height:2px; background-image:linear-gradient(to right,#e9ecef 33%,rgba(255,255,255,0) 0%); background-size:15px 2px; animation:dash 60s linear infinite; }
-          @keyframes dash { from{background-position:0px top} to{background-position:-1000px top} }
-          .step-item { position:relative; z-index:1; text-align:center; flex:1; padding:0 1rem; transition:transform 0.3s ease-out; }
-          .step-item:hover { transform:translateY(-5px); }
-          .step-icon-wrapper { position:relative; display:inline-block; margin-bottom:1rem; }
-          .step-number { position:absolute; top:-10px; right:-10px; background:#FFD43C; color:white; border-radius:50%; width:28px; height:28px; display:flex; justify-content:center; align-items:center; font-size:0.9rem; font-weight:bold; border:2px solid white; animation:pulse-glow 2s infinite; }
-          @keyframes pulse-glow { 0%{box-shadow:0 0 0 0 rgba(25,135,84,0.7)} 70%{box-shadow:0 0 0 10px rgba(25,135,84,0)} 100%{box-shadow:0 0 0 0 rgba(25,135,84,0)} }
-          .step-icon { background:white; color:#FFD43C; width:60px; height:60px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:2rem; box-shadow:0 4px 10px rgba(0,0,0,0.1); transition:all 0.3s ease-in-out; animation:icon-pop 0.6s ease-out; animation-fill-mode:backwards; }
-          .step-item:nth-child(1) .step-icon{animation-delay:0.1s} .step-item:nth-child(2) .step-icon{animation-delay:0.2s} .step-item:nth-child(3) .step-icon{animation-delay:0.3s}
-          @keyframes icon-pop { 0%{transform:scale(0);opacity:0} 80%{transform:scale(1.1);opacity:1} 100%{transform:scale(1)} }
-          .step-icon:hover { transform:scale(1.1); box-shadow:0 8px 20px rgba(0,0,0,0.2); }
-          @media(max-width:768px){ .how-it-works-steps{flex-direction:column;align-items:center;padding-bottom:0} .how-it-works-steps::before{display:none} .step-item{margin-bottom:2rem} }
-        `}</style>
-      </section>
-
-      {/* ─── Hire Craftsmen ──────────────────────────────────────────────── */}
-      <section className="py-5 bg-light hire-craftsman">
-        <div className="container">
-          <div className="row align-items-center mb-5">
-            <div className="col-md-6">
-              <h2 className="fw-bold display-6" style={{ color: '#198754' }}>
-                Hire Skilled Craftsmen &amp; Artisans Effortlessly
-              </h2>
-              <p className="text-muted fs-5 lh-lg">
-                We connect you with verified, skilled artisans across plumbing, electrical work, carpentry, painting, tiling, and more.
-              </p>
-              <a href="/craftsmen" className="btn btn-lg btn-yellow-solid fw-semibold mt-3">Find &amp; Hire Craftsmen</a>
-            </div>
-            <div className="col-md-6 position-relative py-5 image-collage">
-              <img src="https://couplingz.com/wp-content/uploads/2025/01/Couplingz-Plumbers-12.jpg" className="img-fluid rounded shadow-sm" alt="Skilled plumber at work" />
-              <img src="https://www.wilsonmclain.com/wp-content/uploads/2013/03/2-resized.png" className="img-fluid rounded shadow-sm position-absolute" style={{ top:'-20px', right:'0', width:'45%', zIndex:2 }} alt="Tools and equipment" />
-              <img src="https://www.shutterstock.com/image-photo/man-worker-building-wooden-frame-600nw-2215979483.jpg" className="img-fluid rounded shadow-sm position-absolute" style={{ bottom:'-20px', left:'0', width:'45%', zIndex:1 }} alt="Carpentry project" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Testimonials ────────────────────────────────────────────────── */}
-      <section className="py-5 bg-light">
-        <h2 className="text-center fw-bold text-success display-5 mb-2" data-aos="fade-left">What Our Clients Say</h2>
-        {!reviewsLoading && !reviewsError && reviews.length > 0 && (
-          <p className="text-center text-muted mb-4" style={{ fontSize: '0.95rem' }}>
-            Let's Hear from Our Own Clients
-          </p>
         )}
       </section>
 
-      <section
-        className="py-5"
-        style={{
-          backgroundImage: `url(${bgImage})`,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '200px 200px',
-          backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
-        }}
-      >
+      {/* ━━━━━━━━━━ FAQ ━━━━━━━━━━ */}
+      <section className="kk-faq" id="faq">
         <div className="container">
-          {renderTestimonials()}
-        </div>
-
-        <style>{`
-          .testimonial-card-glow {
-            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-            border-radius: 0.75rem; background-color: #fff;
-          }
-          .testimonial-card-glow:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 0.5rem 2rem rgba(253,249,13,1), 0 0.25rem 1rem rgba(0,0,0,0.1) !important;
-          }
-          .testimonial-img-circle {
-            width: 90px; height: 90px; object-fit: cover;
-            border: 8px solid #FFD43C; box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.1);
-          }
-          .testimonial-card-glow .card-body p  { font-size: 1.15rem; color: #495057; }
-          .testimonial-card-glow .card-body h5 { color: #2fc552; margin-top: 1rem; }
-          .text-green  { color: #2fc552; }
-          .testimonial-location { font-size: 0.8rem; color: #adb5bd; margin-top: 0.25rem; }
-          .testimonial-card-glow .bi-quote { font-size: 3.5rem; color: #adb5bd; }
-        `}</style>
-      </section>
-
-      {/* ─── FAQ ─────────────────────────────────────────────────────────── */}
-      <section className="py-5 bg-white">
-        <div className="container">
-          <h2 className="text-center mb-5 fw-bold text-success" data-aos="fade-left">Frequently Asked Questions</h2>
+          <div className="text-center mb-5" data-aos="fade-up">
+            <h2 className="kk-section-title">Frequently Asked Questions</h2>
+          </div>
           <div className="row align-items-start g-5">
-            <div className="col-lg-6">
-              <div className="accordion faq-accordion" id="faqAccordion" data-aos="fade-right">
+            <div className="col-lg-6" data-aos="fade-right">
+              <div className="accordion" id="faqAcc">
                 {[
-                  { q: "How do I hire a craftsman?",                answer: "Click on 'Hire a Craftsman', register your account, and post your project. Craftsmen will reach out to you with quotes." },
-                  { q: "Is there a cost to join as a craftsman?",   answer: "No, joining the platform as a craftsman is completely free." },
-                  { q: "Can I trust the craftsmen on your platform?", answer: "Yes, we review all craftsmen submissions and only approve those with complete and verified profiles." },
-                  { q: "How do I leave a review for a craftsman?",  answer: "After your project is completed, go to your dashboard and leave a review based on your experience." },
-                  { q: "Are all the craftsmen local?",              answer: "Yes, we focus on connecting you with skilled craftsmen within your region." },
-                ].map((faq, index) => (
-                  <div className="accordion-item faq-item" key={index} data-aos="fade-up" data-aos-delay={index * 100}>
-                    <h2 className="accordion-header" id={`heading${index}`}>
-                      <button
-                        className={`accordion-button faq-button ${index !== 0 ? "collapsed" : ""}`}
-                        type="button" data-bs-toggle="collapse"
-                        data-bs-target={`#collapse${index}`}
-                        aria-expanded={index === 0 ? "true" : "false"}
-                        aria-controls={`collapse${index}`}
-                      >
-                        {faq.q}
-                      </button>
+                  {q:'How do I hire a craftsman?',a:"Search by trade and county, click a card to view their profile, then click 'Hire Now'."},
+                  {q:'Is it free to search and hire?',a:'Yes — searching and contacting craftsmen is completely free for clients.'},
+                  {q:'Are the craftsmen verified?',a:'Yes. Every craftsman is manually reviewed by our team before they appear on the platform.'},
+                  {q:'What trades are available?',a:'Plumbing, electrical, carpentry, tiling, masonry, tailoring, metalwork, painting, and more.'},
+                  {q:'How do I leave a review?',a:"After your job is done, visit the craftsman's profile and submit a rating and review."},
+                  {q:'Are craftsmen available in my county?',a:'We have craftsmen across 40+ counties in Kenya. Use the county filter when searching.'},
+                ].map((f,i)=>(
+                  <div className="accordion-item kk-faq-item" key={i} data-aos="fade-up" data-aos-delay={i*50}>
+                    <h2 className="accordion-header" id={`fh${i}`}>
+                      <button className={`accordion-button kk-faq-btn ${i!==0?'collapsed':''}`} type="button" data-bs-toggle="collapse" data-bs-target={`#fc${i}`} aria-expanded={i===0?'true':'false'}>{f.q}</button>
                     </h2>
-                    <div id={`collapse${index}`} className={`accordion-collapse collapse ${index === 0 ? "show" : ""}`}
-                      aria-labelledby={`heading${index}`} data-bs-parent="#faqAccordion">
-                      <div className="accordion-body">{faq.answer}</div>
+                    <div id={`fc${i}`} className={`accordion-collapse collapse ${i===0?'show':''}`} aria-labelledby={`fh${i}`} data-bs-parent="#faqAcc">
+                      <div className="kk-faq-body">{f.a}</div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="col-lg-6" data-aos="zoom-in">
-              <div className="question-card text-center shadow-sm">
-                <div className="question-blob mx-auto mb-4" data-aos="fade-down" data-aos-delay="200">
-                  <span className="question-mark">?</span>
-                </div>
-                <h4 className="fw-bold mb-2">Any Question?</h4>
-                <p className="text-muted mb-4">We will get back to you as soon as possible</p>
-                <input type="text" className="form-control question-input" placeholder="Enter here"
-                 data-aos="fade-up" data-aos-delay="400" />
-                <button className="btn btn-success w-100 mt-3 fw-bold" data-aos="fade-up" data-aos-delay="500">
-                 Submit
-               </button>
-             </div>
-           </div>
-         </div>
+            <div className="col-lg-6" data-aos="fade-left">
+              <div className="kk-q-card">
+                <div className="kk-q-blob"><span className="kk-q-mark">?</span></div>
+                <h4 style={{fontWeight:800,marginBottom:6,textAlign:'center'}}>Still have a question?</h4>
+                <p style={{color:'var(--muted)',fontSize:'.88rem',textAlign:'center',marginBottom:20}}>Send it to us — we reply within 24 hours.</p>
+                {faqSent ? (
+                  <div className="kk-q-success"><i className="fas fa-check-circle me-2"/>Thanks! We'll get back to you soon.</div>
+                ) : (<>
+                  <textarea className="kk-q-area" rows={3} placeholder="Type your question here…" value={faqQ} onChange={e=>setFaqQ(e.target.value)}/>
+                  <button className="kk-q-send" onClick={sendFaq} disabled={faqBusy||!faqQ.trim()}>
+                    {faqBusy?<><span className="spinner-border spinner-border-sm me-2"/>Sending…</>:'Send Question'}
+                  </button>
+                </>)}
+              </div>
+            </div>
+          </div>
         </div>
-        <style>{`
-          .faq-accordion { border: none; }
-          .faq-item { border:none; border-radius:12px; margin-bottom:1rem; box-shadow:0 10px 20px rgba(0,0,0,0.05); overflow:hidden; transition:transform 0.3s ease,box-shadow 0.3s ease; }
-          .faq-item:hover { transform:translateY(-4px); box-shadow:0 18px 35px rgba(0,0,0,0.12); }
-          .faq-button { background:#fff; font-weight:600; padding:1.25rem 1.5rem; }
-          .accordion-button:not(.collapsed) { background-color:#f8f9fa; color:#198754; }
-          .accordion-body { background:#fff; padding:1.25rem 1.5rem; color:#6c757d; animation:fadeSlideIn 0.35s ease forwards; }
-          .accordion-button::after { background-image:none; content:"+"; font-size:1.5rem; font-weight:700; transition:transform 0.3s ease; }
-          .accordion-button:hover::after { transform:scale(1.25); }
-          .accordion-button:not(.collapsed)::after { content:"−"; color:#198754; }
-          .question-card { background:#fff; border-radius:20px; padding:3rem 2rem; max-width:420px; margin:0 auto; }
-          .question-blob { width:140px; height:120px; background:#ffcc33; border-radius:45% 55% 50% 50%; display:flex; align-items:center; justify-content:center; transition:transform 0.4s ease; }
-          .question-blob:hover { transform:scale(1.05); }
-          .question-mark { font-size:4rem; font-weight:800; color:#fff; }
-          .question-input { border-radius:8px; padding:0.75rem 1rem; transition:box-shadow 0.3s ease,border-color 0.3s ease; }
-          .question-input:focus { border-color:#198754; box-shadow:0 0 0 0.25rem rgba(25,135,84,0.25); }
-          @keyframes fadeSlideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-          @media(max-width:768px){ .question-card{margin-top:2rem} }
-        `}</style>
       </section>
 
-      {/* ─── Footer ──────────────────────────────────────────────────────── */}
-      <footer className="footer text-light pt-5 pb-4 mt-5">
+      {/* ━━━━━━━━━━ FOOTER ━━━━━━━━━━ */}
+      <footer className="kk-footer">
         <div className="container">
-          <div className="row">
-            <div className="col-lg-3 col-md-6 mb-4">
-              <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Quick Links</h5>
-              <ul className="list-unstyled" data-aos="fade-right">
-                <li className="mb-2"><Link to="/"           className="text-light text-decoration-none">Home</Link></li>
-                <li className="mb-2"><Link to="/signup"     className="text-light text-decoration-none">Become A Craftsman</Link></li>
-                <li className="mb-2"><Link to="/HireSignUp" className="text-light text-decoration-none">Hire a Craftsman</Link></li>
-                <li className="mb-2"><a href="#services"     className="text-light text-decoration-none">Services</a></li>
-                <li className="mb-2"><a href="#how-it-works" className="text-light text-decoration-none">How It Works</a></li>
+          <div className="row g-5">
+            <div className="col-lg-3 col-md-6">
+              <h5>Quick Links</h5>
+              <ul className="list-unstyled" style={{lineHeight:'2.2'}}>
+                <li><Link to="/">Home</Link></li>
+                <li><Link to="/services">View All Services</Link></li>
+                {!isCraftsman&&<li><Link to="/signup">Become a Craftsman</Link></li>}
+                {isCraftsman &&<li><Link to="/craftsman-dashboard">My Dashboard</Link></li>}
+                {isClient    &&<li><Link to="/hire">My Hire Dashboard</Link></li>}
+                <li><a href="#faq">FAQ</a></li>
               </ul>
             </div>
-            <div className="col-lg-4 col-md-6 mb-4">
-              <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Contact Us</h5>
-              <p><i className="fas fa-map-marker-alt me-2" data-aos="fade-right"></i> Kisumu, Kenya</p>
-              <p><i className="fas fa-envelope me-2" data-aos="fade-right"></i> support@kaakazini.com</p>
-              <div className="mt-4 social-icons" data-aos="fade-right">
-                <h6 className="fw-bold mb-3">Follow Us</h6>
-                <a href="#" className="me-3 text-light"><i className="fab fa-facebook-f fa-lg"></i></a>
-                <a href="#" className="me-3 text-light"><i className="fab fa-twitter fa-lg"></i></a>
-                <a href="#" className="me-3 text-light"><i className="fab fa-instagram fa-lg"></i></a>
-                <a href="#" className="me-3 text-light"><i className="fab fa-linkedin-in fa-lg"></i></a>
+            <div className="col-lg-4 col-md-6">
+              <h5>Contact Us</h5>
+              <p><i className="fas fa-map-marker-alt me-2" style={{color:'var(--gold)'}}/>Kisumu, Kenya</p>
+              <p><i className="fas fa-envelope me-2" style={{color:'var(--gold)'}}/>support@kaakazini.com</p>
+              <p><i className="fas fa-phone me-2" style={{color:'var(--gold)'}}/>+254 700 000 000</p>
+              <div className="kk-social mt-3">
+                <h5>Follow Us</h5>
+                {[['fab fa-facebook-f','Facebook'],['fab fa-twitter','Twitter'],['fab fa-instagram','Instagram'],['fab fa-linkedin-in','LinkedIn']].map(([icon,lbl])=>(
+                  <a key={lbl} href="#" aria-label={lbl}><i className={icon}/></a>
+                ))}
               </div>
             </div>
-            <div className="col-lg-5 col-md-12 mb-4">
-              <h5 className="text-uppercase fw-bold mb-3" data-aos="fade-left">Find Us</h5>
-              <div className="map-container" data-aos="fade-right">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
-                  width="100%" height="300" style={{ border: 0 }} allowFullScreen="" loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade" title="Kisumu Location Map"
-                />
+            <div className="col-lg-5">
+              <h5>Find Us</h5>
+              <div className="kk-map-wrap">
+                <iframe title="KaaKazini — Kisumu" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
+                  width="100%" height="220" style={{border:0,display:'block'}} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade"/>
               </div>
             </div>
           </div>
-          <hr className="border-secondary mt-0" />
-          <div className="d-flex justify-content-between align-items-center flex-column flex-md-row">
-            <p className="mb-md-0 text-center">© {new Date().getFullYear()} <strong>KaaKazini</strong>. All Rights Reserved.</p>
-            <div className="mt-2 mt-md-0 text-center">
-              <a href="#top" className="text-light text-decoration-none">Back to top <i className="fas fa-arrow-up ms-2"></i></a>
-            </div>
+          <hr className="kk-footer-hr"/>
+          <div className="kk-footer-bottom">
+            <p style={{margin:0}}>© {new Date().getFullYear()} <strong style={{color:'#fff'}}>KaaKazini</strong>. All rights reserved.</p>
+            <a href="#top" style={{color:'var(--gold)',fontWeight:600}}>Back to top <i className="fas fa-arrow-up ms-1"/></a>
           </div>
         </div>
-        <style>{`
-          .footer { background-color: #222; }
-          .social-icons a { font-size:1.5rem; transition:transform 0.3s ease-in-out; }
-          .social-icons a:hover { transform:scale(1.1); color:#0d6efd !important; }
-          .map-container { border-radius:0.5rem; overflow:hidden; box-shadow:0 0.5rem 1rem rgba(0,0,0,0.15); }
-          @keyframes slide { 0%{transform:translateX(0)} 100%{transform:translateX(20px)} }
-          .hero-buttons { flex-wrap:nowrap !important; gap:1rem; }
-          .hero-buttons a { min-width:150px; }
-          @media(max-width:576px){
-            .hero-buttons { flex-direction:row !important; justify-content:center; align-items:center; flex-wrap:nowrap !important; }
-            .hero-buttons a { font-size:0.9rem; padding:0.6rem 1rem; }
-          }
-        `}</style>
       </footer>
+
+      <button className={`kk-back-top ${showTop?'on':''}`} onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} aria-label="Back to top">
+        <i className="fas fa-arrow-up"/>
+      </button>
     </>
   );
 }
-
-// ─── Testimonial Card Component ───────────────────────────────────────────────
-function TestimonialCard({ comment, rating, reviewer, location, avatar, delay = 0 }) {
-  return (
-    <div className="col-md-4 mb-4" data-aos="fade-up" data-aos-delay={delay}>
-      <div className="card h-100 border-0 testimonial-card-glow text-center shadow-lg">
-        <div className="card-body d-flex flex-column align-items-center p-4">
-          <img src={avatar} className="rounded-circle testimonial-img-circle mb-3" alt={reviewer} />
-          <i className="bi bi-quote display-4 text-muted mb-2"></i>
-          <p className="card-text fst-italic flex-grow-1 mb-3">"{comment}"</p>
-          <StarRating rating={Number(rating)} />
-          <h5 className="card-title mt-3 fw-bold text-green">– {reviewer}</h5>
-          {location && <p className="testimonial-location">📍 {location}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default LandingPage;

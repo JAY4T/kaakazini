@@ -1,242 +1,432 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import api from "../../api/axiosClient"; 
+import api from "../../api/axiosClient";
 import { useAuth } from "../../context/AuthContext";
 
-import heroImage from '../../assets/craftOnline.jpg';
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.hl-root {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  font-family: 'Outfit', sans-serif;
+  background: #0d0d0d;
+}
+
+/* ─── LEFT PANEL ─── */
+.hl-left {
+  background: #0d0d0d;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 56px 60px;
+  overflow: hidden;
+  border-right: 1px solid rgba(255,215,0,.08);
+}
+
+.hl-left::before {
+  content: '';
+  position: absolute;
+  top: -120px; right: -120px;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,215,0,.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.hl-left::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: -60px;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,215,0,.04) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.hl-grid-lines {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,215,0,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,215,0,.03) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.hl-eyebrow {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,215,0,.1);
+  border: 1px solid rgba(255,215,0,.25);
+  border-radius: 4px;
+  padding: 5px 14px;
+  margin-bottom: 24px;
+  font-size: .64rem; font-weight: 700; color: #FFD700;
+  letter-spacing: .12em; text-transform: uppercase;
+  width: fit-content;
+}
+
+.hl-dot { width: 5px; height: 5px; border-radius: 50%; background: #FFD700; }
+
+.hl-headline {
+  position: relative; z-index: 1;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  font-weight: 900; color: #fff;
+  line-height: 1.1; margin-bottom: 18px;
+  letter-spacing: -.03em;
+}
+
+.hl-headline em {
+  font-style: italic;
+  color: #FFD700;
+  font-weight: 800;
+}
+
+.hl-desc {
+  position: relative; z-index: 1;
+  font-size: .86rem; color: rgba(255,255,255,.45);
+  line-height: 1.85; max-width: 360px; margin-bottom: 48px;
+  font-weight: 400;
+}
+
+.hl-perks {
+  position: relative; z-index: 1;
+  list-style: none;
+  display: flex; flex-direction: column; gap: 13px;
+}
+
+.hl-perk {
+  display: flex; align-items: center; gap: 11px;
+  font-size: .8rem; color: rgba(255,255,255,.65); font-weight: 500;
+}
+
+.hl-tick {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(255,215,0,.1);
+  border: 1.5px solid rgba(255,215,0,.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .5rem; color: #FFD700;
+}
+
+/* ─── RIGHT PANEL ─── */
+.hl-right {
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 68px;
+}
+
+.hl-box { width: 100%; max-width: 420px; }
+
+.hl-brand {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 44px;
+}
+
+.hl-brand-mark {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: #0d0d0d;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,.2);
+}
+
+.hl-brand-mark i { color: #FFD700; font-size: .88rem; }
+.hl-brand-name { font-size: 1.1rem; font-weight: 800; color: #0d0d0d; letter-spacing: -.01em; }
+
+.hl-title {
+  font-size: 2rem; font-weight: 900; color: #0d0d0d;
+  margin-bottom: 5px; letter-spacing: -.03em;
+}
+
+.hl-sub {
+  font-size: .84rem; color: #64748b;
+  margin-bottom: 32px; font-weight: 500;
+}
+
+.hl-err {
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-radius: 10px;
+  padding: 11px 14px;
+  margin-bottom: 20px;
+  font-size: .8rem; color: #b91c1c;
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600;
+}
+
+.hl-field { margin-bottom: 18px; }
+
+.hl-lbl {
+  display: block;
+  font-size: .68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: #475569; margin-bottom: 7px;
+}
+
+.hl-inp {
+  width: 100%; padding: 13px 15px;
+  font-size: .9rem; font-weight: 500;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #1e293b;
+  font-family: 'Outfit', sans-serif;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.hl-inp:focus {
+  border-color: #FFD700;
+  box-shadow: 0 0 0 4px rgba(255,215,0,.12);
+}
+
+.hl-pw-wrap { position: relative; }
+
+.hl-eye {
+  position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: #94a3b8;
+  cursor: pointer; font-size: .84rem; padding: 4px;
+  transition: color .15s; line-height: 1;
+}
+
+.hl-eye:hover { color: #0d0d0d; }
+
+.hl-row {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 24px;
+}
+
+.hl-ck-wrap { display: flex; align-items: center; gap: 8px; }
+
+.hl-ck {
+  width: 15px; height: 15px;
+  accent-color: #0d0d0d; cursor: pointer;
+}
+
+.hl-ck-lbl {
+  font-size: .8rem; color: #64748b;
+  cursor: pointer; font-weight: 500;
+}
+
+.hl-forgot {
+  font-size: .8rem; font-weight: 700;
+  color: #0d0d0d; text-decoration: none;
+  transition: color .15s;
+}
+
+.hl-forgot:hover { color: #e6c200; }
+
+/* THE MAIN BUTTON — black + gold matching dashboard */
+.hl-btn {
+  width: 100%; padding: 14px;
+  font-size: .92rem; font-weight: 800;
+  background: linear-gradient(135deg, #FFD700, #e6c200);
+  color: #0d0d0d;
+  border: none; border-radius: 12px;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  transition: all .2s;
+  box-shadow: 0 6px 22px rgba(255,215,0,.35);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  letter-spacing: -.01em;
+}
+
+.hl-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(255,215,0,.45);
+  filter: brightness(1.05);
+}
+
+.hl-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+@keyframes hl-spin { to { transform: rotate(360deg); } }
+
+.hl-spin {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2.5px solid rgba(0,0,0,.2);
+  border-top-color: #0d0d0d;
+  border-radius: 50%;
+  animation: hl-spin .7s linear infinite;
+}
+
+.hl-div {
+  display: flex; align-items: center; gap: 12px;
+  margin: 26px 0;
+}
+
+.hl-div-line { flex: 1; height: 1px; background: #e2e8f0; }
+
+.hl-div-txt {
+  font-size: .68rem; font-weight: 700;
+  color: #94a3b8; text-transform: uppercase; letter-spacing: .08em;
+}
+
+.hl-signup {
+  text-align: center; font-size: .83rem; color: #64748b;
+}
+
+.hl-signup a {
+  color: #0d0d0d; font-weight: 800; text-decoration: none;
+  border-bottom: 2px solid #FFD700;
+  padding-bottom: 1px;
+  transition: color .15s;
+}
+
+.hl-signup a:hover { color: #e6c200; }
+
+@media (max-width: 780px) {
+  .hl-root { grid-template-columns: 1fr; }
+  .hl-left { display: none; }
+  .hl-right { padding: 44px 24px; background: #fff; }
+}
+`;
 
 const HireLogin = () => {
-  const [form, setForm] = useState({ email: '', password: '', remember: false });
-  const [message, setMessage] = useState({ text: '', type: '' });
-  const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm]       = useState({ email: '', password: '', remember: false });
+  const [error, setError]     = useState('');
+  const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { login } = useAuth(); // 🔥 AuthContext login function
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { login } = useAuth();
 
   const fromPath = location.state?.from?.pathname;
-  const from = fromPath && fromPath !== "/HireLogin" ? fromPath : "/hire";
+  const from     = fromPath && fromPath !== '/HireLogin' ? fromPath : '/hire';
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { id, value, type, checked } = e.target;
-    setForm(prev => ({
-      ...prev,
-      [id]: type === "checkbox" ? checked : value
-    }));
+    setForm(p => ({ ...p, [id]: type === 'checkbox' ? checked : value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
-
-    if (!form.email || !form.password) {
-      setMessage({ text: "Email and password are required.", type: "danger" });
-      return;
-    }
-
+    if (!form.email || !form.password) { setError('Both fields are required.'); return; }
+    setLoading(true); setError('');
     try {
-      setLoading(true);
-
-      // Login request
-      await api.post("/client-login/", {
-        email: form.email,
-        password: form.password,
-        remember: form.remember
-      });
-
-      // Update AuthContext user
+      await api.post('/client-login/', { email: form.email, password: form.password, remember: form.remember });
       await login();
-
-      // Navigate to target page
       navigate(from, { replace: true });
-
-    } catch (error) {
-      setMessage({
-        text: "Login failed. " + (error.response?.data?.detail || error.message),
-        type: "danger"
-      });
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Incorrect email or password.');
+    } finally { setLoading(false); }
   };
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+      <style>{CSS}</style>
+      <div className="hl-root">
 
-        .hire-login-container {
-          background: white;
-          min-height: 100vh;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 3rem 1rem;
-          font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
+        {/* ── LEFT PANEL ── */}
+        <div className="hl-left">
+          <div className="hl-grid-lines"/>
+          {/* <span className="hl-eyebrow"><span className="hl-dot"/>KaaKazini</span> */}
+          <h1 className="hl-headline">
+            Hire skilled<br/>craftsmen.<br/><em>Get it done right.</em>
+          </h1>
+          <p className="hl-desc">
+            Kenya's verified marketplace for craftsmen and artisans.
+            Browse portfolios, read reviews, hire directly.
+          </p>
+          <ul className="hl-perks">
+            {[
+              'Every craftsman is manually verified',
+              'Real portfolios & honest reviews',
+              'Direct hire — no commission for clients',
+              'Track your job from request to completion',
+            ].map((t, i) => (
+              <li className="hl-perk" key={i}>
+                <span className="hl-tick"><i className="fas fa-check"/></span>
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
 
-        .hire-login-card {
-          background: white;
-          border-radius: 24px;
-          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.12);
-          border: 2px solid rgba(34, 197, 94, 0.3);
-          padding: 3rem;
-          max-width: 500px;
-          width: 100%;
-          position: relative;
-          animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        {/* ── RIGHT PANEL ── */}
+        <div className="hl-right">
+          <div className="hl-box">
 
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(40px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+            {/* <div className="hl-brand"> */}
+              {/* <span className="hl-brand-mark"><i className="fas fa-hard-hat"/></span> */}
+              {/* <span className="hl-brand-name">KaaKazini</span> */}
+            {/* </div> */}
 
-        .hire-login-card::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 6px;
-          background: linear-gradient(90deg, #22c55e 0%, #fbbf24 100%);
-          border-radius: 24px 24px 0 0;
-        }
+            <h2 className="hl-title">Welcome back</h2>
+            <p className="hl-sub">Log in to your client account</p>
 
-        .hire-login-header { text-align: center; margin-bottom: 2.5rem; }
-        .hire-login-icon {
-          width: 80px; height: 80px;
-          background: linear-gradient(135deg, #22c55e 0%, #fbbf24 100%);
-          border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          margin: 0 auto 1.5rem;
-          box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
-        }
-        .hire-login-header h2 {
-          font-size: 2rem; font-weight: 800;
-          background: linear-gradient(135deg, #22c55e 0%, #fbbf24 100%);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          background-clip: text; margin: 0 0 0.5rem 0; letter-spacing: -0.5px;
-        }
-        .hire-login-header p { color: #6b7280; font-size: 0.95rem; margin: 0; font-weight: 500; }
-
-        .form-group-login { margin-bottom: 1.5rem; position: relative; }
-        .form-label-login { display: block; font-weight: 600; font-size: 0.875rem; color: #374151; margin-bottom: 0.5rem; letter-spacing: 0.2px; }
-        .form-control-login {
-          width: 100%; padding: 0.75rem 1rem; font-size: 0.95rem;
-          border: 2px solid #e5e7eb; border-radius: 12px; transition: all 0.3s ease;
-          font-family: 'Outfit', sans-serif; background: white;
-        }
-        .form-control-login:focus { outline: none; border-color: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1); }
-
-        .password-wrapper-login { position: relative; }
-        .password-toggle-login { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: #9ca3af; cursor: pointer; padding: 0.25rem; transition: color 0.2s; }
-        .password-toggle-login:hover { color: #22c55e; }
-
-        .remember-forgot-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .form-check-login { display: flex; align-items: center; gap: 0.5rem; }
-        .form-check-login input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #22c55e; }
-        .form-check-login label { font-size: 0.875rem; color: #6b7280; cursor: pointer; font-weight: 500; }
-        .forgot-link { font-size: 0.875rem; color: #22c55e; text-decoration: none; font-weight: 600; transition: color 0.2s; }
-        .forgot-link:hover { color: #fbbf24; text-decoration: underline; }
-
-        .btn-login {
-          width: 100%; padding: 0.875rem; font-size: 1rem; font-weight: 700;
-          background: linear-gradient(135deg, #22c55e 0%, #fbbf24 100%);
-          color: white; border: none; border-radius: 12px; cursor: pointer;
-          transition: all 0.3s ease; letter-spacing: 0.3px; text-transform: uppercase;
-          box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
-        }
-        .btn-login:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4); }
-        .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .alert-custom-login { padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.875rem; font-weight: 500; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
-        .alert-danger-login { background: #fee2e2; border: 2px solid #fecaca; color: #991b1b; animation: shake 0.5s; }
-        .alert-success-login { background: #d1fae5; border: 2px solid #a7f3d0; color: #065f46; }
-
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-      `}</style>
-
-      <div className="hire-login-container">
-        <div className="hire-login-card">
-          <div className="hire-login-header">
-            <div className="hire-login-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
-            </div>
-            <h2>Welcome Back</h2>
-            <p>Login to access your client dashboard</p>
-          </div>
-
-          {message.text && (
-            <div className={`alert-custom-login ${message.type === 'danger' ? 'alert-danger-login' : 'alert-success-login'}`}>
-              {message.text}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <div className="form-group-login">
-              <label className="form-label-login">Email Address</label>
-              <input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                className="form-control-login"
-                value={form.email}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                autoComplete="email"
-              />
-            </div>
-
-            <div className="form-group-login">
-              <label className="form-label-login">Password</label>
-              <div className="password-wrapper-login">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="form-control-login"
-                  value={form.password}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  autoComplete="current-password"
-                  style={{ paddingRight: '3rem' }}
-                />
-                <button
-                  type="button"
-                  className="password-toggle-login"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex="-1"
-                >
-                  {showPassword ? "🙈" : "👁️"}
-                </button>
+            {error && (
+              <div className="hl-err">
+                <i className="fas fa-exclamation-circle"/>{error}
               </div>
-            </div>
+            )}
 
-            <div className="remember-forgot-row">
-              <div className="form-check-login">
+            <form onSubmit={handleSubmit}>
+              <div className="hl-field">
+                <label className="hl-lbl" htmlFor="email">Email address</label>
                 <input
-                  id="remember"
-                  type="checkbox"
-                  checked={form.remember}
-                  onChange={handleChange}
+                  id="email" type="email" className="hl-inp"
+                  placeholder="you@example.com"
+                  value={form.email} onChange={handleChange}
+                  required disabled={loading} autoComplete="email"
                 />
-                <label htmlFor="remember">Remember me</label>
               </div>
-              <Link to="/forgot-password" className="forgot-link">Forgot password?</Link>
+
+              <div className="hl-field">
+                <label className="hl-lbl" htmlFor="password">Password</label>
+                <div className="hl-pw-wrap">
+                  <input
+                    id="password" type={showPw ? 'text' : 'password'}
+                    className="hl-inp"
+                    placeholder="••••••••"
+                    value={form.password} onChange={handleChange}
+                    required disabled={loading}
+                    style={{ paddingRight: 44 }}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button" className="hl-eye"
+                    onClick={() => setShowPw(!showPw)} tabIndex="-1"
+                  >
+                    <i className={`fas ${showPw ? 'fa-eye-slash' : 'fa-eye'}`}/>
+                  </button>
+                </div>
+              </div>
+
+              <div className="hl-row">
+                <div className="hl-ck-wrap">
+                  <input
+                    id="remember" type="checkbox" className="hl-ck"
+                    checked={form.remember} onChange={handleChange}
+                  />
+                  <label className="hl-ck-lbl" htmlFor="remember">Keep me logged in</label>
+                </div>
+                <Link to="/forgot-password" className="hl-forgot">Forgot password?</Link>
+              </div>
+
+              <button type="submit" className="hl-btn" disabled={loading}>
+                {loading
+                  ? <><span className="hl-spin"/>Logging in…</>
+                  : <><i className="fas fa-arrow-right-to-bracket"/>Log in</>
+                }
+              </button>
+            </form>
+
+            <div className="hl-div">
+              <div className="hl-div-line"/>
+              <span className="hl-div-txt">New here?</span>
+              <div className="hl-div-line"/>
             </div>
 
-            <button className="btn-login" type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
-            </button>
-          </form>
+            <p className="hl-signup">
+              No account yet?{' '}
+              <Link to="/HireSignup">Create one — it's free</Link>
+            </p>
 
-          <div className="signup-link-login">
-            Don't have an account? <Link to="/HireSignup">Sign up here</Link>
           </div>
         </div>
       </div>

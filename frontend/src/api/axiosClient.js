@@ -23,7 +23,7 @@ if (ENV === "production") {
   API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8000/api";
   BUCKET_URL =
     process.env.REACT_APP_BUCKET_URL ||
-    "http://localhost:8000/media"; // or your local bucket
+    "http://localhost:8000/media";
 }
 
 // ---------------------------
@@ -31,22 +31,33 @@ if (ENV === "production") {
 // ---------------------------
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // send cookies
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
 // ---------------------------
-// CSRF token interceptor
+// Request interceptors
 // ---------------------------
 api.interceptors.request.use((config) => {
+  // 1. CSRF token
   const csrfToken = document.cookie
     .split("; ")
     .find((row) => row.startsWith("csrftoken="))
     ?.split("=")[1];
-
   if (csrfToken) config.headers["X-CSRFToken"] = csrfToken;
+
+  // 2. When sending FormData, DELETE the Content-Type header entirely.
+  //    The browser will then set it automatically to:
+  //      "multipart/form-data; boundary=----WebKitFormBoundaryXYZ"
+  //    with the correct boundary string.
+  //
+  //    If we leave the instance-level "application/json" in place,
+  //    Django's MultiPartParser never runs → 415 Unsupported Media Type.
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  }
 
   return config;
 });

@@ -23,3 +23,7 @@ node_modules/
 media/
 upload_to_spaces.py
 ../backend/backend/settings.py
+
+backend/profiles/
+backend/services/
+backend/test/

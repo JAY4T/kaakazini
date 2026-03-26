@@ -40,7 +40,6 @@ from .views import (
     SubmitQuoteView,
     SendQuoteView,
     ClientQuoteDecisionView,
-    InitiatePaymentView,
 
     # Reviews
     ReviewListCreateView,
@@ -49,6 +48,23 @@ from .views import (
 
     # Contact
     ContactMessageCreateView,
+
+    # Team
+    TeamInviteListCreateView,
+    TeamInviteDeleteView,
+    TeamInviteAcceptView,
+    TeamMemberListView,
+    TeamMemberPendingApprovalView,
+    TeamMemberApproveView,
+    TeamMemberRejectView,
+    TeamMemberDeleteView,
+)
+
+# ✅ NEW: IntaSend payment views (separated from views.py)
+from .payment_views import (
+    ClientPayJobView,           # POST /job-requests/{pk}/pay/
+    PollPaymentStatusView,
+    ConfirmPaymentReceivedView, # POST /job-requests/{pk}/confirm-payment/
 )
 
 
@@ -96,7 +112,15 @@ urlpatterns = [
     path('job-requests/<int:pk>/submit-quote/',         SubmitQuoteView.as_view(),           name='job-request-submit-quote'),
     path('job-requests/<int:pk>/send-quote/',           SendQuoteView.as_view(),             name='job-request-send-quote'),
     path('job-requests/<int:pk>/quote-decision/',       ClientQuoteDecisionView.as_view(),   name='job-request-quote-decision'),
-    path('job-requests/<int:pk>/pay/',                  InitiatePaymentView.as_view(),       name='job-request-pay'),
+
+    # ✅ PAYMENT — now handled by ClientPayJobView (IntaSend)
+    path('job-requests/<int:pk>/pay/',                  ClientPayJobView.as_view(),          name='job-request-pay'),
+
+    # ✅ Craftsman confirms cash received (no IntaSend)
+    path('job-requests/<int:pk>/confirm-payment/',      ConfirmPaymentReceivedView.as_view(), name='job-request-confirm-payment'),
+
+    path('job-requests/<int:pk>/pay-status/', PollPaymentStatusView.as_view(), name='job-request-pay-status'),
+
 
     # ─── Reviews ──────────────────────────────────────────────────────────────
     path('reviews/',                                    ReviewListCreateView.as_view(),      name='review-list-create'),
@@ -106,5 +130,15 @@ urlpatterns = [
     # ─── Contact ──────────────────────────────────────────────────────────────
     path('contact/',                                    ContactMessageCreateView.as_view(),  name='contact-create'),
 
-    
+    # ─── Team: Invites ────────────────────────────────────────────────────────
+    path('craftsman/invites/',                          TeamInviteListCreateView.as_view(),  name='team-invite-list-create'),
+    path('craftsman/invites/<int:pk>/',                 TeamInviteDeleteView.as_view(),      name='team-invite-delete'),
+    path('craftsman/invites/accept/<uuid:token>/',      TeamInviteAcceptView.as_view(),      name='team-invite-accept'),
+
+    # ─── Team: Members ────────────────────────────────────────────────────────
+    path('craftsman/members/',                          TeamMemberListView.as_view(),            name='team-member-list'),
+    path('craftsman/members/pending-approval/',         TeamMemberPendingApprovalView.as_view(), name='team-member-pending'),
+    path('craftsman/members/<int:pk>/approve/',         TeamMemberApproveView.as_view(),         name='team-member-approve'),
+    path('craftsman/members/<int:pk>/reject/',          TeamMemberRejectView.as_view(),          name='team-member-reject'),
+    path('craftsman/members/<int:pk>/',                 TeamMemberDeleteView.as_view(),          name='team-member-delete'),
 ]

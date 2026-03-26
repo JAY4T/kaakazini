@@ -1,855 +1,405 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaUsers, FaChartLine } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import api from "../../api/axiosClient";
 import adminAvatar from "../../assets/admin.png";
 
-function AdminLoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+export default function AdminLoginPage() {
+  const [email, setEmail]             = useState("");
+  const [password, setPassword]       = useState("");
+  const [error, setError]             = useState("");
+  const [success, setSuccess]         = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading]         = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-
+    setError(""); setSuccess(""); setLoading(true);
     try {
-      // Send login request
       const response = await api.post("/admin-login/", { email, password });
-
-      // Assuming backend returns a token (or you can set a dummy token for testing)
       const token = response.data.token || "dummy-admin-token";
       localStorage.setItem("adminToken", token);
-
-      // Show success message
-      setSuccess("Successfully logged in! Redirecting...");
-
-      // Redirect to dashboard after a short delay
-      setTimeout(() => {
-        navigate("/kaakazini-admin/dashboard");
-      }, 1500);
+      setSuccess("Access granted. Redirecting to command centre…");
+      setTimeout(() => navigate("/kaakazini-admin/dashboard"), 1500);
     } catch (err) {
-      console.error("Login error:", err);
-      if (err.response) {
-        const status = err.response.status;
-        if (status === 401) setError("Invalid email or password.");
-        else if (status === 400) setError("Bad request. Please check your input.");
-        else setError("Login failed. Please try again later.");
-      } else {
-        setError("Network or server error. Please check your connection.");
-      }
+      const status = err.response?.status;
+      if (status === 401) setError("Invalid credentials. Access denied.");
+      else if (status === 400) setError("Bad request. Check your input.");
+      else setError("Network error. Check your connection.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="login-page">
+    <div className="al-root">
       <style>{`
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+        :root {
+          --black:  #0a0a0a;
+          --dark:   #111111;
+          --card:   #161616;
+          --border: rgba(255,255,255,.08);
+          --gold:   #FFD700;
+          --gold2:  #FFA500;
+          --green:  #22c55e;
+          --green2: #16a34a;
+          --text:   #f5f5f5;
+          --muted:  #888;
         }
 
-        .login-page {
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body, #root { margin: 0 !important; padding: 0 !important; }
+
+        .al-root {
           min-height: 100vh;
           display: flex;
-          background: #ffffff;
-          margin: 0;
-          padding: 0;
+          background: var(--black);
+          font-family: 'DM Sans', sans-serif;
+          color: var(--text);
+          overflow: hidden;
         }
 
-        /* Left Side - Branding */
-        .branding-section {
-          flex: 1;
-          background: linear-gradient(135deg, #fbbf24 0%, #ffffff 100%);
-          padding: 4rem 3rem;
+        /* ── LEFT PANEL ── */
+        .al-left {
+          flex: 1.1;
+          position: relative;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          color: #1f2937;
-          position: relative;
+          padding: 3.5rem;
           overflow: hidden;
+          background: var(--dark);
         }
-
-        .branding-section::before {
+        .al-left::before {
           content: '';
           position: absolute;
-          top: -50%;
-          right: -20%;
-          width: 80%;
-          height: 80%;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-          border-radius: 50%;
+          inset: 0;
+          background:
+            radial-gradient(ellipse 80% 60% at 20% 80%, rgba(34,197,94,.12) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 50% at 80% 10%, rgba(255,215,0,.08) 0%, transparent 55%);
+          pointer-events: none;
         }
-
-        .branding-content {
+        .al-grid {
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+          background-size: 60px 60px;
+          pointer-events: none;
+        }
+        .al-brand {
           position: relative;
           z-index: 1;
         }
-
-        .brand-logo {
+        .al-logo-row {
           display: flex;
           align-items: center;
-          gap: 1rem;
-          margin-bottom: 3rem;
+          gap: 14px;
+          margin-bottom: 3.5rem;
         }
-
-        .logo-icon {
-          width: 50px;
-          height: 50px;
-          background: #ffffff;
+        .al-logo-box {
+          width: 46px; height: 46px;
+          background: linear-gradient(135deg, var(--gold), var(--gold2));
           border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: #fbbf24;
-          overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .logo-image {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          padding: 5px;
-        }
-
-        .brand-name {
-          font-size: 1.75rem;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        .brand-title {
-          font-size: 2.5rem;
-          font-weight: 700;
-          line-height: 1.2;
-          margin-bottom: 1.5rem;
-          color: #1f2937;
-        }
-
-        .brand-description {
-          font-size: 1.125rem;
-          line-height: 1.6;
-          margin-bottom: 3rem;
-          color: #374151;
-        }
-
-        .feature-list {
-          list-style: none;
-          padding: 0;
-        }
-
-        .feature-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 1rem;
-          margin-bottom: 2rem;
-          padding: 1.5rem;
-          background: #ffffff;
-          border-radius: 12px;
-          border: 2px solid rgba(255, 255, 255, 0.5);
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .feature-item:hover {
-          background: #ffffff;
-          transform: translateX(10px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .feature-icon {
-          width: 45px;
-          height: 45px;
-          background: #fef3c7;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Playfair Display', serif;
+          font-weight: 800; font-size: 1.4rem;
+          color: var(--black);
           flex-shrink: 0;
         }
-
-        .feature-content h3 {
-          font-size: 1.125rem;
-          font-weight: 600;
-          margin-bottom: 0.5rem;
-          color: #1f2937;
+        .al-logo-name {
+          font-family: 'Playfair Display', serif;
+          font-size: 1.3rem; font-weight: 800;
+          letter-spacing: -.5px;
+          color: var(--text);
         }
-
-        .feature-content p {
-          font-size: 0.95rem;
-          color: #6b7280;
-          line-height: 1.5;
+        .al-logo-name span { color: var(--gold); }
+        .al-tagline-badge {
+          display: inline-block;
+          background: rgba(34,197,94,.15);
+          border: 1px solid rgba(34,197,94,.3);
+          color: var(--green);
+          font-size: .72rem; font-weight: 600;
+          letter-spacing: .1em; text-transform: uppercase;
+          padding: 5px 14px; border-radius: 50px;
+          margin-bottom: 1.5rem;
         }
+        .al-headline {
+          font-family: 'Playfair Display', serif;
+          font-size: clamp(2rem, 3.5vw, 2.9rem);
+          font-weight: 800;
+          line-height: 1.12;
+          margin-bottom: 1.25rem;
+          letter-spacing: -.5px;
+        }
+        .al-headline .hl-gold { color: var(--gold); }
+        .al-headline .hl-green { color: var(--green); }
+        .al-sub {
+          color: var(--muted);
+          font-size: .95rem;
+          line-height: 1.75;
+          max-width: 420px;
+          margin-bottom: 3rem;
+        }
+        .al-features {
+          display: flex; flex-direction: column; gap: 1rem;
+        }
+        .al-feat {
+          display: flex; align-items: center; gap: 14px;
+          padding: 1rem 1.25rem;
+          background: rgba(255,255,255,.03);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          transition: border-color .2s, background .2s;
+        }
+        .al-feat:hover {
+          background: rgba(255,255,255,.05);
+          border-color: rgba(255,215,0,.2);
+        }
+        .al-feat-icon {
+          width: 40px; height: 40px;
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 1.15rem; flex-shrink: 0;
+        }
+        .al-feat-icon.gold { background: rgba(255,215,0,.12); color: var(--gold); }
+        .al-feat-icon.green { background: rgba(34,197,94,.12); color: var(--green); }
+        .al-feat-icon.white { background: rgba(255,255,255,.07); color: #aaa; }
+        .al-feat-text { font-size: .88rem; color: #ccc; font-weight: 500; }
+        .al-feat-text strong { color: var(--text); display: block; margin-bottom: 2px; font-weight: 600; }
+        .al-left-footer {
+          position: relative; z-index: 1;
+          font-size: .75rem; color: var(--muted);
+          display: flex; align-items: center; gap: 6px;
+        }
+        .al-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 
-        .branding-footer {
+        /* ── RIGHT PANEL ── */
+        .al-right {
+          flex: 0 0 480px;
+          display: flex; align-items: center; justify-content: center;
+          padding: 2.5rem;
+          background: var(--black);
+          border-left: 1px solid var(--border);
           position: relative;
-          z-index: 1;
-          font-size: 0.875rem;
-          color: #374151;
         }
-
-        /* Right Side - Login Form */
-        .login-section {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 2rem;
-          background: #ffffff;
+        .al-right::before {
+          content: '';
+          position: absolute;
+          top: -120px; right: -120px;
+          width: 400px; height: 400px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255,215,0,.04) 0%, transparent 70%);
+          pointer-events: none;
         }
-
-        .login-container {
-          width: 100%;
-          max-width: 450px;
+        .al-form-wrap {
+          width: 100%; max-width: 360px;
+          position: relative; z-index: 1;
         }
-
-        .login-header {
-          text-align: center;
-          margin-bottom: 2.5rem;
+        .al-avatar-wrap {
+          text-align: center; margin-bottom: 2rem;
         }
-
-        .admin-avatar {
-          width: 100px;
-          height: 100px;
+        .al-avatar {
+          width: 88px; height: 88px;
           border-radius: 50%;
           object-fit: cover;
-          margin-bottom: 1.5rem;
-          border: 4px solid #fbbf24;
-          box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+          border: 3px solid var(--gold);
+          box-shadow: 0 0 0 6px rgba(255,215,0,.1);
         }
-
-        .login-title {
-          font-size: 1.875rem;
-          font-weight: 700;
-          color: #1f2937;
-          margin-bottom: 0.5rem;
+        .al-form-title {
+          text-align: center;
+          font-family: 'Playfair Display', serif;
+          font-size: 1.75rem; font-weight: 800;
+          letter-spacing: -.5px;
+          margin-bottom: 4px;
         }
-
-        .login-subtitle {
-          font-size: 0.95rem;
-          color: #6b7280;
+        .al-form-sub {
+          text-align: center;
+          color: var(--muted); font-size: .88rem;
+          margin-bottom: 2rem;
         }
-
-        .login-form {
-          width: 100%;
-        }
-
-        .form-group {
-          margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-          display: block;
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: #374151;
-          margin-bottom: 0.5rem;
-        }
-
-        .form-label .required {
-          color: #ef4444;
-          margin-left: 0.25rem;
-        }
-
-        .input-wrapper {
-          position: relative;
-        }
-
-        .input-icon {
-          position: absolute;
-          left: 1rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #9ca3af;
-        }
-
-        .form-input {
-          width: 100%;
-          padding: 0.875rem 1rem 0.875rem 3rem;
-          border: 2px solid #e5e7eb;
+        .al-alert {
+          padding: .75rem 1rem;
           border-radius: 10px;
-          font-size: 0.95rem;
-          transition: all 0.2s ease;
-          background: #ffffff;
-          color: #1f2937;
+          font-size: .84rem; font-weight: 500;
+          margin-bottom: 1.25rem;
+          display: flex; align-items: center; gap: 8px;
         }
-
-        .form-input:focus {
-          outline: none;
-          border-color: #fbbf24;
-          box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+        .al-alert.err { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #f87171; }
+        .al-alert.ok  { background: rgba(34,197,94,.1);  border: 1px solid rgba(34,197,94,.25);  color: var(--green); }
+        .al-label {
+          display: block;
+          font-size: .78rem; font-weight: 600;
+          color: #aaa; letter-spacing: .05em; text-transform: uppercase;
+          margin-bottom: 8px;
         }
-
-        .password-toggle {
-          position: absolute;
-          right: 1rem;
-          top: 50%;
+        .al-input-wrap {
+          position: relative; margin-bottom: 1.25rem;
+        }
+        .al-icon {
+          position: absolute; left: 14px; top: 50%;
           transform: translateY(-50%);
-          background: none;
-          border: none;
-          color: #9ca3af;
-          cursor: pointer;
-          padding: 0.5rem;
-          transition: color 0.2s ease;
+          color: var(--muted); font-size: .9rem; pointer-events: none;
         }
-
-        .password-toggle:hover {
-          color: #fbbf24;
+        .al-input {
+          width: 100%;
+          padding: .875rem 1rem .875rem 2.75rem;
+          background: var(--card);
+          border: 1.5px solid var(--border);
+          border-radius: 10px;
+          color: var(--text); font-size: .95rem;
+          font-family: 'DM Sans', sans-serif;
+          transition: border-color .2s, box-shadow .2s;
+          outline: none;
         }
-
-        .form-options {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
+        .al-input:focus {
+          border-color: var(--gold);
+          box-shadow: 0 0 0 3px rgba(255,215,0,.08);
         }
-
-        .remember-me {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
+        .al-input::placeholder { color: #444; }
+        .al-eye {
+          position: absolute; right: 12px; top: 50%;
+          transform: translateY(-50%);
+          background: none; border: none;
+          color: var(--muted); cursor: pointer;
+          padding: 4px; line-height: 1;
+          transition: color .15s;
         }
-
-        .checkbox-input {
-          width: 18px;
-          height: 18px;
-          cursor: pointer;
-          accent-color: #fbbf24;
-        }
-
-        .checkbox-label {
-          font-size: 0.875rem;
-          color: #374151;
-          cursor: pointer;
-        }
-
-        .forgot-link {
-          font-size: 0.875rem;
-          color: #fbbf24;
-          text-decoration: none;
-          font-weight: 500;
-          transition: color 0.2s ease;
-        }
-
-        .forgot-link:hover {
-          color: #f59e0b;
-          text-decoration: underline;
-        }
-
-        .error-message {
-          position: fixed;
-          top: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
-          padding: 0.875rem 1rem;
-          border-radius: 8px;
-          font-size: 0.875rem;
-          z-index: 9999;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          min-width: 300px;
-          max-width: 500px;
-          text-align: center;
-        }
-
-        .success-message {
-          position: fixed;
-          top: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #f0fdf4;
-          border: 1px solid #86efac;
-          color: #16a34a;
-          padding: 0.875rem 1rem;
-          border-radius: 8px;
-          font-size: 0.875rem;
-          z-index: 9999;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          min-width: 300px;
-          max-width: 500px;
-          text-align: center;
-        }
-
-        .submit-button {
+        .al-eye:hover { color: var(--gold); }
+        .al-submit {
           width: 100%;
           padding: 1rem;
-          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-          color: #1f2937;
-          border: none;
-          border-radius: 10px;
-          font-size: 1rem;
-          font-weight: 600;
+          background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+          color: var(--black);
+          border: none; border-radius: 10px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: .95rem; font-weight: 700;
           cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+          transition: all .25s;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          margin-top: .5rem;
+          box-shadow: 0 4px 20px rgba(255,215,0,.2);
         }
-
-        .submit-button:hover {
+        .al-submit:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(251, 191, 36, 0.4);
+          box-shadow: 0 8px 28px rgba(255,215,0,.35);
+        }
+        .al-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+        .al-divider {
+          text-align: center; margin: 1.5rem 0 .75rem;
+          color: var(--muted); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase;
+          position: relative;
+        }
+        .al-divider::before, .al-divider::after {
+          content: ''; position: absolute; top: 50%;
+          width: 38%; height: 1px; background: var(--border);
+        }
+        .al-divider::before { left: 0; }
+        .al-divider::after  { right: 0; }
+        .al-footer-note {
+          text-align: center; font-size: .75rem; color: #444; margin-top: 1.5rem;
         }
 
-        .submit-button:active {
-          transform: translateY(0);
+        /* ── SPINNER ── */
+        .al-spin {
+          width: 16px; height: 16px;
+          border: 2px solid rgba(0,0,0,.2);
+          border-top-color: var(--black);
+          border-radius: 50%;
+          animation: alspin .6s linear infinite;
         }
+        @keyframes alspin { to { transform: rotate(360deg); } }
 
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-          .branding-section {
-            padding: 3rem 2.5rem;
-          }
-
-          .brand-title {
-            font-size: 2.25rem;
-          }
-
-          .brand-description {
-            font-size: 1.05rem;
-          }
-
-          .feature-item {
-            padding: 1.25rem;
-          }
-        }
-
-        @media (max-width: 992px) {
-          .branding-section {
-            display: none;
-          }
-
-          .login-section {
-            flex: 1;
-            padding: 2rem 1.5rem;
-          }
-
-          .login-container {
-            max-width: 500px;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .login-section {
-            padding: 1.5rem 1rem;
-          }
-
-          .login-container {
-            max-width: 100%;
-          }
-
-          .login-header {
-            margin-bottom: 2rem;
-          }
-
-          .admin-avatar {
-            width: 90px;
-            height: 90px;
-            border-width: 3px;
-          }
-
-          .login-title {
-            font-size: 1.625rem;
-          }
-
-          .login-subtitle {
-            font-size: 0.9rem;
-          }
-
-          .form-group {
-            margin-bottom: 1.25rem;
-          }
-
-          .form-input {
-            padding: 0.8rem 0.9rem 0.8rem 2.75rem;
-            font-size: 0.9rem;
-          }
-
-          .input-icon {
-            left: 0.9rem;
-          }
-
-          .password-toggle {
-            right: 0.9rem;
-          }
-
-          .submit-button {
-            padding: 0.95rem;
-            font-size: 0.95rem;
-          }
-        }
-
-        @media (max-width: 576px) {
-          .login-section {
-            padding: 1.25rem 0.875rem;
-            background: #fafafa;
-          }
-
-          .login-container {
-            background: #ffffff;
-            padding: 1.5rem;
-            border-radius: 16px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-          }
-
-          .login-header {
-            margin-bottom: 1.75rem;
-          }
-
-          .admin-avatar {
-            width: 80px;
-            height: 80px;
-            border-width: 3px;
-          }
-
-          .login-title {
-            font-size: 1.5rem;
-          }
-
-          .login-subtitle {
-            font-size: 0.85rem;
-          }
-
-          .brand-title {
-            font-size: 1.875rem;
-          }
-
-          .form-label {
-            font-size: 0.8rem;
-          }
-
-          .form-input {
-            font-size: 16px; /* Prevents zoom on iOS */
-            padding: 0.75rem 0.85rem 0.75rem 2.6rem;
-            border-radius: 8px;
-          }
-
-          .input-icon {
-            left: 0.85rem;
-          }
-
-          .password-toggle {
-            right: 0.85rem;
-            padding: 0.4rem;
-          }
-
-          .form-options {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
-          }
-
-          .checkbox-label {
-            font-size: 0.8rem;
-          }
-
-          .forgot-link {
-            font-size: 0.8rem;
-          }
-
-          .submit-button {
-            padding: 0.9rem;
-            font-size: 0.9rem;
-            border-radius: 8px;
-          }
-
-          .error-message {
-            padding: 0.75rem 0.85rem;
-            font-size: 0.8rem;
-            min-width: 280px;
-            max-width: 90%;
-            top: 15px;
-          }
-
-          .success-message {
-            padding: 0.75rem 0.85rem;
-            font-size: 0.8rem;
-            min-width: 280px;
-            max-width: 90%;
-            top: 15px;
-          }
-        }
-
-        @media (max-width: 400px) {
-          .login-section {
-            padding: 1rem 0.75rem;
-          }
-
-          .login-container {
-            padding: 1.25rem;
-          }
-
-          .admin-avatar {
-            width: 70px;
-            height: 70px;
-          }
-
-          .login-title {
-            font-size: 1.375rem;
-          }
-
-          .form-input {
-            padding: 0.7rem 0.8rem 0.7rem 2.5rem;
-          }
-
-          .submit-button {
-            padding: 0.85rem;
-          }
-        }
-
-        /* Landscape orientation on mobile */
-        @media (max-height: 600px) and (orientation: landscape) {
-          .login-section {
-            padding: 1rem;
-          }
-
-          .login-header {
-            margin-bottom: 1.25rem;
-          }
-
-          .admin-avatar {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 1rem;
-          }
-
-          .login-title {
-            font-size: 1.375rem;
-            margin-bottom: 0.25rem;
-          }
-
-          .login-subtitle {
-            font-size: 0.8rem;
-          }
-
-          .form-group {
-            margin-bottom: 1rem;
-          }
-
-          .form-options {
-            margin-bottom: 1rem;
-          }
-
-          .submit-button {
-            padding: 0.75rem;
-          }
-        }
-
-        /* Touch-friendly for tablets in portrait */
-        @media (min-width: 577px) and (max-width: 991px) {
-          .form-input,
-          .submit-button {
-            font-size: 16px; /* Prevents zoom on iPad */
-          }
-
-          .login-container {
-            max-width: 480px;
-            margin: 0 auto;
-          }
-        }
-
-        /* Large tablets and small laptops */
-        @media (min-width: 992px) and (max-width: 1199px) {
-          .branding-section {
-            padding: 3rem 2rem;
-          }
-
-          .brand-title {
-            font-size: 2.25rem;
-          }
-
-          .feature-item {
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-          }
-
-          .feature-icon {
-            width: 40px;
-            height: 40px;
-          }
-
-          .feature-content h3 {
-            font-size: 1.05rem;
-          }
-
-          .feature-content p {
-            font-size: 0.9rem;
-          }
+        /* ── RESPONSIVE ── */
+        @media (max-width: 960px) { .al-left { display: none; } }
+        @media (max-width: 520px) {
+          .al-right { flex: 1; padding: 1.5rem; border-left: none; }
+          .al-form-wrap { max-width: 100%; }
         }
       `}</style>
 
-      {/* Error Message */}
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
-
-      {/* Success Message */}
-      {success && (
-        <div className="success-message">
-          {success}
-        </div>
-      )}
-
-      {/* Left Side - Branding */}
-      <div className="branding-section">
-        <div className="branding-content">
-          <div className="brand-logo">
-            <div className="logo-icon">
-              {/* <img 
-                src={kaakaziniLogo} 
-                alt="Kaakazini Logo" 
-                className="logo-image"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.parentElement.innerHTML = 'K';
-                }}
-              /> */}
-            </div>
-            <span className="brand-name">Kaakazini Admin</span>
+      {/* LEFT */}
+      <div className="al-left">
+        <div className="al-grid"/>
+        <div className="al-brand">
+          <div className="al-logo-row">
+            <div className="al-logo-box">K</div>
+            <span className="al-logo-name">Kaaka<span>Kazini</span></span>
           </div>
-
-          <h1 className="brand-title">
-            Empowering Communities with Professional Craftsmanship
+          <h1 className="al-headline">
+            Manage. Approve.<br/>
+            <span className="hl-gold">Deploy</span> the best<br/>
+            <span className="hl-green">craftsmen.</span>
           </h1>
-          
-          <p className="brand-description">
-            Manage and connect skilled craftsmen with clients. Make data-driven decisions for better service delivery and community growth.
+          <p className="al-sub">
+            The central hub for approving craftsmen, tracking jobs, managing payments, and keeping Kenya's skilled workforce running at full power.
           </p>
-
-          <ul className="feature-list">
-            <li className="feature-item">
-              <div className="feature-icon">
-                <FaCheckCircle style={{ color: '#fbbf24' }} size={20} />
+          <div className="al-features">
+            {[
+              { icon: '✦', cls: 'gold',  title: 'Craftsman Approvals', desc: 'Review profiles and approve verified professionals instantly' },
+              { icon: '◈', cls: 'green', title: 'Job Management',       desc: 'Assign, track and monitor all service requests in real time' },
+              { icon: '◎', cls: 'white', title: 'MPesa Payments',       desc: 'Process craftsman payouts directly via MPesa integration' },
+            ].map(({ icon, cls, title, desc }) => (
+              <div className="al-feat" key={title}>
+                <div className={`al-feat-icon ${cls}`}>{icon}</div>
+                <div className="al-feat-text">
+                  <strong>{title}</strong>
+                  {desc}
+                </div>
               </div>
-              <div className="feature-content">
-                <h3>Craftsman Management</h3>
-                <p>Approve, manage, and monitor skilled craftsmen efficiently</p>
-              </div>
-            </li>
-
-            <li className="feature-item">
-              <div className="feature-icon">
-                <FaUsers style={{ color: '#fbbf24' }} size={20} />
-              </div>
-              <div className="feature-content">
-                <h3>Service Coordination</h3>
-                <p>Organize and assign service requests to qualified professionals</p>
-              </div>
-            </li>
-
-            <li className="feature-item">
-              <div className="feature-icon">
-                <FaChartLine style={{ color: '#fbbf24' }} size={20} />
-              </div>
-              <div className="feature-content">
-                <h3>Performance Analytics</h3>
-                <p>Track and analyze service delivery and craftsman performance</p>
-              </div>
-            </li>
-          </ul>
+            ))}
+          </div>
         </div>
-
-        <div className="branding-footer">
-          {/* © 2024 Kaakazini. All rights reserved. */}
+        <div className="al-left-footer">
+          <span className="al-dot"/>
+          © {new Date().getFullYear()} KaaKazini · Admin Panel
         </div>
       </div>
 
-      {/* Right Side - Login Form */}
-      <div className="login-section">
-        <div className="login-container">
-          <div className="login-header">
-            <img
-              src={adminAvatar}
-              alt="Admin Avatar"
-              className="admin-avatar"
-            />
-            <h2 className="login-title">Welcome back!</h2>
-            <p className="login-subtitle">Please enter your details to sign in</p>
+      {/* RIGHT */}
+      <div className="al-right">
+        <div className="al-form-wrap">
+          <div className="al-avatar-wrap">
+            <img src={adminAvatar} alt="Admin" className="al-avatar"
+              onError={e => { e.target.style.display = 'none'; }}/>
           </div>
+          <h2 className="al-form-title">Welcome back</h2>
+          <p className="al-form-sub">Sign in to your admin account</p>
 
-          <form onSubmit={handleLogin} className="login-form">
-            {/* Email Field */}
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                Email<span className="required">*</span>
-              </label>
-              <div className="input-wrapper">
-                <FaEnvelope className="input-icon" size={16} />
-                <input
-                  type="email"
-                  id="email"
-                  className="form-input"
-                  placeholder="admin@kaakazini.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
+          {error   && <div className="al-alert err">⚠ {error}</div>}
+          {success && <div className="al-alert ok">✓ {success}</div>}
+
+          <form onSubmit={handleLogin}>
+            <label className="al-label">Email address</label>
+            <div className="al-input-wrap">
+              <FaEnvelope className="al-icon"/>
+              <input className="al-input" type="email" placeholder="admin@kaakazini.com"
+                value={email} onChange={e => setEmail(e.target.value)} required autoFocus/>
             </div>
 
-            {/* Password Field */}
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">
-                Password<span className="required">*</span>
-              </label>
-              <div className="input-wrapper">
-                <FaLock className="input-icon" size={16} />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  className="form-input"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                >
-                  {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-                </button>
-              </div>
+            <label className="al-label">Password</label>
+            <div className="al-input-wrap">
+              <FaLock className="al-icon"/>
+              <input className="al-input" type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password} onChange={e => setPassword(e.target.value)} required/>
+              <button type="button" className="al-eye" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <FaEyeSlash size={16}/> : <FaEye size={16}/>}
+              </button>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="form-options">
-              <label className="remember-me">
-                <input
-                  type="checkbox"
-                  className="checkbox-input"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                <span className="checkbox-label">Remember me</span>
-              </label>
-              <a href="#" className="forgot-link">Forgot Password?</a>
-            </div>
-
-            {/* Submit Button */}
-            <button type="submit" className="submit-button">
-              Sign In
+            <button className="al-submit" type="submit" disabled={loading}>
+              {loading ? <><div className="al-spin"/> Verifying…</> : '→ Sign In to Admin'}
             </button>
           </form>
+
         </div>
       </div>
     </div>
   );
 }
-
-export default AdminLoginPage;
