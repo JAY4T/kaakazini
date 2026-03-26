@@ -483,7 +483,7 @@ export default function ServicesPage() {
       <section className="sv-hiw" aria-label="How hiring works">
         <div className="container">
           <div className="text-center mb-5" data-aos="fade-up">
-            <div className="kk-section-label"><i className="fas fa-info-circle me-1"/>Simple Process</div>
+            {/* <div className="kk-section-label"><i className="fas fa-info-circle me-1"/>Simple Process</div> */}
             <h2 className="kk-section-title">How It Works</h2>
             <p className="kk-section-sub">Get the right craftsman for your job in 4 easy steps</p>
           </div>
@@ -542,7 +542,7 @@ export default function ServicesPage() {
           <div className="sv-cta-inner" data-aos="fade-up">
             <div className="row align-items-center g-5">
               <div className="col-lg-6">
-                <div className="kk-section-label mb-3"><i className="fas fa-hard-hat me-1"/>For Craftsmen</div>
+                {/* <div className="kk-section-label mb-3"><i className="fas fa-hard-hat me-1"/>For Craftsmen</div> */}
                 <h2 className="sv-cta-title">Are You a Skilled Craftsman?<br/>Get Hired on KaaKazini — Free</h2>
                 <p className="sv-cta-sub">
                   Register your profile in minutes. Our team reviews and approves every craftsman before they go live. Once approved, clients across Kenya will find you, contact you, and hire you — directly.
