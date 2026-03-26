@@ -27,7 +27,12 @@ function Navbar() {
   const isHidden = HIDDEN_ON.some(r => pathname === r || pathname.startsWith(r + '/'));
 
   useEffect(() => {
-    document.body.style.paddingTop = isHidden ? '0px' : '80px';
+    const nav = document.querySelector('.navbar');
+    if (nav && !isHidden) {
+      document.body.style.paddingTop = `${nav.offsetHeight}px`;
+    } else {
+      document.body.style.paddingTop = '0px';
+    }
     return () => { document.body.style.paddingTop = ''; };
   }, [isHidden]);
 
@@ -63,7 +68,7 @@ function Navbar() {
           @media (max-width: 991.98px) {
             .kk-auth-collapse {
               position: absolute; top: 100%; right: 0;
-              width: fit-content; min-width: 200px; max-width: 80%;
+              width: fit-content; min-width: 220px; max-width: 80%;
               background-color: white; padding: 1rem; border-radius: 12px;
               box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #eee;
               z-index: 1050;
@@ -72,18 +77,18 @@ function Navbar() {
           }
           .kk-auth-logout-btn {
             background-color: #dc3545; color: white; border: none;
-            border-radius: 50px; padding: 6px 18px;
-            font-weight: 600; font-size: .9rem; cursor: pointer;
+            border-radius: 50px; padding: 7px 22px;
+            font-weight: 600; font-size: 1rem; cursor: pointer;
             font-family: inherit; transition: background .15s;
           }
           .kk-auth-logout-btn:hover { background-color: #b91c1c; }
         `}</style>
 
-        <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm fixed-top">
+        <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm fixed-top py-2">
           <div className="container position-relative">
             <Link className="navbar-brand d-flex align-items-center" to={dashLink} onClick={close}>
-              <img src={logo} alt="KaaKazini Logo" style={{ height: '80px', width: 'auto' }} className="d-inline-block align-text-top"/>
-              <span className="ms-2 fw-bold">KAAKAZINI</span>
+              <img src={logo} alt="KaaKazini Logo" style={{ height: '54px', width: 'auto' }} className="d-inline-block align-text-top"/>
+              <span className="ms-2 fw-bold" style={{ fontSize: '1.15rem' }}>KAAKAZINI</span>
             </Link>
             <button className="navbar-toggler border-0 shadow-none" type="button" onClick={() => setMenuOpen(v => !v)}>
               <span className="fs-3">{menuOpen ? '✕' : '☰'}</span>
@@ -91,7 +96,7 @@ function Navbar() {
             <div className={`collapse navbar-collapse kk-auth-collapse ${menuOpen ? 'show' : ''}`}>
               <ul className="navbar-nav ms-auto d-flex align-items-center kk-auth-nav-list">
                 <li className="nav-item">
-                  <span className="nav-link fs-5 fw-semibold">Hi, {firstName}</span>
+                  <span className="nav-link" style={{ fontSize: '1.15rem' }}>Hi, {firstName}</span>
                 </li>
                 <li className="nav-item">
                   <button className="kk-auth-logout-btn ms-lg-2" onClick={handleLogout}>
@@ -110,7 +115,7 @@ function Navbar() {
     <>
       <style>{`
         @media (max-width: 991.98px) {
-          .navbar-collapse { position: absolute; top: 100%; right: 0; width: fit-content; min-width: 200px; max-width: 80%; background-color: white; padding: 1rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #eee; z-index: 1050; }
+          .navbar-collapse { position: absolute; top: 100%; right: 0; width: fit-content; min-width: 220px; max-width: 80%; background-color: white; padding: 1rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #eee; z-index: 1050; }
           .navbar-nav { align-items: text-center !important; gap: 10px !important; }
           .nav-link { padding: 8px 0 !important; text-align: right; width: 100%; }
           .dropdown-menu.show { position: static; float: none; border: none; background: #f9f9f9; padding-right: 10px; margin-top: 5px; text-align: right; }
@@ -144,10 +149,10 @@ function Navbar() {
         }
         .kk-join-close:hover { background: #f1f5f9; color: #1e293b; }
 
-        .kk-modal-head { padding: 26px 26px 18px; }
-        .kk-modal-head .eyebrow { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #16a34a; margin: 0 0 8px; }
-        .kk-modal-head h2 { font-size: 1.35rem; font-weight: 900; color: #0d0d0d; margin: 0 0 4px; letter-spacing: -.02em; }
-        .kk-modal-head .sub { font-size: .83rem; color: #64748b; margin: 0; }
+        .kk-modal-head { padding: 24px 24px 17px; }
+        .kk-modal-head .eyebrow { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #16a34a; margin: 0 0 7px; }
+        .kk-modal-head h2 { font-size: 1.3rem; font-weight: 900; color: #0d0d0d; margin: 0 0 4px; letter-spacing: -.02em; }
+        .kk-modal-head .sub { font-size: .82rem; color: #64748b; margin: 0; }
 
         .kk-join-cards { display: grid; grid-template-columns: 1fr 1fr; border-top: 1.5px solid #f1f5f9; }
 
@@ -176,9 +181,9 @@ function Navbar() {
         .kk-join-card.craftsman .kk-join-card-banner-label { color: #FFD700; }
         .kk-join-card.client    .kk-join-card-banner-label { color: #86efac; }
 
-        .kk-join-card-body { padding: 16px 16px 18px; display: flex; flex-direction: column; flex: 1; transition: background .15s; }
-        .kk-join-card-title { font-size: .92rem; font-weight: 800; color: #0d0d0d; margin: 0 0 5px; }
-        .kk-join-card-desc { font-size: .72rem; color: #64748b; margin: 0 0 14px; line-height: 1.55; flex: 1; font-weight: 500; }
+        .kk-join-card-body { padding: 15px 15px 17px; display: flex; flex-direction: column; flex: 1; transition: background .15s; }
+        .kk-join-card-title { font-size: .9rem; font-weight: 800; color: #0d0d0d; margin: 0 0 5px; }
+        .kk-join-card-desc { font-size: .72rem; color: #64748b; margin: 0 0 13px; line-height: 1.55; flex: 1; font-weight: 500; }
         .kk-join-card-links { display: flex; flex-direction: column; gap: 7px; }
 
         .kk-join-card-signup {
@@ -188,51 +193,53 @@ function Navbar() {
         .kk-join-card.craftsman .kk-join-card-signup { color: #ca8a04; }
         .kk-join-card.client    .kk-join-card-signup { color: #16a34a; }
 
-        .kk-join-card-login { font-size: .7rem; color: #94a3b8; text-decoration: none; }
+        .kk-join-card-login { font-size: .69rem; color: #94a3b8; text-decoration: none; }
         .kk-join-card-login span { color: #0d0d0d; font-weight: 600; }
         .kk-join-card.craftsman .kk-join-card-login span { border-bottom: 1.5px solid #ffc107; }
         .kk-join-card.client    .kk-join-card-login span { border-bottom: 1.5px solid #16a34a; }
 
         .kk-join-login {
-          text-align: center; font-size: .78rem; color: #94a3b8;
-          padding: 13px 24px; border-top: 1px solid #f1f5f9; margin: 0;
+          text-align: center; font-size: .77rem; color: #94a3b8;
+          padding: 12px 24px; border-top: 1px solid #f1f5f9; margin: 0;
         }
         .kk-join-login a { color: #0d0d0d; font-weight: 800; text-decoration: none; border-bottom: 2px solid #FFD700; padding-bottom: 1px; }
         .kk-join-login a:hover { color: #e6c200; }
       `}</style>
 
-      <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm fixed-top">
+      <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm fixed-top py-2">
         <div className="container position-relative">
           <Link className="navbar-brand d-flex align-items-center" to="/" onClick={close}>
-            <img src={logo} alt="KaaKazini Logo" style={{ height: '80px', width: 'auto' }} className="d-inline-block align-text-top"/>
-            <span className="ms-2 fw-bold">KAAKAZINI</span>
+            <img src={logo} alt="KaaKazini Logo" style={{ height: '54px', width: 'auto' }} className="d-inline-block align-text-top"/>
+            <span className="ms-2 fw-bold" style={{ fontSize: '1.15rem' }}>KAAKAZINI</span>
           </Link>
           <button className="navbar-toggler border-0 shadow-none" type="button" onClick={() => setMenuOpen(v => !v)}>
             <span className="fs-3">{menuOpen ? '✕' : '☰'}</span>
           </button>
           <div className={`collapse navbar-collapse ${menuOpen ? 'show' : ''}`}>
-            <ul className="navbar-nav ms-auto d-flex align-items-center">
+            <ul className="navbar-nav ms-auto d-flex align-items-center gap-1">
               <li className="nav-item">
-                <Link className="nav-link fs-5" to="/craftsmen" onClick={close}>Craftsmen</Link>
+                <Link className="nav-link" to="/craftsmen" onClick={close} style={{ fontSize: '1.15rem' }}>Craftsmen</Link>
               </li>
               <li className="nav-item dropdown" onClick={e => { e.stopPropagation(); setServicesOpen(v => !v); }} style={{ cursor: 'pointer' }}>
-                <span className="nav-link fs-5 d-flex align-items-center justify-content-end">
+                <span className="nav-link d-flex align-items-center justify-content-end" style={{ fontSize: '1.15rem' }}>
                   Services
-                  <span style={{ display:'inline-block', marginRight:'8px', fontSize:'12px', transition:'transform 0.2s', transform: servicesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                  <span style={{ display:'inline-block', marginLeft:'5px', fontSize:'11px', transition:'transform 0.2s', transform: servicesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                 </span>
                 {servicesOpen && (
-                  <ul className="dropdown-menu show border-0">
-                    <li><Link className="dropdown-item py-2" to="/services" onClick={close}>What We Offer</Link></li>
-                    <li><Link className="dropdown-item py-2" to="/business" onClick={close}>Grow Your Business</Link></li>
+                  <ul className="dropdown-menu show border-0 shadow-sm">
+                    <li><Link className="dropdown-item py-2" to="/services" onClick={close} style={{ fontSize: '1rem' }}>What We Offer</Link></li>
+                    <li><Link className="dropdown-item py-2" to="/business" onClick={close} style={{ fontSize: '1rem' }}>Grow Your Business</Link></li>
                   </ul>
                 )}
               </li>
               <li className="nav-item">
-                <Link className="nav-link fs-5" to="/login" onClick={close}>Login</Link>
+                <Link className="nav-link" to="/login" onClick={close} style={{ fontSize: '1.15rem' }}>Login</Link>
               </li>
-              <li className="nav-item">
-                <button className="btn btn-yellow-solid fw-semibold px-4 py-2 rounded-pill ms-lg-2"
-                  onClick={() => { close(); setJoinModal(true); }} style={{ border:'none', cursor:'pointer' }}>
+              <li className="nav-item ms-lg-1">
+                <button
+                  className="btn btn-yellow-solid fw-semibold rounded-pill"
+                  style={{ border:'none', cursor:'pointer', padding: '8px 24px', fontSize: '1rem' }}
+                  onClick={() => { close(); setJoinModal(true); }}>
                   Join Now
                 </button>
               </li>

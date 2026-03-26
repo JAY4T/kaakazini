@@ -3,20 +3,20 @@ import {
   BsPerson, BsBriefcase, BsPeopleFill, BsGear,
   BsBoxArrowRight, BsGraphUp, BsSpeedometer2,
 } from "react-icons/bs";
-import { FaBuilding, FaUser } from "react-icons/fa";
+import { FaBuilding, FaUser, FaTimes } from "react-icons/fa";
 
-function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType }) {
+function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, isOpen, onClose }) {
 
   const tabs = [
-    { name: "Dashboard", icon: <BsSpeedometer2 />, label: "Dashboard"    },
-    { name: "Analytics", icon: <BsGraphUp />,      label: "Analytics"    },  // ← NEW
-    { name: "Profile",   icon: <BsPerson />,       label: "Profile"      },
-    { name: "Jobs",      icon: <BsBriefcase />,    label: "Jobs"         },
+    { name: "Dashboard", icon: <BsSpeedometer2 />, label: "Dashboard" },
+    { name: "Analytics", icon: <BsGraphUp />,      label: "Analytics" },
+    { name: "Profile",   icon: <BsPerson />,       label: "Profile"   },
+    { name: "Jobs",      icon: <BsBriefcase />,    label: "Jobs"      },
     ...(accountType === "Company"
       ? [{ name: "Members", icon: <BsPeopleFill />, label: "Team Members" }]
       : []
     ),
-    { name: "Settings",  icon: <BsGear />,         label: "Settings"     },
+    { name: "Settings",  icon: <BsGear />,         label: "Settings"  },
   ];
 
   return (
@@ -28,6 +28,31 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType }
           font-family: 'Outfit', sans-serif;
           background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
           box-shadow: 4px 0 30px rgba(0,0,0,.2);
+          width: 260px;
+          min-height: 100vh;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          padding: 1.25rem;
+          /* Desktop: always visible */
+        }
+
+        /* ── Mobile: slide-in drawer ── */
+        @media (max-width: 991px) {
+          .craftsman-sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            z-index: 300;
+            transform: translateX(-100%);
+            transition: transform .3s cubic-bezier(.4,0,.2,1);
+            min-height: 100vh;
+            overflow-y: auto;
+            /* Prevent background scroll bleed */
+            overscroll-behavior: contain;
+          }
+          .craftsman-sidebar.open {
+            transform: translateX(0);
+          }
         }
 
         .sidebar-logo {
@@ -42,9 +67,8 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType }
           display: inline-flex; align-items: center; gap: 5px;
           padding: 4px 12px; border-radius: 50px; font-size: .72rem; font-weight: 700;
           margin-top: 8px;
+          background: rgba(34,197,94,.15); color: #86efac; border: 1px solid rgba(34,197,94,.2);
         }
-        .chip-company    { background: rgba(34,197,94,.15); color: #86efac; border: 1px solid rgba(34,197,94,.2); }
-        .chip-individual { background: rgba(34,197,94,.15); color: #86efac; border: 1px solid rgba(34,197,94,.2); }
 
         .nav-btn {
           border: none !important; background: transparent !important;
@@ -64,16 +88,12 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType }
           box-shadow: 0 6px 20px rgba(34,197,94,.2) !important;
           border-left: 3px solid #22c55e !important;
         }
-
-        /* Analytics tab gets a gold accent when active to match its chart colors */
         .nav-btn.analytics-btn.active {
           background: linear-gradient(135deg,rgba(251,191,36,.25),rgba(34,197,94,.15)) !important;
           border-left-color: #fbbf24 !important;
           box-shadow: 0 6px 20px rgba(251,191,36,.15) !important;
         }
-        .nav-btn.analytics-btn:hover {
-          background: rgba(251,191,36,.12) !important;
-        }
+        .nav-btn.analytics-btn:hover { background: rgba(251,191,36,.12) !important; }
 
         .nav-icon { font-size: 1.2rem; flex-shrink: 0; }
 
@@ -91,38 +111,53 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType }
           box-shadow: 0 4px 15px rgba(239,68,68,.2) !important;
         }
 
-        .sidebar-divider {
-          border: none; border-top: 1px solid rgba(255,255,255,.08);
-          margin: 1rem 0;
-        }
+        .sidebar-divider { border: none; border-top: 1px solid rgba(255,255,255,.08); margin: 1rem 0; }
 
-        /* Small "NEW" badge on Analytics */
         .nav-new-badge {
           margin-left: auto;
           background: linear-gradient(135deg,#fbbf24,#22c55e);
           color: #1f2937; font-size: .58rem; font-weight: 800;
-          padding: 2px 7px; border-radius: 50px; letter-spacing: .3px;
-          flex-shrink: 0;
+          padding: 2px 7px; border-radius: 50px; letter-spacing: .3px; flex-shrink: 0;
+        }
+
+        /* Close button — only shows on mobile */
+        .sidebar-close-btn {
+          display: none;
+          background: rgba(255,255,255,.1);
+          border: none; border-radius: 10px;
+          width: 36px; height: 36px;
+          color: white; cursor: pointer;
+          align-items: center; justify-content: center;
+          transition: background .2s; flex-shrink: 0;
+        }
+        .sidebar-close-btn:hover { background: rgba(255,255,255,.2); }
+
+        @media (max-width: 991px) {
+          .sidebar-close-btn { display: flex; }
         }
       `}</style>
 
-      <div className="d-flex flex-column craftsman-sidebar text-white p-3"
-        style={{ width: "260px", minHeight: "100vh", flexShrink: 0 }}>
+      <div className={`craftsman-sidebar text-white ${isOpen ? "open" : ""}`}>
 
-        {/* Logo */}
-        <div className="text-center mb-4 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-          <h4 className="sidebar-logo mb-1">Kaakazini</h4>
-          <div className="sidebar-subtitle">Craftsman Dashboard</div>
-          {accountType && (
-            <div className={`account-chip ${accountType === "Company" ? "chip-company" : "chip-individual"}`}>
-              {accountType === "Company" ? <FaBuilding size={10}/> : <FaUser size={10}/>}
-              {accountType} Account
-            </div>
-          )}
+        {/* Logo row — with close button on mobile */}
+        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:"1.5rem", paddingBottom:"1rem", borderBottom:"1px solid rgba(255,255,255,.08)" }}>
+          <div style={{ textAlign:"left" }}>
+            <h4 className="sidebar-logo mb-1">Kaakazini</h4>
+            <div className="sidebar-subtitle">Craftsman Dashboard</div>
+            {accountType && (
+              <div className="account-chip">
+                {accountType === "Company" ? <FaBuilding size={10}/> : <FaUser size={10}/>}
+                {accountType} Account
+              </div>
+            )}
+          </div>
+          <button className="sidebar-close-btn" onClick={onClose}>
+            <FaTimes size={16}/>
+          </button>
         </div>
 
         {/* Navigation */}
-        <div className="flex-grow-1">
+        <div style={{ flexGrow: 1 }}>
           {tabs.map(tab => (
             <button
               key={tab.name}

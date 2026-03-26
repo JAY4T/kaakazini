@@ -372,10 +372,7 @@ function CraftsmenList() {
           <div className="container">
             <div className="cl-header-inner">
 
-              <div className="cl-eyebrow">
-                <span className="cl-eyebrow-dot" aria-hidden="true"/>
-                Verified Professionals · Kenya
-              </div>
+             
 
               <h1 className="cl-title">
                 Find &amp; Hire <em>Skilled</em><br/>Craftsmen Near You

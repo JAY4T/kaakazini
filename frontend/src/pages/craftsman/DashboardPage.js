@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import api from "../../api/axiosClient";
 
-import DashboardSidebar from "../../components/craftsman/DashboardSidebar";
-import DashboardTab     from "../../components/craftsman/DashboardTab";
-import AnalyticsTab     from "../../components/craftsman/AnalyticsTab";
-import ProfileTab       from "../../components/craftsman/ProfileTab";
-import JobsTab          from "../../components/craftsman/JobsTab";
-import MembersTab       from "../../components/craftsman/MembersTab";
-import SettingsTab      from "../../components/craftsman/SettingsTab";
+import DashboardSidebar     from "../../components/craftsman/DashboardSidebar";
+import DashboardTab         from "../../components/craftsman/DashboardTab";
+import AnalyticsTab         from "../../components/craftsman/AnalyticsTab";
+import ProfileTab           from "../../components/craftsman/ProfileTab";
+import JobsTab              from "../../components/craftsman/JobsTab";
+import MembersTab           from "../../components/craftsman/MembersTab";
+import SettingsTab          from "../../components/craftsman/SettingsTab";
 
 import { getFullImageUrl } from "../../utils/getFullImageUrl";
 
@@ -81,6 +81,8 @@ function DashboardPage() {
   const navigate = useNavigate();
   const { toasts, addToast, removeToast } = useToast();
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [craftsman,   setCraftsman]   = useState({});
   const [profileData, setProfileData] = useState({
     description: "", profession: "", experience_level: "",
@@ -105,6 +107,12 @@ function DashboardPage() {
   const serviceOptions    = ["Plumbing","Electrical","Carpentry","Painting","Roofing","Welding","Tiling","Interior Design","Landscaping","Masonry","AC Repair","Woodwork","Auto Repair","Tarmacking","Fencing","Borehole Drilling"];
 
   useEffect(() => { fetchCraftsmanData(); fetchAssignedJobs(); }, []);
+
+  // Close sidebar on tab change (mobile)
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSidebarOpen(false);
+  };
 
   const fetchCraftsmanData = async () => {
     try {
@@ -192,32 +200,144 @@ function DashboardPage() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
-        .dashboard-container { min-height:100vh; background:white; display:flex; font-family:'Outfit',sans-serif; }
-        .main-content { flex-grow:1; padding:2.5rem; background:#f8fafc; min-height:100vh; }
-        .content-card {
-          background:white; border-radius:20px;
-          box-shadow:0 10px 40px rgba(0,0,0,.06);
-          padding:2.5rem; margin-bottom:2rem;
-          border:2px solid rgba(251,191,36,.1);
-          position:relative; overflow:hidden;
+
+        .dashboard-container {
+          min-height: 100vh;
+          background: white;
+          display: flex;
+          font-family: 'Outfit', sans-serif;
         }
-        .content-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#fbbf24,#22c55e); }
-        .content-card.dark { background:transparent; box-shadow:none; padding:0; border:none; }
-        .content-card.dark::before { display:none; }
-        @media (max-width:768px) {
-          .main-content  { padding:1rem; }
-          .content-card  { padding:1.25rem; border-radius:14px; }
+
+        /* ── Main content ── */
+        .main-content {
+          flex-grow: 1;
+          padding: 2.5rem;
+          background: #f8fafc;
+          min-height: 100vh;
+          /* On mobile the sidebar is an overlay so main fills full width */
+          width: 100%;
+          min-width: 0;
+        }
+
+        .content-card {
+          background: white;
+          border-radius: 20px;
+          box-shadow: 0 10px 40px rgba(0,0,0,.06);
+          padding: 2.5rem;
+          margin-bottom: 2rem;
+          border: 2px solid rgba(251,191,36,.1);
+          position: relative;
+          overflow: hidden;
+        }
+        .content-card::before {
+          content: '';
+          position: absolute; top: 0; left: 0; right: 0; height: 4px;
+          background: linear-gradient(90deg, #fbbf24, #22c55e);
+        }
+        .content-card.dark {
+          background: transparent; box-shadow: none; padding: 0; border: none;
+        }
+        .content-card.dark::before { display: none; }
+
+        /* ── Mobile top bar ── */
+        .mobile-topbar {
+          display: none;
+          position: sticky;
+          top: 0;
+          z-index: 200;
+          background: #1f2937;
+          padding: .75rem 1rem;
+          align-items: center;
+          justify-content: space-between;
+          box-shadow: 0 2px 12px rgba(0,0,0,.3);
+        }
+        .mobile-topbar-title {
+          font-family: 'Outfit', sans-serif;
+          font-weight: 800;
+          font-size: 1.1rem;
+          background: linear-gradient(135deg, #fbbf24, #22c55e);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        .hamburger-btn {
+          background: rgba(255,255,255,.1);
+          border: none;
+          border-radius: 10px;
+          width: 40px; height: 40px;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          transition: background .2s;
+        }
+        .hamburger-btn:hover { background: rgba(255,255,255,.2); }
+        .hamburger-icon { display: flex; flex-direction: column; gap: 5px; }
+        .hamburger-icon span {
+          display: block; width: 20px; height: 2px;
+          background: white; border-radius: 2px;
+          transition: all .3s;
+        }
+
+        /* ── Sidebar overlay on mobile ── */
+        .sidebar-overlay {
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,.55);
+          z-index: 299;
+          animation: fadeIn .2s ease;
+        }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+        /* ── Responsive breakpoints ── */
+        @media (max-width: 991px) {
+          .mobile-topbar { display: flex; }
+          .sidebar-overlay { display: block; }
+
+          .dashboard-container { flex-direction: column; }
+
+          .main-content {
+            padding: 1rem;
+            /* No left margin since sidebar is overlay */
+          }
+          .content-card {
+            padding: 1.25rem;
+            border-radius: 14px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .main-content { padding: .75rem; }
+          .content-card { padding: 1rem; border-radius: 12px; }
         }
       `}</style>
 
       <ToastContainer toasts={toasts} removeToast={removeToast}/>
 
+      {/* Mobile top bar */}
+      <div className="mobile-topbar">
+        <span className="mobile-topbar-title">Kaakazini</span>
+        <button className="hamburger-btn" onClick={() => setSidebarOpen(v => !v)}>
+          <div className="hamburger-icon">
+            <span/>
+            <span/>
+            <span/>
+          </div>
+        </button>
+      </div>
+
+      {/* Overlay backdrop — clicking closes sidebar */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}/>
+      )}
+
       <div className="dashboard-container">
         <DashboardSidebar
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleTabChange}
           handleLogout={handleLogout}
           accountType={accountType}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
 
         <div className="main-content">
