@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import api from "../../api/axiosClient";
 
-import DashboardSidebar     from "../../components/craftsman/DashboardSidebar";
-import DashboardTab         from "../../components/craftsman/DashboardTab";
-import AnalyticsTab         from "../../components/craftsman/AnalyticsTab";
-import ProfileTab           from "../../components/craftsman/ProfileTab";
-import JobsTab              from "../../components/craftsman/JobsTab";
-import MembersTab           from "../../components/craftsman/MembersTab";
-import SettingsTab          from "../../components/craftsman/SettingsTab";
+import DashboardSidebar from "../../components/craftsman/DashboardSidebar";
+import DashboardTab     from "../../components/craftsman/DashboardTab";
+import AnalyticsTab     from "../../components/craftsman/AnalyticsTab";
+import ProfileTab       from "../../components/craftsman/ProfileTab";
+import JobsTab          from "../../components/craftsman/JobsTab";
+import MembersTab       from "../../components/craftsman/MembersTab";
+import SettingsTab      from "../../components/craftsman/SettingsTab";
 
 import { getFullImageUrl } from "../../utils/getFullImageUrl";
 
@@ -81,7 +81,8 @@ function DashboardPage() {
   const navigate = useNavigate();
   const { toasts, addToast, removeToast } = useToast();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen,   setSidebarOpen]   = useState(false);
+  const [switchingRole, setSwitchingRole] = useState(false);
 
   const [craftsman,   setCraftsman]   = useState({});
   const [profileData, setProfileData] = useState({
@@ -90,8 +91,8 @@ function DashboardPage() {
     account_type: "Individual",
   });
 
-  const [profileImage,  setProfileImage]  = useState(null);
-  const [proofDocument, setProofDocument] = useState(null);
+  const [profileImage,         setProfileImage]        = useState(null);
+  const [proofDocument,        setProofDocument]        = useState(null);
   const [portfolioImages,      setPortfolioImages]      = useState([]);
   const [portfolioIdsToRemove, setPortfolioIdsToRemove] = useState([]);
 
@@ -102,22 +103,44 @@ function DashboardPage() {
 
   const accountType = profileData.account_type || craftsman.account_type || "Individual";
 
+  // ── active_role comes from /me/ (user table), not /craftsman/ ───────────
+  const activeRole = craftsman.active_role || "craftsman";
+
   const professionOptions = ["Electrician","Plumber","Carpenter","Welder","Painter","Mechanic","WoodMaker","Mason","Tiler","Roofer","AC Technician","Landscaper"];
   const skillOptions      = ["Wiring","Pipe Fitting","Roofing","Furniture Making","Auto Repair","Welding","Tiling","Plastering","Painting"];
   const serviceOptions    = ["Plumbing","Electrical","Carpentry","Painting","Roofing","Welding","Tiling","Interior Design","Landscaping","Masonry","AC Repair","Woodwork","Auto Repair","Tarmacking","Fencing","Borehole Drilling"];
 
-  useEffect(() => { fetchCraftsmanData(); fetchAssignedJobs(); }, []);
+  // ── On mount: load craftsman profile + jobs + user role ─────────────────
+  useEffect(() => {
+    fetchCraftsmanData();
+    fetchAssignedJobs();
+    fetchUserRole();       // ← fetch active_role from /me/
+  }, []);
 
-  // Close sidebar on tab change (mobile)
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setSidebarOpen(false);
   };
 
+  // ── Fetches active_role from the user/accounts table via /me/ ───────────
+  const fetchUserRole = async () => {
+    try {
+      const { data } = await api.get("/me/");
+      // Merge active_role into craftsman state
+      setCraftsman(prev => ({ ...prev, active_role: data.active_role || "craftsman" }));
+    } catch (err) {
+      // Silently fail — default is "craftsman" already
+    }
+  };
+
+  // ── Fetches craftsman profile data ───────────────────────────────────────
   const fetchCraftsmanData = async () => {
     try {
       const { data } = await api.get("/craftsman/");
-      setCraftsman(data);
+      setCraftsman(prev => ({
+        ...prev,          // preserve active_role if already set by fetchUserRole
+        ...data,          // spread craftsman data on top
+      }));
       setProfileData({
         description:      data.description      || "",
         profession:       data.profession        || "",
@@ -130,10 +153,13 @@ function DashboardPage() {
           ? data.services.map(s => ({ id:s.id, name:s.name, rate:s.rate ? parseFloat(s.rate) : null, unit:s.unit||"fixed" }))
           : [],
       });
-      setProfileImage(data.profile_url   ? getFullImageUrl(data.profile_url)        : null);
-      setProofDocument(data.proof_document_url ? getFullImageUrl(data.proof_document_url) : null);
+      setProfileImage(data.profile_url         ? getFullImageUrl(data.profile_url)         : null);
+      setProofDocument(data.proof_document_url  ? getFullImageUrl(data.proof_document_url)  : null);
       if (Array.isArray(data.gallery_images)) {
-        setPortfolioImages(data.gallery_images.map(img => ({ id:img.id, url:img.image_url, preview:getFullImageUrl(img.image_url), isExisting:true })));
+        setPortfolioImages(data.gallery_images.map(img => ({
+          id: img.id, url: img.image_url,
+          preview: getFullImageUrl(img.image_url), isExisting: true,
+        })));
       }
     } catch (err) {
       addToast("Failed to load your profile. Please refresh.", "error", "Load Error");
@@ -149,6 +175,43 @@ function DashboardPage() {
     } catch (err) {}
   };
 
+  // ── Switch between craftsman ↔ client mode ───────────────────────────────
+  const handleSwitchRole = async () => {
+    if (switchingRole) return;
+
+    const newRole = activeRole === "craftsman" ? "client" : "craftsman";
+    setSwitchingRole(true);
+
+    try {
+      await api.post("/switch-role/", { role: newRole });
+
+      // Update active_role in local state immediately
+      setCraftsman(prev => ({ ...prev, active_role: newRole }));
+
+      addToast(
+        `Switched to ${newRole} mode!`,
+        "success",
+        "Role Switched 🔄",
+        3000,
+      );
+
+      // Redirect after short delay so user sees the toast
+      setTimeout(() => {
+        if (newRole === "client") {
+          navigate("/hire");
+        } else {
+          navigate("/craftsman-dashboard");
+        }
+      }, 1000);
+
+    } catch (err) {
+      const msg = err.response?.data?.detail || "Could not switch role. Please try again.";
+      addToast(msg, "error", "Switch Failed");
+    } finally {
+      setSwitchingRole(false);
+    }
+  };
+
   const handleProfileImageChange  = (e) => { const f = e.target.files[0]; if (f) setProfileImage(f); };
   const handleProofDocumentChange = (e) => { const f = e.target.files[0]; if (f) setProofDocument(f); };
   const handlePortfolioAdd        = (imgObj) => setPortfolioImages(prev => [...prev, imgObj]);
@@ -158,29 +221,43 @@ function DashboardPage() {
     if (img?.isExisting && typeof img.id === "number") setPortfolioIdsToRemove(prev => [...prev, img.id]);
   };
 
-  const handleLogout = () => { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/login"); };
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
 
   const saveProfile = async (formData) => {
     if (saving) return;
     setSaving(true);
     try {
       const { data } = await api.patch("/craftsman/", formData);
-      setCraftsman(data);
-      setProfileImage(data.profile_url ? getFullImageUrl(data.profile_url) : null);
-      setProofDocument(data.proof_document_url ? getFullImageUrl(data.proof_document_url) : null);
+      setCraftsman(prev => ({
+        ...prev,   // preserve active_role
+        ...data,   // update craftsman fields
+      }));
+      setProfileImage(data.profile_url         ? getFullImageUrl(data.profile_url)         : null);
+      setProofDocument(data.proof_document_url  ? getFullImageUrl(data.proof_document_url)  : null);
       if (Array.isArray(data.gallery_images)) {
-        setPortfolioImages(data.gallery_images.map(img => ({ id:img.id, url:img.image_url, preview:getFullImageUrl(img.image_url), isExisting:true })));
+        setPortfolioImages(data.gallery_images.map(img => ({
+          id: img.id, url: img.image_url,
+          preview: getFullImageUrl(img.image_url), isExisting: true,
+        })));
       }
       setProfileData(prev => ({
         ...prev,
         skills: Array.isArray(data.skills) ? data.skills : prev.skills,
-        services: Array.isArray(data.services) ? data.services.map(s => ({ id:s.id, name:s.name, rate:s.rate ? parseFloat(s.rate) : null, unit:s.unit||"fixed" })) : prev.services,
+        services: Array.isArray(data.services)
+          ? data.services.map(s => ({ id:s.id, name:s.name, rate:s.rate ? parseFloat(s.rate) : null, unit:s.unit||"fixed" }))
+          : prev.services,
         experience_level: data.experience_level || prev.experience_level,
       }));
       setPortfolioIdsToRemove([]);
       addToast("Profile saved!", "success", "Profile Saved!", 5000);
     } catch (err) {
-      const msg = err.response?.data?.detail || Object.values(err.response?.data || {})[0] || "Something went wrong. Please try again.";
+      const msg = err.response?.data?.detail
+        || Object.values(err.response?.data || {})[0]
+        || "Something went wrong. Please try again.";
       addToast(typeof msg === "string" ? msg : JSON.stringify(msg), "error", "Save Failed");
     } finally {
       setSaving(false);
@@ -207,18 +284,14 @@ function DashboardPage() {
           display: flex;
           font-family: 'Outfit', sans-serif;
         }
-
-        /* ── Main content ── */
         .main-content {
           flex-grow: 1;
           padding: 2.5rem;
           background: #f8fafc;
           min-height: 100vh;
-          /* On mobile the sidebar is an overlay so main fills full width */
           width: 100%;
           min-width: 0;
         }
-
         .content-card {
           background: white;
           border-radius: 20px;
@@ -238,73 +311,38 @@ function DashboardPage() {
           background: transparent; box-shadow: none; padding: 0; border: none;
         }
         .content-card.dark::before { display: none; }
-
-        /* ── Mobile top bar ── */
         .mobile-topbar {
           display: none;
-          position: sticky;
-          top: 0;
-          z-index: 200;
-          background: #1f2937;
-          padding: .75rem 1rem;
-          align-items: center;
-          justify-content: space-between;
+          position: sticky; top: 0; z-index: 200;
+          background: #1f2937; padding: .75rem 1rem;
+          align-items: center; justify-content: space-between;
           box-shadow: 0 2px 12px rgba(0,0,0,.3);
         }
         .mobile-topbar-title {
-          font-family: 'Outfit', sans-serif;
-          font-weight: 800;
-          font-size: 1.1rem;
+          font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.1rem;
           background: linear-gradient(135deg, #fbbf24, #22c55e);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
         .hamburger-btn {
-          background: rgba(255,255,255,.1);
-          border: none;
-          border-radius: 10px;
-          width: 40px; height: 40px;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer;
-          transition: background .2s;
+          background: rgba(255,255,255,.1); border: none; border-radius: 10px;
+          width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: background .2s;
         }
         .hamburger-btn:hover { background: rgba(255,255,255,.2); }
         .hamburger-icon { display: flex; flex-direction: column; gap: 5px; }
-        .hamburger-icon span {
-          display: block; width: 20px; height: 2px;
-          background: white; border-radius: 2px;
-          transition: all .3s;
-        }
-
-        /* ── Sidebar overlay on mobile ── */
+        .hamburger-icon span { display: block; width: 20px; height: 2px; background: white; border-radius: 2px; }
         .sidebar-overlay {
-          display: none;
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,.55);
-          z-index: 299;
-          animation: fadeIn .2s ease;
+          display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+          z-index: 299; animation: fadeIn .2s ease;
         }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-
-        /* ── Responsive breakpoints ── */
         @media (max-width: 991px) {
           .mobile-topbar { display: flex; }
           .sidebar-overlay { display: block; }
-
           .dashboard-container { flex-direction: column; }
-
-          .main-content {
-            padding: 1rem;
-            /* No left margin since sidebar is overlay */
-          }
-          .content-card {
-            padding: 1.25rem;
-            border-radius: 14px;
-          }
+          .main-content { padding: 1rem; }
+          .content-card { padding: 1.25rem; border-radius: 14px; }
         }
-
         @media (max-width: 480px) {
           .main-content { padding: .75rem; }
           .content-card { padding: 1rem; border-radius: 12px; }
@@ -317,20 +355,16 @@ function DashboardPage() {
       <div className="mobile-topbar">
         <span className="mobile-topbar-title">Kaakazini</span>
         <button className="hamburger-btn" onClick={() => setSidebarOpen(v => !v)}>
-          <div className="hamburger-icon">
-            <span/>
-            <span/>
-            <span/>
-          </div>
+          <div className="hamburger-icon"><span/><span/><span/></div>
         </button>
       </div>
 
-      {/* Overlay backdrop — clicking closes sidebar */}
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}/>
       )}
 
       <div className="dashboard-container">
+
         <DashboardSidebar
           activeTab={activeTab}
           setActiveTab={handleTabChange}
@@ -338,6 +372,9 @@ function DashboardPage() {
           accountType={accountType}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          activeRole={activeRole}
+          onSwitchRole={handleSwitchRole}
+          switchingRole={switchingRole}
         />
 
         <div className="main-content">
@@ -380,7 +417,7 @@ function DashboardPage() {
 
           {activeTab === "Jobs" && (
             <div className="content-card">
-              <JobsTab jobs={jobs} setJobs={setJobs} userRole="craftsman" addToast={addToast}/>
+              <JobsTab jobs={jobs} setJobs={setJobs} userRole={activeRole} addToast={addToast}/>
             </div>
           )}
 

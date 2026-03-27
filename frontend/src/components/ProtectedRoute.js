@@ -11,19 +11,25 @@ const ProtectedRoute = ({ children, role }) => {
   }
 
   if (!user) {
-    // ✅ Send to the correct login page based on which route is being protected
-    // Craftsman routes → craftsman login (/login)
-    // Client routes    → client login (/HireLogin)
-    // Unknown          → client login as default
+    
     const loginPath = role === 'craftsman' ? '/login' : '/HireLogin';
     return <Navigate to={loginPath} state={{ from: location }} replace />;
   }
 
-  if (role && user.role !== role) {
-    // User is logged in but wrong role — send to their own dashboard
-    if (user.role === 'craftsman') return <Navigate to="/craftsman-dashboard" replace />;
-    if (user.role === 'client')    return <Navigate to="/hire" replace />;
-    return <Navigate to="/" replace />;
+  if (role) {
+    
+
+    const effectiveRole = user.active_role || user.role;
+    const hasAccess = user.role === role || effectiveRole === role;
+
+    if (!hasAccess) {
+      // Redirect to wherever they actually belong right now
+      if (effectiveRole === 'craftsman') return <Navigate to="/craftsman-dashboard" replace />;
+      if (effectiveRole === 'client')    return <Navigate to="/hire" replace />;
+      if (user.role === 'craftsman')     return <Navigate to="/craftsman-dashboard" replace />;
+      if (user.role === 'client')        return <Navigate to="/hire" replace />;
+      return <Navigate to="/" replace />;
+    }
   }
 
   return children;

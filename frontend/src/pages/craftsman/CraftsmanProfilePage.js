@@ -34,7 +34,7 @@ function CraftsmanProfile() {
   if (loading) return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f0fdf4'}}>
       <div style={{textAlign:'center'}}>
-        <div style={{width:52,height:52,border:'3px solid #bbf7d0',borderTopColor:'#16a34a',borderRadius:'50%',animation:'spin 0.8s linear infinite',margin:'0 auto'}}/>
+        <div style={{width:48,height:48,border:'3px solid #bbf7d0',borderTopColor:'#16a34a',borderRadius:'50%',animation:'spin 0.8s linear infinite',margin:'0 auto'}}/>
         <p style={{marginTop:16,fontFamily:"'DM Sans',sans-serif",color:'#15803d',fontWeight:600,fontSize:'.88rem'}}>Loading profile…</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
@@ -44,10 +44,9 @@ function CraftsmanProfile() {
   if (notFound || !craftsman) return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f0fdf4'}}>
       <div style={{textAlign:'center',padding:'40px 24px'}}>
-        <div style={{fontSize:'3rem',marginBottom:16}}>🔍</div>
         <h2 style={{fontFamily:"'Playfair Display',serif",color:'#1a2e1a',marginBottom:8,fontWeight:800}}>Craftsman Not Found</h2>
         <p style={{color:'#64748b',marginBottom:24}}>{errorMsg || 'Please check the URL or select another craftsman.'}</p>
-        <Link to="/craftsmen" style={{background:'#FFD700',color:'#1a2e1a',padding:'12px 28px',borderRadius:10,textDecoration:'none',fontWeight:700,boxShadow:'0 3px 14px rgba(255,215,0,.4)'}}>Browse Craftsmen</Link>
+        <Link to="/craftsmen" style={{background:'#FFD700',color:'#1a2e1a',padding:'12px 28px',borderRadius:10,textDecoration:'none',fontWeight:700}}>Browse Craftsmen</Link>
       </div>
     </div>
   );
@@ -63,17 +62,25 @@ function CraftsmanProfile() {
     ? (craftsman.reviews.reduce((sum, r) => sum + r.rating, 0) / craftsman.reviews.length).toFixed(1)
     : null;
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/craftsman/${slug}`)
-      .then(() => alert('Profile link copied!'));
+  const handleShare = () => {
+    const url = `${window.location.origin}/craftsman/${slug}`;
+    if (navigator.share) {
+      navigator.share({
+        title: `${craftsman.name} — KaaKazini`,
+        text: `Check out ${craftsman.name}'s profile on KaaKazini`,
+        url,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url).then(() => alert('Link copied!'));
+    }
   };
 
-  const tabs = ['about','portfolio','skills','reviews'];
+  const tabs = ['about', 'portfolio', 'skills', 'reviews'];
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
         :root {
           --green:   #16a34a;
@@ -91,29 +98,20 @@ function CraftsmanProfile() {
         }
 
         * { box-sizing: border-box; }
-        body { font-family: 'DM Sans', sans-serif; }
 
-        /* ── Cover ── */
         .cp-cover {
-          height: 260px; position: relative; overflow: hidden;
+          height: 240px; position: relative; overflow: hidden;
           background: linear-gradient(135deg, #0a2e1a 0%, #15803d 50%, #16a34a 100%);
         }
         .cp-cover-pattern {
-          position: absolute; inset: 0; opacity: .08;
+          position: absolute; inset: 0; opacity: .06;
           background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
-        .cp-cover-glow {
-          position: absolute; top: -80px; right: -80px;
-          width: 400px; height: 400px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(255,215,0,.1) 0%, transparent 65%);
-          pointer-events: none;
-        }
-        @media(max-width:768px){ .cp-cover { height: 160px; } }
+        @media(max-width:768px){ .cp-cover { height: 150px; } }
 
-        /* ── Profile header card ── */
         .cp-header-card {
           background: var(--white); border-radius: 16px;
-          box-shadow: 0 4px 30px rgba(0,0,0,.08);
+          box-shadow: 0 4px 24px rgba(0,0,0,.07);
           border: 1.5px solid var(--border);
           margin: 0 0 1.5rem; overflow: hidden; position: relative;
         }
@@ -123,36 +121,36 @@ function CraftsmanProfile() {
         }
 
         .cp-avatar-row {
-          padding: 0 2rem 1.5rem; margin-top: -70px;
+          padding: 0 2rem 1.5rem; margin-top: -64px;
           display: flex; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap;
         }
-        @media(max-width:576px){ .cp-avatar-row { margin-top: -50px; padding: 0 1rem 1.25rem; gap: 1rem; } }
+        @media(max-width:576px){ .cp-avatar-row { margin-top: -48px; padding: 0 1rem 1.25rem; gap: 1rem; } }
 
         .cp-avatar {
-          width: 140px; height: 140px; border-radius: 50%;
-          border: 5px solid var(--white);
-          box-shadow: 0 4px 20px rgba(0,0,0,.15);
+          width: 128px; height: 128px; border-radius: 50%;
+          border: 4px solid var(--white);
+          box-shadow: 0 4px 18px rgba(0,0,0,.12);
           object-fit: cover; background: var(--white); flex-shrink: 0;
         }
-        @media(max-width:576px){ .cp-avatar { width: 100px; height: 100px; } }
+        @media(max-width:576px){ .cp-avatar { width: 90px; height: 90px; } }
 
-        .cp-name-block { flex: 1; min-width: 200px; padding-top: 80px; }
-        @media(max-width:576px){ .cp-name-block { padding-top: 60px; } }
+        .cp-name-block { flex: 1; min-width: 200px; padding-top: 72px; }
+        @media(max-width:576px){ .cp-name-block { padding-top: 56px; } }
 
         .cp-name {
           font-family: 'Playfair Display', serif;
-          font-size: 2rem; font-weight: 800; color: var(--text); margin: 0 0 4px;
+          font-size: 1.9rem; font-weight: 800; color: var(--text); margin: 0 0 6px;
         }
-        @media(max-width:576px){ .cp-name { font-size: 1.5rem; } }
+        @media(max-width:576px){ .cp-name { font-size: 1.45rem; } }
 
         .cp-headline {
-          font-size: .97rem; color: var(--muted); margin: 0 0 8px;
+          font-size: .93rem; color: var(--muted); margin: 0 0 8px;
           display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
         }
 
         .cp-trade-pill {
           background: var(--green); color: #fff; border-radius: 20px;
-          padding: 3px 12px; font-size: .75rem; font-weight: 700;
+          padding: 3px 12px; font-size: .73rem; font-weight: 700;
           display: inline-flex; align-items: center; gap: 5px;
         }
 
@@ -169,90 +167,50 @@ function CraftsmanProfile() {
         .cp-rating-pill {
           display: inline-flex; align-items: center; gap: 6px;
           background: var(--gold-l); border: 1.5px solid var(--gold);
-          border-radius: 20px; padding: 5px 14px; font-size: .87rem; font-weight: 700;
+          border-radius: 20px; padding: 4px 13px; font-size: .85rem; font-weight: 700;
           color: #7c4b00; margin-top: 8px;
         }
 
-        /* ── Stats row ── */
         .cp-stats {
-          display: flex; gap: 0; border-top: 1px solid var(--border);
-          margin: 0 2rem;
+          display: flex; gap: 0; border-top: 1px solid var(--border); margin: 0 2rem;
         }
         @media(max-width:576px){ .cp-stats { margin: 0 1rem; } }
-        .cp-stat { flex: 1; text-align: center; padding: 16px 8px; border-right: 1px solid var(--border); }
+        .cp-stat { flex: 1; text-align: center; padding: 14px 8px; border-right: 1px solid var(--border); }
         .cp-stat:last-child { border-right: none; }
-        .cp-stat-val { display: block; font-size: 1.35rem; font-weight: 800; color: var(--text); }
-        .cp-stat-lbl { display: block; font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+        .cp-stat-val { display: block; font-size: 1.3rem; font-weight: 800; color: var(--text); }
+        .cp-stat-lbl { display: block; font-size: .7rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
 
-        /* ── Action buttons ── */
-        .cp-actions { display: flex; gap: 10px; flex-wrap: wrap; padding: 1.25rem 2rem 0; }
-        @media(max-width:576px){ .cp-actions { padding: 1rem 1rem 0; flex-direction: column; } }
+        .cp-actions { display: flex; gap: 10px; flex-wrap: wrap; padding: 1.25rem 2rem; }
+        @media(max-width:576px){ .cp-actions { padding: 1rem; flex-direction: column; } }
 
         .cp-btn-hire {
-          flex: 1; min-width: 180px;
+          flex: 1; min-width: 160px;
           display: flex; align-items: center; justify-content: center; gap: 8px;
-          background: var(--gold);
-          color: #1a2e1a; border: none; border-radius: 12px; padding: 14px 24px;
-          font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700;
-          cursor: pointer; text-decoration: none; transition: all .2s;
-          box-shadow: 0 4px 18px rgba(255,215,0,.4);
-        }
-        .cp-btn-hire:hover { background: var(--gold-d); color: #1a2e1a; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,215,0,.5); }
-
-        .cp-btn-contact {
-          display: flex; align-items: center; gap: 8px;
-          background: var(--green); color: #fff;
-          border: none; border-radius: 12px; padding: 14px 24px;
+          background: var(--gold); color: #1a2e1a;
+          border: none; border-radius: 11px; padding: 13px 22px;
           font-family: 'DM Sans', sans-serif; font-size: .97rem; font-weight: 700;
           cursor: pointer; text-decoration: none; transition: all .2s;
-          box-shadow: 0 4px 14px rgba(22,163,74,.3);
         }
-        .cp-btn-contact:hover { background: var(--green-d); color: #fff; transform: translateY(-2px); }
+        .cp-btn-hire:hover { background: var(--gold-d); color: #1a2e1a; transform: translateY(-1px); }
 
         .cp-btn-share {
-          display: flex; align-items: center; gap: 8px;
+          display: flex; align-items: center; gap: 7px;
           background: var(--white); color: var(--muted);
-          border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px;
+          border: 1.5px solid var(--border); border-radius: 11px; padding: 13px 18px;
           font-family: 'DM Sans', sans-serif; font-size: .9rem; font-weight: 600;
           cursor: pointer; transition: all .2s;
         }
         .cp-btn-share:hover { border-color: var(--gold); color: #7c4b00; }
 
-        /* ── How to hire banner ── */
-        .cp-hire-guide {
-          background: var(--white); border: 1.5px solid var(--border);
-          border-left: 4px solid var(--gold);
-          border-radius: 14px; padding: 20px 24px; margin-bottom: 1.5rem;
-          display: flex; align-items: flex-start; gap: 16px;
-          box-shadow: 0 2px 12px rgba(0,0,0,.05);
-        }
-        .cp-hire-guide-icon { font-size: 1.6rem; flex-shrink: 0; margin-top: 2px; }
-        .cp-hire-guide h4 { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; color: var(--text); margin: 0 0 6px; }
-        .cp-hire-guide p { font-size: .84rem; color: var(--muted); margin: 0; line-height: 1.65; }
-
-        .cp-hire-steps { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-        .cp-hire-step {
-          display: flex; align-items: center; gap: 8px;
-          background: var(--green-l); border: 1px solid var(--green-b); border-radius: 10px;
-          padding: 8px 14px; font-size: .78rem; font-weight: 600; color: var(--green);
-        }
-        .cp-hire-step-num {
-          width: 22px; height: 22px; border-radius: 50%;
-          background: var(--green); color: #fff;
-          display: flex; align-items: center; justify-content: center;
-          font-size: .68rem; font-weight: 800; flex-shrink: 0;
-        }
-
-        /* ── Tabs ── */
         .cp-tabs {
           display: flex; gap: 0; background: var(--white);
-          border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06);
+          border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.05);
           overflow: hidden; margin-bottom: 1.5rem; border: 1.5px solid var(--border);
         }
         .cp-tab {
-          flex: 1; padding: 14px 8px; text-align: center; border: none;
+          flex: 1; padding: 13px 8px; text-align: center; border: none;
           background: transparent; font-family: 'DM Sans', sans-serif;
-          font-size: .84rem; font-weight: 600; color: var(--muted); cursor: pointer;
+          font-size: .83rem; font-weight: 600; color: var(--muted); cursor: pointer;
           transition: all .18s; border-right: 1px solid var(--border);
           display: flex; align-items: center; justify-content: center; gap: 6px;
         }
@@ -260,92 +218,85 @@ function CraftsmanProfile() {
         .cp-tab.active { background: var(--green); color: #fff; }
         .cp-tab:hover:not(.active) { background: var(--green-l); color: var(--green); }
 
-        /* ── Section card ── */
         .cp-section {
           background: var(--white); border-radius: 14px;
-          box-shadow: 0 2px 16px rgba(0,0,0,.06);
+          box-shadow: 0 2px 14px rgba(0,0,0,.05);
           padding: 1.75rem; margin-bottom: 1.5rem;
           border: 1.5px solid var(--border);
         }
         .cp-section-title {
-          font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700;
+          font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700;
           color: var(--text); margin: 0 0 1.25rem;
           display: flex; align-items: center; gap: 10px;
         }
         .cp-section-title-icon {
-          width: 32px; height: 32px; border-radius: 8px;
+          width: 30px; height: 30px; border-radius: 8px;
           background: var(--green-l); color: var(--green);
           display: flex; align-items: center; justify-content: center;
-          font-size: .88rem; flex-shrink: 0;
+          font-size: .85rem; flex-shrink: 0;
         }
         .cp-about-text { font-size: .95rem; color: var(--muted); line-height: 1.8; }
 
-        /* ── Gallery ── */
-        .cp-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+        .cp-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
         .cp-gallery-img {
           width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px;
-          cursor: pointer; transition: transform .25s, box-shadow .25s;
-          box-shadow: 0 2px 8px rgba(0,0,0,.1); border: 1.5px solid var(--border);
+          cursor: pointer; transition: transform .22s, box-shadow .22s;
+          box-shadow: 0 2px 8px rgba(0,0,0,.08); border: 1.5px solid var(--border);
         }
-        .cp-gallery-img:hover { transform: scale(1.04); box-shadow: 0 8px 24px rgba(0,0,0,.2); border-color: var(--gold); }
+        .cp-gallery-img:hover { transform: scale(1.04); box-shadow: 0 8px 22px rgba(0,0,0,.18); border-color: var(--gold); }
 
-        /* ── Lightbox ── */
         .cp-lightbox {
           position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.88);
           display: flex; align-items: center; justify-content: center; padding: 20px; cursor: pointer;
         }
         .cp-lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 12px; object-fit: contain; }
         .cp-lightbox-close {
-          position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%;
-          background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.3);
-          color: #fff; font-size: 1.1rem; cursor: pointer;
+          position: absolute; top: 16px; right: 16px; width: 38px; height: 38px; border-radius: 50%;
+          background: rgba(255,255,255,.12); border: 1.5px solid rgba(255,255,255,.25);
+          color: #fff; font-size: 1rem; cursor: pointer;
           display: flex; align-items: center; justify-content: center;
         }
 
-        /* ── Skills ── */
         .cp-skills { display: flex; flex-wrap: wrap; gap: 8px; }
         .cp-skill-tag {
           background: var(--green-l); color: var(--green);
           border: 1px solid var(--green-b); border-radius: 20px;
-          padding: 6px 16px; font-size: .82rem; font-weight: 600;
+          padding: 6px 15px; font-size: .82rem; font-weight: 600;
         }
 
-        /* ── Reviews ── */
         .cp-review {
           background: var(--bg); border-radius: 12px; padding: 1.25rem;
           border: 1px solid var(--border); margin-bottom: 12px;
         }
         .cp-review-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        .cp-reviewer-name { font-weight: 700; color: var(--text); font-size: .95rem; margin: 0 0 3px; }
-        .cp-reviewer-loc { font-size: .78rem; color: var(--muted); }
+        .cp-reviewer-name { font-weight: 700; color: var(--text); font-size: .93rem; margin: 0 0 3px; }
+        .cp-reviewer-loc { font-size: .77rem; color: var(--muted); }
         .cp-rating-badge {
           background: var(--gold); color: #1a2e1a; border-radius: 20px;
-          padding: 4px 12px; font-size: .8rem; font-weight: 800;
+          padding: 4px 11px; font-size: .78rem; font-weight: 800;
           display: flex; align-items: center; gap: 4px; flex-shrink: 0;
         }
         .cp-review-text { font-size: .88rem; color: var(--muted); line-height: 1.65; margin: 0; }
 
-        /* ── Sidebar ── */
         .cp-sidebar-card {
           background: var(--white); border-radius: 14px;
-          box-shadow: 0 2px 16px rgba(0,0,0,.06);
+          box-shadow: 0 2px 14px rgba(0,0,0,.05);
           padding: 1.5rem; margin-bottom: 1.5rem; border: 1.5px solid var(--border);
         }
         .cp-contact-item {
           display: flex; align-items: center; gap: 12px;
-          padding: 12px 0; border-bottom: 1px solid var(--border); font-size: .9rem;
+          padding: 11px 0; border-bottom: 1px solid var(--border); font-size: .9rem;
         }
         .cp-contact-item:last-child { border-bottom: none; padding-bottom: 0; }
         .cp-contact-icon {
-          width: 36px; height: 36px; border-radius: 10px;
+          width: 34px; height: 34px; border-radius: 9px;
           background: var(--green-l); color: var(--green);
           display: flex; align-items: center; justify-content: center;
-          font-size: .88rem; flex-shrink: 0;
+          font-size: .85rem; flex-shrink: 0;
         }
-        .cp-contact-label { font-size: .73rem; color: var(--muted); display: block; }
+        .cp-contact-label { font-size: .72rem; color: var(--muted); display: block; }
         .cp-contact-value { font-weight: 600; color: var(--text); }
 
-        /* ── Credentials ── */
         .cp-cred-btn {
           display: flex; align-items: center; gap: 10px;
           background: var(--green-l); color: var(--green);
@@ -354,25 +305,23 @@ function CraftsmanProfile() {
         }
         .cp-cred-btn:hover { background: var(--green); color: #fff; }
 
-        /* ── Services list ── */
         .cp-service-item {
           display: flex; align-items: center; gap: 12px; padding: 10px 0;
           border-bottom: 1px solid var(--border); font-size: .9rem;
         }
         .cp-service-item:last-child { border-bottom: none; }
-        .cp-service-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+        .cp-service-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
 
-        /* ── Sticky hire CTA ── */
         .cp-sticky-cta {
-          background: linear-gradient(135deg, var(--green-l) 0%, #fff 100%);
-          border: 2px solid var(--green-b); border-radius: 14px;
-          padding: 1.5rem; margin-bottom: 1.5rem; position: sticky; top: 20px;
+          background: var(--white); border: 1.5px solid var(--border);
+          border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem;
+          position: sticky; top: 20px;
+          box-shadow: 0 4px 18px rgba(0,0,0,.06);
         }
-        .cp-sticky-cta h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+        .cp-sticky-cta h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; color: var(--text); }
         .cp-sticky-cta p { font-size: .84rem; color: var(--muted); margin-bottom: 16px; line-height: 1.65; }
-        .cp-sticky-note { font-size: .73rem; color: var(--muted); text-align: center; margin-top: 10px; margin-bottom: 0; }
+        .cp-sticky-note { font-size: .72rem; color: var(--muted); text-align: center; margin-top: 10px; margin-bottom: 0; }
 
-        /* ── Footer ── */
         .cp-footer { background: #1a1a2e; color: #bbb; padding: 52px 0 26px; font-family: 'DM Sans', sans-serif; }
         .cp-footer h5 { color: #fff; font-weight: 700; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 14px; }
         .cp-footer a { color: #bbb; text-decoration: none; font-size: .85rem; transition: color .15s; }
@@ -381,14 +330,12 @@ function CraftsmanProfile() {
 
         @media(max-width:768px){
           .cp-tabs { overflow-x: auto; }
-          .cp-tab { font-size: .75rem; padding: 12px 6px; white-space: nowrap; }
-          .cp-hire-steps { flex-direction: column; }
+          .cp-tab { font-size: .75rem; padding: 11px 6px; white-space: nowrap; }
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
-      {/* Lightbox */}
       {lightboxImg && (
         <div className="cp-lightbox" onClick={() => setLightboxImg(null)}>
           <button className="cp-lightbox-close" onClick={() => setLightboxImg(null)}>✕</button>
@@ -396,47 +343,24 @@ function CraftsmanProfile() {
         </div>
       )}
 
-      {/* ── COVER ── */}
+      {/* Cover */}
       <div className="cp-cover">
         <div className="cp-cover-pattern"/>
-        <div className="cp-cover-glow"/>
       </div>
 
       <div style={{background:'var(--bg)', padding:'0 0 80px'}}>
         <div className="container" style={{maxWidth:1100}}>
+          <div className="row g-4" style={{marginTop:0}}>
 
-          {/* ── HOW TO HIRE GUIDE ── */}
-          <div className="cp-hire-guide" style={{marginTop:24}}>
-            <div className="cp-hire-guide-icon">💡</div>
-            <div style={{flex:1}}>
-              <h4>How to Hire {craftsman.name?.split(' ')[0] || 'This Craftsman'}</h4>
-              <p>Follow these simple steps to get your job done quickly and professionally.</p>
-              <div className="cp-hire-steps">
-                {[
-                  {n:1, text:'Review portfolio & ratings below'},
-                  {n:2, text:'Click "Hire Now" to begin'},
-                  {n:3, text:'Describe your job & agree on price'},
-                  {n:4, text:'Rate after job completion'},
-                ].map(s => (
-                  <div className="cp-hire-step" key={s.n}>
-                    <span className="cp-hire-step-num">{s.n}</span>
-                    {s.text}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="row g-4">
-            {/* ── MAIN COLUMN ── */}
+            {/* Main column */}
             <div className="col-lg-8">
 
-              {/* Profile Card */}
+              {/* Profile card */}
               <div className="cp-header-card">
                 <div className="cp-avatar-row">
                   <img
                     src={profileImage} alt={craftsman.name} className="cp-avatar"
-                    onError={e => { e.target.src='https://placehold.co/140x140/f0fdf4/16a34a?text=👷'; }}
+                    onError={e => { e.target.src='https://placehold.co/128x128/f0fdf4/16a34a?text=C'; }}
                   />
                   <div className="cp-name-block">
                     <h1 className="cp-name">{craftsman.name}</h1>
@@ -457,9 +381,9 @@ function CraftsmanProfile() {
                     </p>
                     {avgRating && (
                       <div className="cp-rating-pill">
-                        <span style={{color:'var(--gold)'}}>★</span>
+                        <span style={{color:'#d97706'}}>★</span>
                         <strong>{avgRating}</strong>
-                        <span style={{fontWeight:400,opacity:.7}}>({craftsman.reviews.length} reviews)</span>
+                        <span style={{fontWeight:400,opacity:.7}}>({craftsman.reviews.length} {craftsman.reviews.length === 1 ? 'review' : 'reviews'})</span>
                       </div>
                     )}
                   </div>
@@ -479,8 +403,8 @@ function CraftsmanProfile() {
                     <span className="cp-stat-lbl">Services</span>
                   </div>
                   <div className="cp-stat">
-                    <span className="cp-stat-val" style={{color:'var(--green)',fontSize:'1rem'}}>
-                      {craftsman.status === 'approved' ? '✓ Active' : 'Active'}
+                    <span className="cp-stat-val" style={{color:'var(--green)', fontSize:'.95rem'}}>
+                      {craftsman.status === 'approved' ? 'Verified' : 'Active'}
                     </span>
                     <span className="cp-stat-lbl">Status</span>
                   </div>
@@ -488,14 +412,9 @@ function CraftsmanProfile() {
 
                 <div className="cp-actions">
                   <Link to="/HireLogin" className="cp-btn-hire">
-                    <i className="fas fa-hard-hat"/> Hire {craftsman.name?.split(' ')[0] || 'Now'}
+                    <i className="fas fa-paper-plane"/> Hire {craftsman.name?.split(' ')[0] || 'Now'}
                   </Link>
-                  {craftsman.phone && (
-                    <a href={`tel:${craftsman.phone}`} className="cp-btn-contact">
-                      <i className="fas fa-phone"/> Call Now
-                    </a>
-                  )}
-                  <button className="cp-btn-share" onClick={handleCopyLink}>
+                  <button className="cp-btn-share" onClick={handleShare}>
                     <i className="fas fa-share-alt"/> Share
                   </button>
                 </div>
@@ -504,11 +423,11 @@ function CraftsmanProfile() {
               {/* Tabs */}
               <div className="cp-tabs">
                 {tabs.map(t => (
-                  <button key={t} className={`cp-tab ${activeTab===t?'active':''}`} onClick={() => setActiveTab(t)}>
-                    {t === 'about'     && <><i className="fas fa-user"/>About</>}
-                    {t === 'portfolio' && <><i className="fas fa-images"/>Portfolio</>}
-                    {t === 'skills'    && <><i className="fas fa-tools"/>Skills</>}
-                    {t === 'reviews'   && <><i className="fas fa-star"/>Reviews {craftsman.reviews?.length > 0 && `(${craftsman.reviews.length})`}</>}
+                  <button key={t} className={`cp-tab ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>
+                    {t === 'about'     && <><i className="fas fa-user"/> About</>}
+                    {t === 'portfolio' && <><i className="fas fa-images"/> Portfolio</>}
+                    {t === 'skills'    && <><i className="fas fa-tools"/> Skills</>}
+                    {t === 'reviews'   && <><i className="fas fa-star"/> Reviews {craftsman.reviews?.length > 0 && `(${craftsman.reviews.length})`}</>}
                   </button>
                 ))}
               </div>
@@ -521,18 +440,18 @@ function CraftsmanProfile() {
                     About {craftsman.name?.split(' ')[0]}
                   </h2>
                   <p className="cp-about-text">
-                    {craftsman.description || 'This craftsman has not yet added a description. They are a skilled professional ready to help with your projects.'}
+                    {craftsman.description || 'No description added yet.'}
                   </p>
                   {services.length > 0 && (
                     <>
-                      <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,color:'var(--text)',marginTop:24,marginBottom:12}}>
+                      <h3 style={{fontFamily:"'Playfair Display',serif", fontSize:'1rem', fontWeight:700, color:'var(--text)', marginTop:24, marginBottom:12}}>
                         Services Offered
                       </h3>
                       <div>
                         {services.map((svc, i) => (
                           <div className="cp-service-item" key={i}>
                             <span className="cp-service-dot"/>
-                            <span style={{fontWeight:600,color:'var(--text)'}}>{svc.name || `Service ${i+1}`}</span>
+                            <span style={{fontWeight:600, color:'var(--text)'}}>{svc.name || `Service ${i + 1}`}</span>
                           </div>
                         ))}
                       </div>
@@ -550,15 +469,15 @@ function CraftsmanProfile() {
                   </h2>
                   {craftsman.gallery_images?.length > 0 ? (
                     <>
-                      <p style={{fontSize:'.84rem',color:'var(--muted)',marginBottom:16}}>
-                        Click any image to enlarge. {craftsman.gallery_images.length} project{craftsman.gallery_images.length !== 1 ? 's' : ''} showcased.
+                      <p style={{fontSize:'.84rem', color:'var(--muted)', marginBottom:16}}>
+                        {craftsman.gallery_images.length} project{craftsman.gallery_images.length !== 1 ? 's' : ''} — click to enlarge.
                       </p>
                       <div className="cp-gallery">
                         {craftsman.gallery_images.map((img, i) => (
                           <img
                             key={img.id || i}
                             src={getFullImageUrl(img.image_url)}
-                            alt={`Project ${i+1}`}
+                            alt={`Project ${i + 1}`}
                             className="cp-gallery-img"
                             loading="lazy"
                             onClick={() => setLightboxImg(getFullImageUrl(img.image_url))}
@@ -568,11 +487,7 @@ function CraftsmanProfile() {
                       </div>
                     </>
                   ) : (
-                    <div style={{textAlign:'center',padding:'40px 20px',color:'var(--muted)'}}>
-                      <div style={{fontSize:'2.5rem',marginBottom:12}}>🖼️</div>
-                      <p style={{fontWeight:600}}>No portfolio images yet</p>
-                      <p style={{fontSize:'.85rem'}}>This craftsman hasn't uploaded work samples yet — reach out directly to request examples.</p>
-                    </div>
+                    <p style={{color:'var(--muted)', fontSize:'.9rem'}}>No portfolio images uploaded yet.</p>
                   )}
                 </div>
               )}
@@ -591,19 +506,16 @@ function CraftsmanProfile() {
                       ))}
                     </div>
                   ) : (
-                    <div style={{textAlign:'center',padding:'32px 20px',color:'var(--muted)'}}>
-                      <div style={{fontSize:'2rem',marginBottom:8}}>🔧</div>
-                      <p>No skills listed yet.</p>
-                    </div>
+                    <p style={{color:'var(--muted)', fontSize:'.9rem'}}>No skills listed yet.</p>
                   )}
                   {proofDocument && (
                     <div style={{marginTop:24}}>
-                      <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,color:'var(--text)',marginBottom:12}}>
-                        Credentials & Certification
+                      <h3 style={{fontFamily:"'Playfair Display',serif", fontSize:'1rem', fontWeight:700, color:'var(--text)', marginBottom:12}}>
+                        Credentials
                       </h3>
                       <a href={proofDocument} target="_blank" rel="noopener noreferrer" className="cp-cred-btn">
-                        <i className="fas fa-file-certificate"/> View Verification Document
-                        <i className="fas fa-external-link-alt" style={{marginLeft:'auto',fontSize:'.75rem',opacity:.7}}/>
+                        <i className="fas fa-file-alt"/> View Verification Document
+                        <i className="fas fa-external-link-alt" style={{marginLeft:'auto', fontSize:'.72rem', opacity:.6}}/>
                       </a>
                     </div>
                   )}
@@ -616,7 +528,11 @@ function CraftsmanProfile() {
                   <h2 className="cp-section-title">
                     <span className="cp-section-title-icon"><i className="fas fa-star"/></span>
                     Client Reviews
-                    {avgRating && <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:'.85rem',fontWeight:600,color:'var(--muted)',marginLeft:8}}>Avg {avgRating}/10</span>}
+                    {avgRating && (
+                      <span style={{fontFamily:"'DM Sans',sans-serif", fontSize:'.83rem', fontWeight:600, color:'var(--muted)', marginLeft:8}}>
+                        Avg {avgRating}/10
+                      </span>
+                    )}
                   </h2>
                   {craftsman.reviews?.length > 0 ? (
                     craftsman.reviews.map((review, i) => (
@@ -634,47 +550,38 @@ function CraftsmanProfile() {
                       </div>
                     ))
                   ) : (
-                    <div style={{textAlign:'center',padding:'40px 20px',color:'var(--muted)'}}>
-                      <div style={{fontSize:'2.5rem',marginBottom:12}}>⭐</div>
-                      <p style={{fontWeight:600}}>No reviews yet</p>
-                      <p style={{fontSize:'.85rem'}}>Be the first to hire {craftsman.name?.split(' ')[0]} and leave a review!</p>
-                      <Link to="/HireLogin" className="cp-btn-hire" style={{display:'inline-flex',marginTop:12,width:'auto',padding:'12px 24px'}}>
-                        <i className="fas fa-hard-hat"/> Hire Now & Be First to Review
-                      </Link>
-                    </div>
+                    <p style={{color:'var(--muted)', fontSize:'.9rem'}}>No reviews yet.</p>
                   )}
                 </div>
               )}
 
             </div>
 
-            {/* ── SIDEBAR ── */}
+            {/* Sidebar */}
             <div className="col-lg-4">
 
-              {/* Sticky hire CTA */}
               <div className="cp-sticky-cta">
-                <h3>Ready to hire?</h3>
-                <p>{craftsman.name?.split(' ')[0]} is available for work. Click below to start the hiring process.</p>
-                <Link to="/HireLogin" className="cp-btn-hire" style={{display:'flex',width:'100%',justifyContent:'center',marginBottom:10}}>
-                  <i className="fas fa-hard-hat"/> Hire {craftsman.name?.split(' ')[0]}
+                <h3>Hire {craftsman.name?.split(' ')[0]}</h3>
+                <p>Available for work across Kenya. Send a request to get started.</p>
+                <Link to="/HireLogin" className="cp-btn-hire" style={{display:'flex', width:'100%', justifyContent:'center', marginBottom: craftsman.phone ? 10 : 0}}>
+                  <i className="fas fa-paper-plane"/> Send Request
                 </Link>
                 {craftsman.phone && (
-                  <a href={`tel:${craftsman.phone}`} className="cp-btn-contact" style={{display:'flex',width:'100%',justifyContent:'center'}}>
-                    <i className="fas fa-phone"/> Call Directly
+                  <a href={`tel:${craftsman.phone}`} style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8, background:'var(--green)', color:'#fff', border:'none', borderRadius:11, padding:'13px 22px', fontFamily:"'DM Sans',sans-serif", fontSize:'.97rem', fontWeight:700, textDecoration:'none', transition:'all .2s', width:'100%'}}>
+                    <i className="fas fa-phone"/> Call Now
                   </a>
                 )}
-                <p className="cp-sticky-note">Free to contact · No upfront fees</p>
+                <p className="cp-sticky-note">No upfront fees</p>
               </div>
 
-              {/* Contact details */}
               <div className="cp-sidebar-card">
-                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,color:'var(--text)',marginBottom:12}}>Contact Details</h3>
+                <h3 style={{fontFamily:"'Playfair Display',serif", fontSize:'1rem', fontWeight:700, color:'var(--text)', marginBottom:12}}>Details</h3>
                 {craftsman.phone && (
                   <div className="cp-contact-item">
                     <span className="cp-contact-icon"><i className="fas fa-phone"/></span>
                     <div>
                       <span className="cp-contact-label">Phone</span>
-                      <a href={`tel:${craftsman.phone}`} className="cp-contact-value" style={{color:'var(--green)',display:'block'}}>{craftsman.phone}</a>
+                      <a href={`tel:${craftsman.phone}`} className="cp-contact-value" style={{color:'var(--green)', display:'block'}}>{craftsman.phone}</a>
                     </div>
                   </div>
                 )}
@@ -703,16 +610,12 @@ function CraftsmanProfile() {
                 </div>
               </div>
 
-              {/* Browse more */}
               <div className="cp-sidebar-card" style={{textAlign:'center'}}>
-                <div style={{fontSize:'1.8rem',marginBottom:8}}>🔍</div>
-                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',fontWeight:700,color:'var(--text)',marginBottom:6}}>Looking for more options?</h3>
-                <p style={{fontSize:'.82rem',color:'var(--muted)',marginBottom:14}}>Browse all verified craftsmen across Kenya and find the perfect match.</p>
+                <p style={{fontFamily:"'Playfair Display',serif", fontSize:'1rem', fontWeight:700, color:'var(--text)', marginBottom:6}}>Looking for other craftsmen?</p>
+                <p style={{fontSize:'.82rem', color:'var(--muted)', marginBottom:14}}>Browse all verified craftsmen across Kenya.</p>
                 <Link to="/craftsmen"
-                  style={{display:'block',background:'#FFD700',color:'#1a2e1a',border:'none',borderRadius:10,padding:'10px',fontWeight:700,fontSize:'.88rem',textDecoration:'none',transition:'all .18s',boxShadow:'0 3px 12px rgba(255,215,0,.35)'}}
-                  onMouseOver={e=>{e.currentTarget.style.background='#e6c200';}}
-                  onMouseOut={e=>{e.currentTarget.style.background='#FFD700';}}>
-                  <i className="fas fa-th-list me-2"/>View All Services
+                  style={{display:'block', background:'#FFD700', color:'#1a2e1a', borderRadius:10, padding:'10px', fontWeight:700, fontSize:'.88rem', textDecoration:'none'}}>
+                  View All Craftsmen
                 </Link>
               </div>
 
@@ -721,7 +624,6 @@ function CraftsmanProfile() {
         </div>
       </div>
 
-      {/* ── FOOTER — preserved from original ── */}
       <footer className="cp-footer">
         <div className="container">
           <div className="row g-5">
@@ -730,29 +632,32 @@ function CraftsmanProfile() {
               <ul className="list-unstyled" style={{lineHeight:'2.2'}}>
                 <li><Link to="/">Home</Link></li>
                 <li><Link to="/craftsmen">Browse Craftsmen</Link></li>
-                <li><Link to="/craftsmen">View All Services</Link></li>
-                <li><Link to="/signup">Become A Craftsman</Link></li>
+                <li><Link to="/signup">Become a Craftsman</Link></li>
                 <li><Link to="/HireLogin">Hire a Craftsman</Link></li>
               </ul>
             </div>
             <div className="col-lg-4 col-md-6">
-              <h5>Contact Us</h5>
+              <h5>Contact</h5>
               <p><i className="fas fa-map-marker-alt me-2" style={{color:'#FFD700'}}/>Kisumu, Kenya</p>
               <p><i className="fas fa-envelope me-2" style={{color:'#FFD700'}}/>support@kaakazini.com</p>
               <p><i className="fas fa-phone me-2" style={{color:'#FFD700'}}/>+254 700 000 000</p>
             </div>
             <div className="col-lg-5">
               <h5>Find Us</h5>
-              <div style={{borderRadius:12,overflow:'hidden',boxShadow:'0 4px 20px rgba(0,0,0,.3)'}}>
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
-                  width="100%" height="200" style={{border:0,display:'block'}} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Location"/>
+              <div style={{borderRadius:12, overflow:'hidden'}}>
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63828.69947405925!2d34.7106301!3d-0.1022054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182aa5b2e0a70b83%3A0x36005f520589fdfc!2sKisumu!5e0!3m2!1sen!2ske!4v1718888888888!5m2!1sen!2ske"
+                  width="100%" height="200" style={{border:0, display:'block'}}
+                  allowFullScreen loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade" title="Location"
+                />
               </div>
             </div>
           </div>
-          <hr style={{borderColor:'rgba(255,255,255,.08)',margin:'26px 0 18px'}}/>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10,fontSize:'.8rem'}}>
+          <hr style={{borderColor:'rgba(255,255,255,.08)', margin:'26px 0 18px'}}/>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10, fontSize:'.8rem'}}>
             <p style={{margin:0}}>© {new Date().getFullYear()} <strong style={{color:'#fff'}}>KaaKazini</strong>. All rights reserved.</p>
-            <a href="#top" style={{color:'#FFD700',fontWeight:600}}>Back to top ↑</a>
+            <a href="#top" style={{color:'#FFD700', fontWeight:600}}>Back to top</a>
           </div>
         </div>
       </footer>

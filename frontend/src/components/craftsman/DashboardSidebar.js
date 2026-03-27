@@ -3,9 +3,19 @@ import {
   BsPerson, BsBriefcase, BsPeopleFill, BsGear,
   BsBoxArrowRight, BsGraphUp, BsSpeedometer2,
 } from "react-icons/bs";
-import { FaBuilding, FaUser, FaTimes } from "react-icons/fa";
+import { FaBuilding, FaUser, FaTimes, FaExchangeAlt } from "react-icons/fa";
 
-function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, isOpen, onClose }) {
+function DashboardSidebar({
+  activeTab,
+  setActiveTab,
+  handleLogout,
+  accountType,
+  isOpen,
+  onClose,
+  activeRole    = "craftsman",
+  onSwitchRole,
+  switchingRole = false,
+}) {
 
   const tabs = [
     { name: "Dashboard", icon: <BsSpeedometer2 />, label: "Dashboard" },
@@ -16,8 +26,10 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, 
       ? [{ name: "Members", icon: <BsPeopleFill />, label: "Team Members" }]
       : []
     ),
-    { name: "Settings",  icon: <BsGear />,         label: "Settings"  },
+    { name: "Settings", icon: <BsGear />, label: "Settings" },
   ];
+
+  const isCraftsman = activeRole === "craftsman";
 
   return (
     <>
@@ -34,10 +46,8 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, 
           display: flex;
           flex-direction: column;
           padding: 1.25rem;
-          /* Desktop: always visible */
         }
 
-        /* ── Mobile: slide-in drawer ── */
         @media (max-width: 991px) {
           .craftsman-sidebar {
             position: fixed;
@@ -47,7 +57,6 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, 
             transition: transform .3s cubic-bezier(.4,0,.2,1);
             min-height: 100vh;
             overflow-y: auto;
-            /* Prevent background scroll bleed */
             overscroll-behavior: contain;
           }
           .craftsman-sidebar.open {
@@ -68,6 +77,23 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, 
           padding: 4px 12px; border-radius: 50px; font-size: .72rem; font-weight: 700;
           margin-top: 8px;
           background: rgba(34,197,94,.15); color: #86efac; border: 1px solid rgba(34,197,94,.2);
+        }
+
+        .active-role-badge {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 12px; border-radius: 50px; font-size: .72rem; font-weight: 700;
+          margin-top: 6px;
+          border: 1px solid;
+        }
+        .active-role-badge.craftsman {
+          background: rgba(34,197,94,.12);
+          color: #86efac;
+          border-color: rgba(34,197,94,.25);
+        }
+        .active-role-badge.client {
+          background: rgba(251,191,36,.12);
+          color: #fde68a;
+          border-color: rgba(251,191,36,.25);
         }
 
         .nav-btn {
@@ -97,21 +123,48 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, 
 
         .nav-icon { font-size: 1.2rem; flex-shrink: 0; }
 
-        .logout-btn {
-          background: rgba(239,68,68,.1) !important;
-          border: 2px solid rgba(239,68,68,.2) !important;
-          color: #f87171 !important; padding: .875rem 1rem !important;
-          border-radius: 12px !important; font-weight: 600 !important;
-          transition: all .3s !important; display: flex; align-items: center;
-          gap: 10px; width: 100%; cursor: pointer;
+        /* ── Switch role button — styled like a nav-btn but gold ── */
+        .switch-role-btn {
+          border: none !important;
+          background: rgba(251,191,36,.08) !important;
+          color: #fbbf24 !important;
+          padding: .875rem 1rem !important;
+          border-radius: 12px !important;
+          font-weight: 700 !important;
+          font-size: .9375rem !important;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          text-align: left;
+          cursor: pointer;
+          margin-bottom: .5rem;
+          font-family: 'Outfit', sans-serif;
+          transition: all .25s ease !important;
+          letter-spacing: .2px;
+          border-left: 3px solid transparent !important;
         }
-        .logout-btn:hover {
-          background: rgba(239,68,68,.2) !important;
-          color: #fca5a5 !important; transform: translateY(-2px);
-          box-shadow: 0 4px 15px rgba(239,68,68,.2) !important;
+        .switch-role-btn:hover:not(:disabled) {
+          background: rgba(251,191,36,.15) !important;
+          color: #fde68a !important;
+          transform: translateX(4px);
+          border-left-color: #fbbf24 !important;
         }
+        .switch-role-btn:disabled {
+          opacity: .55;
+          cursor: not-allowed;
+        }
+        .switch-role-btn .spin {
+          display: inline-block;
+          animation: spin .7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .sidebar-divider { border: none; border-top: 1px solid rgba(255,255,255,.08); margin: 1rem 0; }
+        .sidebar-divider {
+          border: none;
+          border-top: 1px solid rgba(255,255,255,.08);
+          margin: 1rem 0;
+        }
 
         .nav-new-badge {
           margin-left: auto;
@@ -120,7 +173,21 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, 
           padding: 2px 7px; border-radius: 50px; letter-spacing: .3px; flex-shrink: 0;
         }
 
-        /* Close button — only shows on mobile */
+        .logout-btn {
+          background: rgba(239,68,68,.1) !important;
+          border: 2px solid rgba(239,68,68,.2) !important;
+          color: #f87171 !important; padding: .875rem 1rem !important;
+          border-radius: 12px !important; font-weight: 600 !important;
+          transition: all .3s !important; display: flex; align-items: center;
+          gap: 10px; width: 100%; cursor: pointer;
+          font-family: 'Outfit', sans-serif;
+        }
+        .logout-btn:hover {
+          background: rgba(239,68,68,.2) !important;
+          color: #fca5a5 !important; transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(239,68,68,.2) !important;
+        }
+
         .sidebar-close-btn {
           display: none;
           background: rgba(255,255,255,.1);
@@ -139,24 +206,32 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, 
 
       <div className={`craftsman-sidebar text-white ${isOpen ? "open" : ""}`}>
 
-        {/* Logo row — with close button on mobile */}
+        {/* ── Logo row ─────────────────────────────────────────────── */}
         <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:"1.5rem", paddingBottom:"1rem", borderBottom:"1px solid rgba(255,255,255,.08)" }}>
           <div style={{ textAlign:"left" }}>
             <h4 className="sidebar-logo mb-1">Kaakazini</h4>
-            <div className="sidebar-subtitle">Craftsman Dashboard</div>
+            <div className="sidebar-subtitle">
+              {isCraftsman ? "Craftsman Dashboard" : "Client Dashboard"}
+            </div>
+
             {accountType && (
               <div className="account-chip">
                 {accountType === "Company" ? <FaBuilding size={10}/> : <FaUser size={10}/>}
                 {accountType} Account
               </div>
             )}
+
+            <div className={`active-role-badge ${activeRole}`}>
+              {isCraftsman ? "🔧 Craftsman mode" : "🔍 Client mode"}
+            </div>
           </div>
+
           <button className="sidebar-close-btn" onClick={onClose}>
             <FaTimes size={16}/>
           </button>
         </div>
 
-        {/* Navigation */}
+        {/* ── Navigation ───────────────────────────────────────────── */}
         <div style={{ flexGrow: 1 }}>
           {tabs.map(tab => (
             <button
@@ -171,15 +246,37 @@ function DashboardSidebar({ activeTab, setActiveTab, handleLogout, accountType, 
               )}
             </button>
           ))}
+
+          {/* ── Switch Role button — sits right after Settings ── */}
+          <button
+            className="switch-role-btn"
+            onClick={onSwitchRole}
+            disabled={switchingRole}
+            title={isCraftsman ? "Browse as a Client" : "Go back to Craftsman mode"}
+          >
+            <span className="nav-icon">
+              {switchingRole
+                ? <span className="spin"><FaExchangeAlt size={14}/></span>
+                : <FaExchangeAlt size={14}/>
+              }
+            </span>
+            {switchingRole
+              ? "Switching…"
+              : isCraftsman
+                ? "Switch to Client mode"
+                : "Switch to Craftsman mode"
+            }
+          </button>
         </div>
 
         <hr className="sidebar-divider" />
 
-        {/* Logout */}
+        {/* ── Logout ───────────────────────────────────────────────── */}
         <button className="logout-btn" onClick={handleLogout}>
           <BsBoxArrowRight style={{ fontSize: "1.2rem" }} />
           Logout
         </button>
+
       </div>
     </>
   );

@@ -9,7 +9,7 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-import requests as http_requests  # plain requests, not google's
+import requests as http_requests
 
 from .models import CustomUser
 from .serializers import (
@@ -17,6 +17,7 @@ from .serializers import (
     ClientSignupSerializer,
     RoleLoginSerializer,
     UserProfileSerializer,
+    SwitchRoleSerializer,
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from google.oauth2 import id_token
@@ -25,29 +26,23 @@ from google.auth.transport import requests as google_requests
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-# ── Read from Django settings (loaded by decouple), NOT os.environ ──────────
 GOOGLE_CLIENT_ID   = getattr(settings, "GOOGLE_CLIENT_ID",   None)
 FRONTEND_URL       = getattr(settings, "FRONTEND_URL",       "http://localhost:3000")
 BREVO_API_KEY      = getattr(settings, "BREVO_API_KEY",      "")
 BREVO_SENDER_EMAIL = getattr(settings, "BREVO_SENDER_EMAIL", "noreply@kaakazini.com")
 
-# Role → frontend dashboard path
 ROLE_DASHBOARD = {
     "craftsman": "/craftsman/dashboard",
-    "client":    "/client/dashboard",
+    "client":    "/hire",
     "admin":     "/admin/dashboard",
 }
 
 
 # ─────────────────────────────────────────────
-# Brevo email (plain HTTP — no SDK needed)
+# Brevo email
 # ─────────────────────────────────────────────
 
 def send_email(to_email: str, to_name: str, subject: str, html_content: str) -> bool:
-    """
-    Send a transactional email via the Brevo REST API.
-    Returns True on success, False on any failure.
-    """
     if not BREVO_API_KEY:
         logger.warning("BREVO_API_KEY is not set — skipping email to %s", to_email)
         return False
@@ -85,7 +80,7 @@ def send_email(to_email: str, to_name: str, subject: str, html_content: str) -> 
 
 
 def send_welcome_email(email: str, full_name: str, role: str = "") -> bool:
-    name = full_name or "User"
+    name       = full_name or "User"
     role_label = role.capitalize() if role else "Member"
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;">
@@ -132,7 +127,7 @@ def set_auth_cookies(response, user, remember=False):
         response.set_cookie(
             name, value,
             httponly=True,
-            secure=False,      # set True in production (HTTPS)
+            secure=False,
             samesite="Lax",
             max_age=max_age,
             path="/",
@@ -141,13 +136,14 @@ def set_auth_cookies(response, user, remember=False):
 
 
 def _user_payload(user):
-    """Consistent user payload + dashboard redirect for every login response."""
+    """Consistent user payload for every login/switch response."""
     return {
-        "id":         user.id,
-        "email":      user.email,
-        "full_name":  user.full_name,
-        "role":       user.role,
-        "dashboard":  ROLE_DASHBOARD.get(user.role, "/dashboard"),
+        "id":          user.id,
+        "email":       user.email,
+        "full_name":   user.full_name,
+        "role":        user.role,
+        "active_role": user.active_role,   # ── NEW: included in every auth response
+        "dashboard":   ROLE_DASHBOARD.get(user.active_role, "/dashboard"),
     }
 
 
@@ -156,8 +152,7 @@ def _user_payload(user):
 # ─────────────────────────────────────────────
 
 class RegisterView(generics.CreateAPIView):
-    """Craftsman signup — POST /api/signup/"""
-    serializer_class = CraftsmanSignupSerializer
+    serializer_class   = CraftsmanSignupSerializer
     permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
@@ -166,8 +161,7 @@ class RegisterView(generics.CreateAPIView):
 
 
 class ClientSignupView(generics.CreateAPIView):
-    """Client signup — POST /api/client-signup/"""
-    serializer_class = ClientSignupSerializer
+    serializer_class   = ClientSignupSerializer
     permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
@@ -176,51 +170,41 @@ class ClientSignupView(generics.CreateAPIView):
 
 
 # ─────────────────────────────────────────────
-# Login  (each endpoint enforces its own role)
+# Login
 # ─────────────────────────────────────────────
 
 class LoginAPIView(APIView):
-    """Craftsman login — POST /api/login/"""
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = RoleLoginSerializer(
-            data={**request.data, "role": "craftsman"}
-        )
+        serializer = RoleLoginSerializer(data={**request.data, "role": "craftsman"})
         serializer.is_valid(raise_exception=True)
-        user = serializer.context["user"]
+        user     = serializer.context["user"]
         remember = request.data.get("remember", False)
         response = Response({"detail": "Login successful", "user": _user_payload(user)})
         return set_auth_cookies(response, user, remember=remember)
 
 
 class ClientLoginView(APIView):
-    """Client login — POST /api/client-login/"""
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = RoleLoginSerializer(
-            data={**request.data, "role": "client"}
-        )
+        serializer = RoleLoginSerializer(data={**request.data, "role": "client"})
         serializer.is_valid(raise_exception=True)
-        user = serializer.context["user"]
+        user     = serializer.context["user"]
         remember = request.data.get("remember", False)
         response = Response({"detail": "Login successful", "user": _user_payload(user)})
         return set_auth_cookies(response, user, remember=remember)
 
 
 class AdminLoginAPIView(APIView):
-    """Admin login — POST /api/admin-login/"""
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = RoleLoginSerializer(
-            data={**request.data, "role": "admin"}
-        )
+        serializer = RoleLoginSerializer(data={**request.data, "role": "admin"})
         serializer.is_valid(raise_exception=True)
         user = serializer.context["user"]
 
-        # Backfill role field for legacy staff accounts
         if user.is_staff and user.role != "admin":
             user.role = "admin"
             user.save(update_fields=["role"])
@@ -252,7 +236,7 @@ class GoogleLoginView(APIView):
 
             user, created = CustomUser.objects.get_or_create(
                 email=email,
-                defaults={"full_name": full_name, "role": role},
+                defaults={"full_name": full_name, "role": role, "active_role": role},
             )
 
             if not created and user.role != role:
@@ -299,7 +283,7 @@ class OnboardingView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request):
-        user = request.user
+        user         = request.user
         full_name    = request.data.get("full_name", "").strip()
         phone_number = request.data.get("phone_number", "").strip()
 
@@ -323,6 +307,55 @@ class MeAPIView(APIView):
 
     def get(self, request):
         return Response(UserProfileSerializer(request.user).data)
+
+
+# ─────────────────────────────────────────────
+# ── NEW: Switch Role ─────────────────────────
+# ─────────────────────────────────────────────
+
+class SwitchRoleView(APIView):
+    """
+    POST /api/accounts/switch-role/
+    Body: { "role": "client" }  or  { "role": "craftsman" }
+
+    Switches the user's active_role so they can browse as either
+    a craftsman or a client without creating a second account.
+    Admins are not allowed to switch.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = SwitchRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_role = serializer.validated_data['role']
+        user     = request.user
+
+        # Admins don't switch
+        if user.role == 'admin':
+            return Response(
+                {"detail": "Admins cannot switch roles."},
+                status=403,
+            )
+
+        # No-op if already in that mode
+        if user.active_role == new_role:
+            return Response({
+                "detail":      f"You are already in {new_role} mode.",
+                "active_role": user.active_role,
+                "dashboard":   ROLE_DASHBOARD.get(new_role, "/dashboard"),
+            })
+
+        user.active_role = new_role
+        user.save(update_fields=["active_role"])
+
+        logger.info("User %s switched active_role to %s", user.email, new_role)
+
+        return Response({
+            "detail":      f"Switched to {new_role} mode successfully.",
+            "active_role": user.active_role,
+            "dashboard":   ROLE_DASHBOARD.get(new_role, "/dashboard"),
+        })
 
 
 # ─────────────────────────────────────────────
