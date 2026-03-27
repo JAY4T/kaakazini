@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ============================
 # ENVIRONMENT
 # ============================
-ENVIRONMENT = config("ENVIRONMENT", default="local")  
+ENVIRONMENT = config("ENVIRONMENT", default="local")
 
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="fallback-secret")
 
@@ -29,7 +29,7 @@ if ENVIRONMENT == "local":
 else:
     ALLOWED_HOSTS = config(
         "DJANGO_ALLOWED_HOSTS",
-        default="localhost,127.0.0.1,staging.kaakazini.com,kaakazini.com,www.kaakazini.com"
+        default="staging.kaakazini.com,kaakazini.com,www.kaakazini.com"
     ).split(",")
 
 
@@ -59,7 +59,7 @@ INSTALLED_APPS = [
 # MIDDLEWARE
 # ============================
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",   # ← must be first
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -123,55 +123,68 @@ REST_FRAMEWORK = {
 # ============================
 # SIMPLE JWT
 # ============================
+IS_LOCAL = ENVIRONMENT == "local"
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME":    timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME":   timedelta(days=1),
     "ROTATE_REFRESH_TOKENS":    True,
     "BLACKLIST_AFTER_ROTATION": True,
-    "AUTH_COOKIE": "access_token",  # Cookie name for access token
-    "AUTH_COOKIE_REFRESH": "refresh_token",  # Cookie name for refresh token
-    "AUTH_COOKIE_SECURE": ENVIRONMENT != "local",  # HTTPS only in staging/prod
-    "AUTH_COOKIE_HTTP_ONLY": True,
-    "AUTH_COOKIE_SAMESITE": "Lax",
+    "AUTH_COOKIE":              "access_token",
+    "AUTH_COOKIE_REFRESH":      "refresh_token",
+    "AUTH_COOKIE_SECURE":       not IS_LOCAL,   # HTTPS only on staging/prod
+    "AUTH_COOKIE_HTTP_ONLY":    True,
+    "AUTH_COOKIE_SAMESITE":     "Lax",
 }
 
 # ============================
 # CORS / CSRF
+# ── Only set these ONCE — no duplicate assignments ──
 # ============================
-CORS_ALLOW_CREDENTIALS  = True
-CORS_ALLOWED_ORIGINS    = ["http://localhost:3000"]
-CORS_ALLOW_HEADERS      = list(default_headers) + ["authorization"]
-CSRF_TRUSTED_ORIGINS    = ["http://localhost:3000"]
-SESSION_COOKIE_SECURE   = False
-CSRF_COOKIE_SECURE      = False
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS     = list(default_headers) + ["authorization"]
 
-if ENVIRONMENT == "local":
-    CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
-    CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"]
+if IS_LOCAL:
+    # ── Local development ──────────────────────────────────────────
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE    = False
+    SIMPLE_JWT["AUTH_COOKIE_SECURE"] = False
+
 else:
-    CORS_ALLOWED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
-    CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
+    # ── Staging / Production ───────────────────────────────────────
+    # Build origins only from real domains — exclude localhost and 127.0.0.1
+    real_hosts = [
+        h.strip() for h in ALLOWED_HOSTS
+        if h not in ("localhost", "127.0.0.1", "")
+    ]
+    CORS_ALLOWED_ORIGINS = [f"https://{h}" for h in real_hosts]
+    CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in real_hosts]
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE    = True
 
-SESSION_COOKIE_SECURE = ENVIRONMENT != "local"
-CSRF_COOKIE_SECURE = ENVIRONMENT != "local"
-
+# ── Cookie / session settings (shared) ────────────────────────────
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE    = "Lax"
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY    = False
-SECURE_SSL_REDIRECT     = False
-SECURE_HSTS_SECONDS     = 0
+CSRF_COOKIE_HTTPONLY    = False   # frontend needs to read this
+
+# ── SSL — let nginx handle redirects, not Django ──────────────────
+SECURE_SSL_REDIRECT            = False
+SECURE_HSTS_SECONDS            = 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-SECURE_HSTS_PRELOAD     = False
+SECURE_HSTS_PRELOAD            = False
 
 # ============================
-# STORAGE — Digital Ocean Spaces
+# STORAGE — DigitalOcean Spaces
 # ============================
-# ============================
-# STORAGE — DigitalOcean Spaces (Django 5+)
-# ============================
-
 AWS_ACCESS_KEY_ID        = config('DO_SPACES_KEY')
 AWS_SECRET_ACCESS_KEY    = config('DO_SPACES_SECRET')
 AWS_STORAGE_BUCKET_NAME  = config('DO_SPACES_BUCKET')
@@ -181,9 +194,7 @@ AWS_S3_CUSTOM_DOMAIN     = config('DO_SPACES_CUSTOM_DOMAIN')
 
 AWS_DEFAULT_ACL          = 'public-read'
 AWS_QUERYSTRING_AUTH     = False
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=86400'
-}
+AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
 
 STORAGES = {
     "default": {
@@ -203,14 +214,14 @@ STATIC_URL  = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # ============================
-# SECURITY
+# SECURITY HEADERS
 # ============================
 SECURE_BROWSER_XSS_FILTER   = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 # ============================
-# OTHER SETTINGS
+# INTERNATIONALISATION
 # ============================
 LANGUAGE_CODE      = "en-us"
 TIME_ZONE          = "Africa/Nairobi"
@@ -223,8 +234,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ============================
 FRONTEND_URL        = config('FRONTEND_URL', default='http://localhost:3000')
 BACKEND_URL         = config('BACKEND_URL',  default='http://127.0.0.1:8000')
-BREVO_API_KEY       = config('BREVO_API_KEY', default='')
+BREVO_API_KEY       = config('BREVO_API_KEY',       default='')
 GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')
-FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
-INTASEND_WALLET_ID = config('INTASEND_WALLET_ID', default=2, cast=int)
+INTASEND_WALLET_ID  = config('INTASEND_WALLET_ID', default=2, cast=int)
