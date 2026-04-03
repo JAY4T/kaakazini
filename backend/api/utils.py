@@ -1,6 +1,5 @@
 import logging
 from django.conf import settings
-from django.conf import settings as django_settings
 from sib_api_v3_sdk import ApiClient, Configuration
 from sib_api_v3_sdk.api import transactional_emails_api
 from sib_api_v3_sdk.models import SendSmtpEmail
@@ -31,6 +30,20 @@ def _get_api_instance():
     return transactional_emails_api.TransactionalEmailsApi(ApiClient(configuration))
 
 
+def _require_setting(name: str) -> str:
+    """
+    Fetch a required Django setting and raise clearly if it is missing.
+    This prevents silent broken links in staging / production.
+    """
+    value = getattr(settings, name, None)
+    if not value:
+        raise ImproperlyConfigured(
+            f"'{name}' must be set in Django settings. "
+            "Add it to your .env / settings file before sending emails."
+        )
+    return value
+
+
 def send_email(to_email: str, subject: str, html_content: str, to_name: str = 'User'):
     """
     Core sender — every other function calls this.
@@ -40,10 +53,10 @@ def send_email(to_email: str, subject: str, html_content: str, to_name: str = 'U
         return
 
     email_content = SendSmtpEmail(
-        sender   = {'name': 'KaaKazini', 'email': 'noreply@kaakazini.com'},
-        reply_to = {'name': 'KaaKazini', 'email': 'support@kaakazini.com'},
-        to       = [{'email': to_email, 'name': to_name}],
-        subject  = subject,
+        sender       = {'name': 'KaaKazini', 'email': 'noreply@kaakazini.com'},
+        reply_to     = {'name': 'KaaKazini', 'email': 'support@kaakazini.com'},
+        to           = [{'email': to_email, 'name': to_name}],
+        subject      = subject,
         html_content = html_content,
     )
 
@@ -61,7 +74,7 @@ def send_email(to_email: str, subject: str, html_content: str, to_name: str = 'U
 def send_welcome_email(email: str, full_name: str, role: str = ''):
     name       = full_name or 'User'
     role_label = role.capitalize() if role else 'Member'
-    frontend   = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+    frontend   = _require_setting('FRONTEND_URL')
 
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;">
@@ -98,7 +111,7 @@ def send_welcome_email(email: str, full_name: str, role: str = ''):
 
 def send_craftsman_approval_email(email: str, full_name: str):
     name     = full_name or 'User'
-    frontend = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+    frontend = _require_setting('FRONTEND_URL')
 
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;">
@@ -136,7 +149,7 @@ def send_craftsman_approval_email(email: str, full_name: str):
 
 def send_staff_welcome_email(name: str, email: str, password: str, role: str):
     role_label    = ROLE_LABELS.get(role, role.title())
-    dashboard_url = getattr(settings, 'ADMIN_DASHBOARD_URL', 'http://localhost:3000/kaakazini-admin/login')
+    dashboard_url = _require_setting('ADMIN_DASHBOARD_URL')
 
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;">
