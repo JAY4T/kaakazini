@@ -205,9 +205,10 @@ class AdminLoginAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.context["user"]
 
-        if user.is_staff and user.role != "admin":
-            user.role = "admin"
+        if user.is_staff and getattr(user, 'role', None) not in ['superadmin','moderator','maintenance','support','finance','analytics']:
+            user.role = 'superadmin'
             user.save(update_fields=["role"])
+
 
         response = Response({"detail": "Admin login successful", "user": _user_payload(user)})
         return set_auth_cookies(response, user)

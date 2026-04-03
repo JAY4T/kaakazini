@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/axiosClient";
+import CraftCard            from '../../components/client/CraftCard';
+import { AVAILABILITY_CSS } from '../../styles/availabilityCSS';
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_BASE   = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
 const MEDIA_BASE = (process.env.REACT_APP_MEDIA_URL || process.env.REACT_APP_API_BASE_URL || '').replace(/\/api\/?$/, '');
 
 const imgUrl = (p) => {
@@ -16,12 +18,6 @@ const proofImgUrl = (img) => {
   return imgUrl(raw);
 };
 const avi = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'C')}&background=1a1a1a&color=FFD700&size=80&bold=true`;
-const getCover = (c) => {
-  if (!c) return null;
-  if (Array.isArray(c.gallery_images) && c.gallery_images.length)
-    return imgUrl(c.gallery_images[0].image_url || c.gallery_images[0].url || c.gallery_images[0].image);
-  return imgUrl(c.services?.[0]?.image_url || c.services?.[0]?.image || c.service_image || null);
-};
 const getAvatar  = (c) => imgUrl(c?.profile_url || c?.profile || c?.profile_image || c?.avatar || null);
 const getName    = (c) => c?.full_name || c?.name || 'Craftsman';
 const getJobCraftsmanName = (job) => {
@@ -57,10 +53,8 @@ const CSS = `
 @keyframes hcp-pulse   { 0%,100% { opacity:1; } 50% { opacity:.45; } }
 @keyframes hcp-glow    { 0%,100% { box-shadow:0 0 0 0 rgba(34,197,94,.3); } 50% { box-shadow:0 0 0 8px rgba(34,197,94,0); } }
 
-/* ── SHELL ── */
 .hcp .shell { display: flex; min-height: 100vh; }
 
-/* ── DESKTOP SIDEBAR ── */
 .hcp .sb {
   width: 260px; min-width: 260px; background: #0d0d0d;
   display: flex; flex-direction: column;
@@ -73,8 +67,6 @@ const CSS = `
   width: 180px; height: 180px; border-radius: 50%;
   background: radial-gradient(circle, rgba(255,215,0,.12) 0%, transparent 70%); pointer-events: none;
 }
-
-/* ── SIDEBAR CONTENT (shared) ── */
 .hcp .sb-head { position: relative !important; z-index: 1 !important; padding: 22px 18px 18px !important; border-bottom: 1px solid rgba(255,255,255,.06) !important; flex-shrink: 0 !important; }
 .hcp .drawer .sb-head { padding-top: 58px !important; }
 .hcp .user-row { display: flex; align-items: center; gap: 10px; }
@@ -92,49 +84,23 @@ const CSS = `
 .hcp .nb.on .nb-icon { background: linear-gradient(135deg, #fbbf24, #22c55e); color: #0d0d0d; }
 .hcp .nb.on::before { content: ''; position: absolute; left: -10px; top: 50%; transform: translateY(-50%); width: 3px; height: 20px; background: linear-gradient(180deg, #fbbf24, #22c55e); border-radius: 0 3px 3px 0; }
 
-/* ── MOBILE TOPBAR — hidden on desktop ── */
-.hcp .topbar {
-  display: none;
-  position: fixed; top: 0; left: 0; right: 0; height: 56px;
-  background: #0d0d0d; z-index: 300;
-  align-items: center; padding: 0 16px; gap: 12px;
-  border-bottom: 1px solid rgba(255,215,0,.12);
-}
+.hcp .topbar { display: none; position: fixed; top: 0; left: 0; right: 0; height: 56px; background: #0d0d0d; z-index: 300; align-items: center; padding: 0 16px; gap: 12px; border-bottom: 1px solid rgba(255,215,0,.12); }
 .hcp .topbar-brand { font-size: 1rem; font-weight: 800; color: #fff; flex: 1; font-family: 'Outfit', sans-serif; }
 .hcp .hamburger { width: 38px; height: 38px; border-radius: 9px; background: rgba(255,215,0,.12); color: #FFD700; border: 1.5px solid rgba(255,215,0,.25); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .88rem; flex-shrink: 0; }
 
-/* ── OVERLAY ── */
 .hcp .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 400; }
 .hcp .overlay.show { display: block; }
 
-/* ── MOBILE DRAWER — always in DOM, slides via transform ── */
-.hcp .drawer {
-  position: fixed; top: 0; left: 0; bottom: 0; width: 260px;
-  z-index: 500; background: #0d0d0d;
-  display: flex; flex-direction: column;
-  overflow-y: auto; overscroll-behavior: contain;
-  transform: translateX(-100%);
-  transition: transform .3s cubic-bezier(.4,0,.2,1);
-  pointer-events: none;
-}
+.hcp .drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 260px; z-index: 500; background: #0d0d0d; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; transform: translateX(-100%); transition: transform .3s cubic-bezier(.4,0,.2,1); pointer-events: none; }
 .hcp .drawer.open { transform: translateX(0); pointer-events: auto; }
-.hcp .drawer-close {
-  position: absolute; top: 14px; right: 14px; z-index: 2;
-  background: rgba(255,255,255,.12); border: none; border-radius: 8px;
-  width: 32px; height: 32px; color: rgba(255,255,255,.7);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: .85rem; transition: background .15s;
-}
+.hcp .drawer-close { position: absolute; top: 14px; right: 14px; z-index: 2; background: rgba(255,255,255,.12); border: none; border-radius: 8px; width: 32px; height: 32px; color: rgba(255,255,255,.7); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .85rem; transition: background .15s; }
 .hcp .drawer-close:hover { background: rgba(255,255,255,.22); color: #fff; }
 
-/* ── MAIN ── */
 .hcp .main { flex: 1; min-width: 0; padding: 2.25rem 2.25rem 3rem; background: var(--off); }
 
-/* ── CARD ── */
 .hcp .card { background: #fff; border-radius: 18px; box-shadow: 0 8px 32px rgba(0,0,0,.06); padding: 2.25rem; margin-bottom: 1.75rem; border: 2px solid rgba(255,215,0,.1); position: relative; overflow: hidden; animation: hcp-fadeUp .35s ease both; }
 .hcp .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #0d0d0d, #FFD700, #0d0d0d); }
 
-/* ── FILTER ── */
 .hcp .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; align-items: center; }
 .hcp .srch-wrap { flex: 1; min-width: 180px; position: relative; }
 .hcp .srch-ico { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: .82rem; pointer-events: none; }
@@ -143,7 +109,6 @@ const CSS = `
 .hcp .filter-sel { padding: 11px 15px; border: 2px solid var(--border); border-radius: 11px; font-size: .88rem; font-family: 'Outfit', sans-serif; outline: none; background: #fff; color: var(--text); cursor: pointer; min-width: 145px; font-weight: 600; transition: border-color .2s; }
 .hcp .filter-sel:focus { border-color: #FFD700; }
 
-/* ── CRAFT GRID ── */
 .hcp .craft-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
 .hcp .craft-card { background: #fff; border: 2px solid var(--border); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; transition: transform .22s, box-shadow .22s, border-color .2s; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
 .hcp .craft-card:hover { transform: translateY(-5px); box-shadow: 0 18px 44px rgba(0,0,0,.11); border-color: #FFD700; }
@@ -165,7 +130,6 @@ const CSS = `
 .hcp .hire-btn { display: flex; align-items: center; justify-content: center; gap: 7px; background: linear-gradient(135deg, #0d0d0d, #333); color: #FFD700; border: none; border-radius: 11px; padding: 10px 0; font-weight: 800; font-size: .82rem; cursor: pointer; margin-top: auto; font-family: 'Outfit', sans-serif; transition: all .2s; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 .hcp .hire-btn:hover { background: linear-gradient(135deg, #1a1a1a, #444); transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.3); }
 
-/* ── HIRE FORM ── */
 .hcp .locked-bar { display: flex; align-items: center; gap: 16px; background: linear-gradient(135deg, #0d0d0d, #1a1a2e); border-radius: 14px; padding: 18px 22px; margin-bottom: 20px; border: 1px solid rgba(255,215,0,.15); box-shadow: 0 8px 28px rgba(0,0,0,.2); flex-wrap: wrap; }
 .hcp .locked-av { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid #FFD700; flex-shrink: 0; }
 .hcp .locked-name { font-weight: 800; font-size: 1.15rem; color: #fff; }
@@ -185,15 +149,13 @@ const CSS = `
 .hcp .submit-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .hcp .ok-banner { background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 13px; padding: 13px 17px; font-size: .88rem; color: #15803d; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
 
-/* ── TABLE ── */
 .hcp .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.hcp .tbl { width: 100%; border-collapse: collapse; min-width: 560px; }
+.hcp .tbl { width: 100%; border-collapse: collapse; min-width: 700px; }
 .hcp .tbl th { background: var(--off); font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
 .hcp .tbl td { padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: .86rem; vertical-align: middle; font-family: 'Outfit', sans-serif; }
 .hcp .tbl tr:last-child td { border-bottom: none; }
 .hcp .tbl tbody tr:hover { background: var(--off); }
 
-/* ── BADGES ── */
 .hcp .bdg { display: inline-flex; align-items: center; gap: 5px; border-radius: 50px; padding: 4px 11px; font-size: .68rem; font-weight: 700; white-space: nowrap; }
 .hcp .bdg-g  { background: #f0fdf4; color: #15803d; }
 .hcp .bdg-y  { background: #fef9c3; color: #78350f; }
@@ -202,24 +164,27 @@ const CSS = `
 .hcp .bdg-b  { background: #eff6ff; color: #1d4ed8; }
 .hcp .bdg-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; flex-shrink: 0; }
 
-/* ── ACTION BUTTONS ── */
 .hcp .act { padding: 5px 12px; border-radius: 7px; font-size: .72rem; font-weight: 700; cursor: pointer; border: 2px solid; font-family: 'Outfit', sans-serif; transition: all .14s; white-space: nowrap; }
 .hcp .act-ok  { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
 .hcp .act-ok:hover  { background: #16a34a; color: #fff; border-color: #16a34a; }
 .hcp .act-bad { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
 .hcp .act-bad:hover { background: #b91c1c; color: #fff; border-color: #b91c1c; }
-.hcp .act-pay { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(22,163,74,.3); animation: hcp-glow 2s infinite; }
+.hcp .act-pay { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(22,163,74,.3); animation: hcp-glow 2s infinite; cursor: pointer; }
 .hcp .act-pay:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.hcp .act-pay:disabled { background: #94a3b8; box-shadow: none; animation: none; cursor: not-allowed; opacity: .65; transform: none; filter: none; }
+.hcp .act-review { background: linear-gradient(135deg, #fef9c3, #fef08a); color: #78350f; border-color: #fde68a; }
+.hcp .act-review:hover { background: linear-gradient(135deg, #fde68a, #fbbf24); border-color: #fbbf24; }
 
-/* ── PROOF LIGHTBOX ── */
-.hcp .proof-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.hcp .proof-lightbox img { max-width: 100%; max-height: 85vh; border-radius: 12px; object-fit: contain; }
+.hcp .proof-gallery { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.hcp .proof-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 7px; border: 2px solid var(--border); cursor: pointer; transition: border-color .15s, transform .15s; display: block; flex-shrink: 0; }
+.hcp .proof-thumb:hover { border-color: #FFD700; transform: scale(1.1); }
+.hcp .proof-more { width: 40px; height: 40px; border-radius: 7px; background: #f1f5f9; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 800; color: #64748b; cursor: pointer; flex-shrink: 0; }
+.hcp .proof-awaiting { display: inline-flex; align-items: center; gap: 5px; font-size: .72rem; color: #f59e0b; font-weight: 600; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+.hcp .pay-locked { display: inline-flex; align-items: center; gap: 5px; font-size: .7rem; color: #94a3b8; font-weight: 600; cursor: default; padding: 5px 10px; border: 2px dashed #e2e8f0; border-radius: 7px; white-space: nowrap; }
+
+.hcp .proof-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .hcp .proof-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,.1); border: 1.5px solid rgba(255,255,255,.2); color: #fff; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; }
-.hcp .proof-thumb { width: 38px; height: 38px; object-fit: cover; border-radius: 7px; border: 2px solid var(--border); cursor: pointer; transition: border-color .15s, transform .15s; display: block; }
-.hcp .proof-thumb:hover { border-color: #FFD700; transform: scale(1.08); }
-.hcp .proof-broken { width: 38px; height: 38px; border-radius: 7px; border: 2px dashed var(--border); background: var(--off); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .6rem; }
 
-/* ── M-PESA ── */
 .hcp .mpesa-steps { display: flex; flex-direction: column; gap: 14px; margin: 18px 0; }
 .hcp .mpesa-step { display: flex; align-items: flex-start; gap: 13px; padding: 14px; border-radius: 12px; background: var(--off); border: 1.5px solid var(--border); }
 .hcp .mpesa-num { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; background: #0d0d0d; color: #FFD700; display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 800; }
@@ -236,7 +201,6 @@ const CSS = `
 .hcp .mpesa-logo-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
 .hcp .mpesa-logo { background: #16a34a; color: #fff; border-radius: 8px; padding: 4px 12px; font-size: .78rem; font-weight: 900; letter-spacing: .05em; }
 
-/* ── REVIEWS ── */
 .hcp .rev-grid { display: flex; flex-direction: column; gap: 16px; }
 .hcp .rev-card { background: #fff; border: 2px solid var(--border); border-radius: 18px; padding: 24px; box-shadow: 0 6px 22px rgba(0,0,0,.05); position: relative; overflow: hidden; animation: hcp-fadeUp .35s ease both; }
 .hcp .rev-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #0d0d0d, #FFD700); }
@@ -253,7 +217,6 @@ const CSS = `
 .hcp .rev-btn { background: linear-gradient(135deg, #FFD700, #e6c200); color: #0d0d0d; border: none; border-radius: 9px; padding: 9px 22px; font-weight: 800; font-size: .84rem; cursor: pointer; font-family: 'Outfit', sans-serif; transition: all .18s; box-shadow: 0 4px 14px rgba(255,215,0,.3); display: inline-flex; align-items: center; gap: 7px; }
 .hcp .rev-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,215,0,.4); }
 
-/* ── PAYMENTS ── */
 .hcp .pay-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 14px; margin-bottom: 20px; }
 .hcp .pay-stat { background: #fff; border: 2px solid rgba(255,215,0,.12); border-radius: 16px; padding: 20px; box-shadow: 0 4px 18px rgba(0,0,0,.05); transition: transform .2s; }
 .hcp .pay-stat:hover { transform: translateY(-3px); }
@@ -262,7 +225,6 @@ const CSS = `
 .hcp .pay-stat-v { font-size: 1.55rem; font-weight: 800; color: var(--text); margin-bottom: 3px; }
 .hcp .pay-stat-l { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 
-/* ── PROFILE ── */
 .hcp .prof-hero { background: linear-gradient(135deg, #0d0d0d, #1a1a2e); border: 1px solid rgba(255,215,0,.12); border-radius: 18px; padding: 28px; margin-bottom: 18px; position: relative; overflow: hidden; box-shadow: 0 18px 48px rgba(0,0,0,.2); animation: hcp-fadeUp .35s ease both; }
 .hcp .prof-hero::before { content: ''; position: absolute; top: -80px; right: -80px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(255,215,0,.08) 0%, transparent 65%); pointer-events: none; }
 .hcp .prof-top { position: relative; z-index: 1; display: flex; align-items: center; gap: 18px; margin-bottom: 24px; flex-wrap: wrap; }
@@ -283,18 +245,15 @@ const CSS = `
 .hcp .prof-item-lbl { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 2px; }
 .hcp .prof-item-val { font-size: .88rem; font-weight: 700; color: var(--text); word-break: break-word; }
 
-/* ── EMPTY ── */
 .hcp .empty { text-align: center; padding: 56px 20px; }
 .hcp .empty-icon { width: 66px; height: 66px; border-radius: 50%; background: var(--off); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.4rem; color: #cbd5e1; }
 .hcp .empty h3 { font-size: .97rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
 .hcp .empty p  { font-size: .83rem; color: var(--muted); }
 
-/* ── SPINNERS ── */
 .hcp .spinner       { width: 16px; height: 16px; border: 2.5px solid rgba(0,0,0,.18); border-top-color: #0d0d0d; border-radius: 50%; animation: hcp-spin .7s linear infinite; display: inline-block; vertical-align: middle; }
 .hcp .spinner-white { width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,.25); border-top-color: #fff; border-radius: 50%; animation: hcp-spin .7s linear infinite; display: inline-block; vertical-align: middle; }
 .hcp .spinner-lg    { width: 32px; height: 32px; border: 3px solid rgba(245,158,11,.2); border-top-color: #f59e0b; border-radius: 50%; animation: hcp-spin .7s linear infinite; display: block; }
 
-/* ── MODALS ── */
 .hcp .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 800; display: flex; align-items: center; justify-content: center; padding: 20px; animation: hcp-fadeUp .2s ease both; }
 .hcp .modal-box { background: #fff; border-radius: 20px; border: 2px solid rgba(255,215,0,.15); font-family: 'Outfit', sans-serif; box-shadow: 0 24px 80px rgba(0,0,0,.25); max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; }
 .hcp .modal-hd { border-bottom: 2px solid #f1f5f9; padding: 20px 26px; border-radius: 18px 18px 0 0; position: relative; }
@@ -317,73 +276,21 @@ const CSS = `
 .hcp .mbl-gold:hover  { filter: brightness(1.06); transform: translateY(-1px); }
 .hcp .modal-hr { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
 
+.hcp .proof-modal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 12px; }
+.hcp .proof-modal-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 2px solid var(--border); cursor: pointer; transition: border-color .15s, transform .15s; }
+.hcp .proof-modal-img:hover { border-color: #FFD700; transform: scale(1.04); }
 
-/* ── BOTTOM NAV (mobile only — always visible, always works) ── */
-.hcp .bottom-nav {
-  display: none;
-  position: fixed; bottom: 0; left: 0; right: 0;
-  height: 62px; background: #0d0d0d; z-index: 300;
-  border-top: 1px solid rgba(255,215,0,.15);
-  align-items: stretch;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-.hcp .bn-item {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 3px;
-  background: none; border: none; cursor: pointer;
-  color: rgba(255,255,255,.4); font-family: 'Outfit', sans-serif;
-  font-size: .56rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .04em; padding: 8px 4px; transition: all .15s;
-  -webkit-tap-highlight-color: transparent;
-}
+.hcp .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 62px; background: #0d0d0d; z-index: 300; border-top: 1px solid rgba(255,215,0,.15); align-items: stretch; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.hcp .bn-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: none; cursor: pointer; color: rgba(255,255,255,.4); font-family: 'Outfit', sans-serif; font-size: .56rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 8px 4px; transition: all .15s; -webkit-tap-highlight-color: transparent; }
 .hcp .bn-item i { font-size: .95rem; line-height: 1; }
 .hcp .bn-item.on { color: #FFD700; }
 .hcp .bn-item.on i { color: #FFD700; }
 .hcp .bn-item:hover { color: rgba(255,255,255,.7); }
-.hcp .bn-dot {
-  position: absolute; top: 8px;
-  width: 4px; height: 4px; border-radius: 50%;
-  background: #FFD700;
-}
 
-/* ══════════ RESPONSIVE ══════════ */
-@media (max-width: 1024px) {
-  .hcp .craft-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
-  .hcp .main { padding: 2rem 1.5rem 3rem; }
-}
-@media (max-width: 992px) {
-  .hcp .sb          { display: none !important; }
-  .hcp .topbar      { display: flex !important; }
-  .hcp .bottom-nav  { display: flex !important; }
-
-  /* ── KEY FIX: add generous gap below the 56px topbar ── */
-  .hcp .main        { padding: 80px 16px 90px; }
-
-  .hcp .card    { padding: 1.25rem; border-radius: 14px; }
-  .hcp .form-grid { grid-template-columns: 1fr; }
-  .hcp .modal-bg  { padding: 12px; align-items: flex-end; }
-  .hcp .modal-box { max-height: 92vh; border-radius: 20px 20px 0 0; }
-}
-@media (max-width: 600px) {
-  .hcp .craft-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .hcp .craft-cover { height: 110px; }
-  .hcp .pay-grid   { grid-template-columns: 1fr 1fr; }
-  .hcp .filter-bar { flex-direction: column; gap: 8px; }
-  .hcp .srch-wrap, .hcp .filter-sel { min-width: 100%; width: 100%; }
-
-  /* ── KEY FIX: same generous gap at 600px breakpoint ── */
-  .hcp .main { padding: 80px 12px 80px; }
-
-  .hcp .card { padding: 1rem; margin-bottom: 1.25rem; }
-  .hcp .mpesa-amt { flex-direction: column; gap: 10px; align-items: flex-start; }
-}
-@media (max-width: 400px) {
-  .hcp .craft-grid { grid-template-columns: 1fr; }
-  .hcp .pay-grid   { grid-template-columns: 1fr; }
-
-  /* ── KEY FIX: same generous gap at 400px breakpoint ── */
-  .hcp .main       { padding: 78px 10px 76px; }
-}
+@media (max-width: 1024px) { .hcp .craft-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; } .hcp .main { padding: 2rem 1.5rem 3rem; } }
+@media (max-width: 992px) { .hcp .sb { display: none !important; } .hcp .topbar { display: flex !important; } .hcp .bottom-nav { display: flex !important; } .hcp .main { padding: 80px 16px 90px; } .hcp .card { padding: 1.25rem; border-radius: 14px; } .hcp .form-grid { grid-template-columns: 1fr; } .hcp .modal-bg { padding: 12px; align-items: flex-end; } .hcp .modal-box { max-height: 92vh; border-radius: 20px 20px 0 0; } }
+@media (max-width: 600px) { .hcp .craft-grid { grid-template-columns: 1fr 1fr; gap: 10px; } .hcp .craft-cover { height: 110px; } .hcp .pay-grid { grid-template-columns: 1fr 1fr; } .hcp .filter-bar { flex-direction: column; gap: 8px; } .hcp .srch-wrap, .hcp .filter-sel { min-width: 100%; width: 100%; } .hcp .main { padding: 80px 12px 80px; } .hcp .card { padding: 1rem; margin-bottom: 1.25rem; } .hcp .mpesa-amt { flex-direction: column; gap: 10px; align-items: flex-start; } }
+@media (max-width: 400px) { .hcp .craft-grid { grid-template-columns: 1fr; } .hcp .pay-grid { grid-template-columns: 1fr; } .hcp .main { padding: 78px 10px 76px; } }
 `;
 
 function Stars({ r }) {
@@ -430,25 +337,25 @@ function SidebarContent({ client, tab, setTab, onClose }) {
   );
 }
 
-function ProofThumbs({ proofs, onOpen }) {
-  if (!proofs?.length) return <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>;
+function ProofGalleryCell({ proofs, onViewAll }) {
+  if (!proofs || proofs.length === 0) {
+    return <span className="proof-awaiting"><i className="fas fa-hourglass-half"/> Awaiting photos</span>;
+  }
   return (
-    <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+    <div className="proof-gallery">
       {proofs.slice(0, 3).map((img, ix) => {
-        const url = proofImgUrl(img);
-        if (!url) return <div key={ix} className="proof-broken"><i className="fas fa-image"/></div>;
+        const url  = img.image_url || img.image || (typeof img === 'string' ? img : null);
+        const full = url ? (url.startsWith('http') ? url : `${MEDIA_BASE}${url.startsWith('/') ? '' : '/'}${url}`) : null;
+        if (!full) return null;
         return (
-          <img key={ix} src={url} alt={`Proof ${ix+1}`} className="proof-thumb"
-            onClick={() => onOpen(proofs, ix)}
-            onError={e => { e.target.style.opacity='.2'; e.target.style.border='2px dashed #e2e8f0'; }}
+          <img key={ix} src={full} alt={`Proof ${ix+1}`} className="proof-thumb"
+            onClick={() => onViewAll(proofs, ix)}
+            onError={e => { e.target.style.display='none'; }}
           />
         );
       })}
       {proofs.length > 3 && (
-        <div style={{ width:38, height:38, borderRadius:7, background:'#f1f5f9', border:'2px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'.68rem', fontWeight:800, color:'#64748b', cursor:'pointer' }}
-          onClick={() => onOpen(proofs, 0)}>
-          +{proofs.length - 3}
-        </div>
+        <div className="proof-more" onClick={() => onViewAll(proofs, 0)}>+{proofs.length - 3}</div>
       )}
     </div>
   );
@@ -456,7 +363,6 @@ function ProofThumbs({ proofs, onOpen }) {
 
 function Lightbox({ proofs, startIdx, onClose }) {
   const [idx, setIdx] = useState(startIdx);
-  const url = proofImgUrl(proofs[idx]);
   useEffect(() => {
     const h = (e) => {
       if (e.key === 'Escape') onClose();
@@ -466,17 +372,29 @@ function Lightbox({ proofs, startIdx, onClose }) {
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [proofs.length, onClose]);
+
+  const raw  = proofs[idx];
+  const url  = raw?.image_url || raw?.image || (typeof raw === 'string' ? raw : null);
+  const full = url ? (url.startsWith('http') ? url : `${MEDIA_BASE}${url.startsWith('/') ? '' : '/'}${url}`) : null;
+
   return (
     <div className="hcp proof-lightbox" onClick={onClose}>
       <button className="proof-close" onClick={onClose}>✕</button>
       <div onClick={e => e.stopPropagation()} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
-        <img src={url} alt="Proof" style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:12, objectFit:'contain' }}
+        <img src={full} alt="Work proof"
+          style={{ maxWidth:'90vw', maxHeight:'80vh', borderRadius:12, objectFit:'contain' }}
           onError={e => { e.target.src='https://placehold.co/400x300/1e293b/64748b?text=Image+not+found'; }}
         />
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          {proofs.length > 1 && <button onClick={() => setIdx(i => (i-1+proofs.length)%proofs.length)} style={{ background:'rgba(255,255,255,.1)', border:'1.5px solid rgba(255,255,255,.2)', color:'#fff', borderRadius:9, padding:'6px 14px', cursor:'pointer', fontSize:'.82rem', fontWeight:700 }}>‹ Prev</button>}
+          {proofs.length > 1 && (
+            <button onClick={() => setIdx(i => (i-1+proofs.length)%proofs.length)}
+              style={{ background:'rgba(255,255,255,.1)', border:'1.5px solid rgba(255,255,255,.2)', color:'#fff', borderRadius:9, padding:'6px 14px', cursor:'pointer', fontSize:'.82rem', fontWeight:700 }}>‹ Prev</button>
+          )}
           <span style={{ color:'rgba(255,255,255,.6)', fontSize:'.78rem' }}>{idx+1} / {proofs.length}</span>
-          {proofs.length > 1 && <button onClick={() => setIdx(i => (i+1)%proofs.length)} style={{ background:'rgba(255,255,255,.1)', border:'1.5px solid rgba(255,255,255,.2)', color:'#fff', borderRadius:9, padding:'6px 14px', cursor:'pointer', fontSize:'.82rem', fontWeight:700 }}>Next ›</button>}
+          {proofs.length > 1 && (
+            <button onClick={() => setIdx(i => (i+1)%proofs.length)}
+              style={{ background:'rgba(255,255,255,.1)', border:'1.5px solid rgba(255,255,255,.2)', color:'#fff', borderRadius:9, padding:'6px 14px', cursor:'pointer', fontSize:'.82rem', fontWeight:700 }}>Next ›</button>
+          )}
         </div>
       </div>
     </div>
@@ -502,16 +420,19 @@ export default function HireCraftsmanPage() {
   const [payState, setPayState]   = useState('idle');
   const [payMsg,   setPayMsg]     = useState('');
   const [lightbox, setLightbox]   = useState(null);
+  const [notifiedIds, setNotifiedIds] = useState(new Set());
   const pollRef = useRef(null);
-  const [jf, setJf] = useState({ service:'', budget:'', schedule:'', location:'', address:'', description:'', isUrgent:false, media:null });
+  const [jf, setJf] = useState({
+    service:'', budget:'', schedule:'', location:'',
+    address:'', description:'', isUrgent:false, media:null,
+  });
 
-  // ── Inject CSS into <head> — survives all:initial and mobile browsers ──
   useEffect(() => {
     const id = 'kaakazini-hcp-css';
     if (!document.getElementById(id)) {
       const tag = document.createElement('style');
       tag.id = id;
-      tag.textContent = CSS;
+      tag.textContent = CSS + (AVAILABILITY_CSS || '');
       document.head.insertBefore(tag, document.head.firstChild);
     }
     return () => { const el = document.getElementById(id); if (el) el.remove(); };
@@ -558,6 +479,17 @@ export default function HireCraftsmanPage() {
     setPicked(c);
     setJf(p => ({ ...p, service: c.primary_service || '', location: c.location?.toLowerCase() || '' }));
     setTab('hire'); setSbOpen(false);
+  };
+
+  const handleNotifyMe = async (c) => {
+    try {
+      await api.post('/craftsmen/notify-me/', { craftsman: c.id });
+      setNotifiedIds(prev => new Set([...prev, c.id]));
+    } catch (err) {
+      const msg = err.response?.data?.craftsman?.[0] || '';
+      if (msg.toLowerCase().includes('already')) openHire(c);
+      else alert(msg || 'Could not subscribe. Please try again.');
+    }
   };
 
   const jfChange = (e) => {
@@ -646,7 +578,10 @@ export default function HireCraftsmanPage() {
     const craftsmanId = job?.craftsman?.id || job?.craftsman_id;
     if (!craftsmanId) return alert('Missing craftsman info.');
     try {
-      await api.post('/reviews/', { rating: r.rating, comment: r.review.trim(), location: job.location || '', craftsman: craftsmanId });
+      await api.post('/reviews/', {
+        rating: r.rating, comment: r.review.trim(),
+        location: job.location || '', craftsman: craftsmanId,
+      });
       alert('Review submitted!');
       setReviews(p => ({ ...p, [jobId]: { rating: 0, review: '' } }));
     } catch { alert('Failed to submit review.'); }
@@ -655,7 +590,12 @@ export default function HireCraftsmanPage() {
   const filtered = craftsmen.filter(c => {
     const q  = srch.toLowerCase();
     const mt = trade === 'All' || c.primary_service === trade;
-    const mq = !q || (c.full_name||'').toLowerCase().includes(q) || (c.name||'').toLowerCase().includes(q) || (c.primary_service||'').toLowerCase().includes(q) || (c.location||'').toLowerCase().includes(q) || (c.description||'').toLowerCase().includes(q);
+    const mq = !q
+      || (c.full_name||'').toLowerCase().includes(q)
+      || (c.name||'').toLowerCase().includes(q)
+      || (c.primary_service||'').toLowerCase().includes(q)
+      || (c.location||'').toLowerCase().includes(q)
+      || (c.description||'').toLowerCase().includes(q);
     return mt && mq;
   });
 
@@ -670,10 +610,26 @@ export default function HireCraftsmanPage() {
     return 'bdg bdg-y';
   };
 
+  const canPay = (job) => {
+    const s         = (job.status || '').toLowerCase();
+    const statusOk  = (s === 'completed' || s === 'approved' || s === 'quote approved') && !s.includes('paid');
+    const hasProofs = Array.isArray(job.proof_images) && job.proof_images.length > 0;
+    return statusOk && hasProofs;
+  };
+
+  const payPendingPhotos = (job) => {
+    const s         = (job.status || '').toLowerCase();
+    const statusOk  = (s === 'completed' || s === 'approved' || s === 'quote approved') && !s.includes('paid');
+    const hasProofs = Array.isArray(job.proof_images) && job.proof_images.length > 0;
+    return statusOk && !hasProofs;
+  };
+
+  const isPaid = (job) => /paid/i.test(job.status || '');
+
+  const paidJobs       = jobs.filter(j => isPaid(j));
   const totalSpent     = jobs.filter(j => j.budget).reduce((a, j) => a + Number(j.budget), 0);
   const completedCount = jobs.filter(j => /complet|paid/i.test(j.status || '')).length;
   const pendingCount   = jobs.filter(j => !/complet|paid|cancel/i.test(j.status || '')).length;
-  const canPay = (job) => { const s = (job.status||'').toLowerCase(); return (s.includes('approv') || s.includes('quot')) && !s.includes('paid'); };
 
   if (!client) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0d0d0d', fontFamily:'Outfit,sans-serif' }}>
@@ -687,31 +643,31 @@ export default function HireCraftsmanPage() {
   return (
     <div className="hcp">
 
-      {lightbox && <Lightbox proofs={lightbox.proofs} startIdx={lightbox.idx} onClose={() => setLightbox(null)}/>}
+      {lightbox && (
+        <Lightbox proofs={lightbox.proofs} startIdx={lightbox.idx} onClose={() => setLightbox(null)}/>
+      )}
 
-      {/* ── MOBILE TOPBAR (hidden on desktop via CSS) ── */}
       <div className="topbar">
         <span className="topbar-brand">KaaKazini</span>
-        <img src={avi(client.full_name)} alt={client.full_name} style={{ width:32, height:32, borderRadius:'50%', border:'2px solid rgba(255,215,0,.4)', objectFit:'cover', display:'block' }}/>
+        <img src={avi(client.full_name)} alt={client.full_name}
+          style={{ width:32, height:32, borderRadius:'50%', border:'2px solid rgba(255,215,0,.4)', objectFit:'cover', display:'block' }}/>
       </div>
 
-      {/* ── SHELL: desktop sidebar + main ── */}
       <div className="shell">
-
-        {/* Desktop sidebar (hidden on mobile via CSS) */}
         <nav className="sb" aria-label="Navigation">
           <SidebarContent client={client} tab={tab} setTab={setTab}/>
         </nav>
 
         <main className="main">
 
-          {/* BROWSE */}
+          {/* ══ BROWSE ══ */}
           {tab === 'browse' && (
             <>
               <div className="filter-bar">
                 <div className="srch-wrap">
                   <i className="fas fa-search srch-ico"/>
-                  <input className="srch" placeholder="Search by name, trade or location…" value={srch} onChange={e => setSrch(e.target.value)}/>
+                  <input className="srch" placeholder="Search by name, trade or location…"
+                    value={srch} onChange={e => setSrch(e.target.value)}/>
                 </div>
                 <select className="filter-sel" value={trade} onChange={e => setTrade(e.target.value)}>
                   <option value="All">All trades</option>
@@ -725,43 +681,32 @@ export default function HireCraftsmanPage() {
                 </div></div>
               ) : (
                 <div className="craft-grid">
-                  {filtered.map((c, i) => {
-                    const cover = getCover(c), avatar = getAvatar(c), cName = getName(c), rating = Number(c.average_rating) || 0;
-                    const ph = `https://placehold.co/400x140/0d0d0d/FFD700?text=${encodeURIComponent(c.primary_service || '')}`;
-                    return (
-                      <div className="craft-card" key={c.id || i}>
-                        <div className="craft-cover">
-                          <img src={cover || ph} alt={c.primary_service} onError={e => { e.target.src = ph; }}/>
-                          <span className="trade-pill">{c.primary_service}</span>
-                          {c.is_available && <span className="avail-pill"><span className="avail-dot"/>Available</span>}
-                        </div>
-                        <div className="craft-body">
-                          <div className="craft-row">
-                            <img src={avatar || avi(cName)} alt={cName} className="craft-av" onError={e => { e.target.src = avi(cName); }}/>
-                            <div style={{ minWidth:0 }}>
-                              <p className="craft-name">{cName}</p>
-                              {c.location && <p className="craft-loc"><i className="fas fa-map-marker-alt" style={{ marginRight:4 }}/>{c.location}</p>}
-                            </div>
-                          </div>
-                          {rating > 0 && <div style={{ display:'flex', alignItems:'center', gap:7 }}><Stars r={rating}/><span className="craft-rtg">{rating.toFixed(1)}</span></div>}
-                          {c.description && <p className="craft-desc">{c.description.length > 88 ? c.description.slice(0,88)+'…' : c.description}</p>}
-                          <button className="hire-btn" onClick={() => openHire(c)}><i className="fas fa-paper-plane"/>Request {cName.split(' ')[0]}</button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {filtered.map((c, i) => (
+                    <CraftCard key={c.id || i} c={c}
+                      onHire={openHire} onNotifyMe={handleNotifyMe}
+                      notifiedIds={notifiedIds} mediaBase={MEDIA_BASE}
+                    />
+                  ))}
                 </div>
               )}
             </>
           )}
 
-          {/* HIRE FORM */}
+          {/* ══ HIRE FORM ══ */}
           {tab === 'hire' && picked && (
             <>
-              <button className="back-btn" onClick={() => { setTab('browse'); setPicked(null); }}><i className="fas fa-arrow-left"/>Back to browse</button>
-              {jobOk && <div className="ok-banner"><i className="fas fa-check-circle" style={{ fontSize:'1.1rem' }}/>Request sent! {getName(picked).split(' ')[0]} has been notified. Redirecting…</div>}
+              <button className="back-btn" onClick={() => { setTab('browse'); setPicked(null); }}>
+                <i className="fas fa-arrow-left"/>Back to browse
+              </button>
+              {jobOk && (
+                <div className="ok-banner">
+                  <i className="fas fa-check-circle" style={{ fontSize:'1.1rem' }}/>
+                  Request sent! {getName(picked).split(' ')[0]} has been notified. Redirecting…
+                </div>
+              )}
               <div className="locked-bar">
-                <img src={getAvatar(picked) || avi(getName(picked))} alt={getName(picked)} className="locked-av" onError={e => { e.target.src = avi(getName(picked)); }}/>
+                <img src={getAvatar(picked) || avi(getName(picked))} alt={getName(picked)}
+                  className="locked-av" onError={e => { e.target.src = avi(getName(picked)); }}/>
                 <div>
                   <p className="locked-name">{getName(picked)}</p>
                   <p className="locked-meta">
@@ -774,82 +719,244 @@ export default function HireCraftsmanPage() {
               <div className="card">
                 <form onSubmit={submitHire}>
                   <div className="form-grid">
-                    <div><label className="lbl" htmlFor="service">Service needed</label><select id="service" className="sel" value={jf.service} onChange={jfChange} required><option value="">Select service…</option>{SERVICES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-                    <div><label className="lbl" htmlFor="budget">Your budget (KSh)</label><input id="budget" type="number" min="0" className="inp" placeholder="e.g. 5,000" value={jf.budget} onChange={jfChange} required/></div>
-                    <div><label className="lbl" htmlFor="schedule">Preferred date &amp; time</label><input id="schedule" type="datetime-local" className="inp" value={jf.schedule} onChange={jfChange} required/></div>
-                    <div><label className="lbl" htmlFor="location">County</label><select id="location" className="sel" value={jf.location} onChange={jfChange} required><option value="">Select county…</option>{LOCATIONS.map(l => <option key={l} value={l.toLowerCase()}>{l}</option>)}</select></div>
-                    <div style={{ gridColumn:'1 / -1' }}><label className="lbl" htmlFor="address">Exact address</label><input id="address" type="text" className="inp" placeholder="e.g. Westlands, Nairobi" value={jf.address} onChange={jfChange} required/></div>
-                    <div style={{ gridColumn:'1 / -1' }}><label className="lbl" htmlFor="description">Describe the work</label><textarea id="description" className="ta" rows={4} placeholder="Describe the work…" value={jf.description} onChange={jfChange} required/></div>
-                    <div><label className="lbl" htmlFor="media">Attach a photo (optional)</label><input id="media" type="file" accept="image/*" className="inp" onChange={jfChange}/></div>
-                    <div style={{ display:'flex', alignItems:'center' }}><div className="ck-row"><input id="isUrgent" type="checkbox" className="ck" checked={jf.isUrgent} onChange={jfChange}/><label className="ck-lbl" htmlFor="isUrgent">⚡ Mark as urgent</label></div></div>
+                    <div>
+                      <label className="lbl" htmlFor="service">Service needed</label>
+                      <select id="service" className="sel" value={jf.service} onChange={jfChange} required>
+                        <option value="">Select service…</option>
+                        {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="lbl" htmlFor="budget">Your budget (KSh)</label>
+                      <input id="budget" type="number" min="0" className="inp" placeholder="e.g. 5,000" value={jf.budget} onChange={jfChange} required/>
+                    </div>
+                    <div>
+                      <label className="lbl" htmlFor="schedule">Preferred date &amp; time</label>
+                      <input id="schedule" type="datetime-local" className="inp" value={jf.schedule} onChange={jfChange} required/>
+                    </div>
+                    <div>
+                      <label className="lbl" htmlFor="location">County</label>
+                      <select id="location" className="sel" value={jf.location} onChange={jfChange} required>
+                        <option value="">Select county…</option>
+                        {LOCATIONS.map(l => <option key={l} value={l.toLowerCase()}>{l}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ gridColumn:'1 / -1' }}>
+                      <label className="lbl" htmlFor="address">Exact address</label>
+                      <input id="address" type="text" className="inp" placeholder="e.g. Westlands, Nairobi" value={jf.address} onChange={jfChange} required/>
+                    </div>
+                    <div style={{ gridColumn:'1 / -1' }}>
+                      <label className="lbl" htmlFor="description">Describe the work</label>
+                      <textarea id="description" className="ta" rows={4} placeholder="Describe the work…" value={jf.description} onChange={jfChange} required/>
+                    </div>
+                    <div>
+                      <label className="lbl" htmlFor="media">Attach a photo (optional)</label>
+                      <input id="media" type="file" accept="image/*" className="inp" onChange={jfChange}/>
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center' }}>
+                      <div className="ck-row">
+                        <input id="isUrgent" type="checkbox" className="ck" checked={jf.isUrgent} onChange={jfChange}/>
+                        <label className="ck-lbl" htmlFor="isUrgent">⚡ Mark as urgent</label>
+                      </div>
+                    </div>
                   </div>
-                  <button type="submit" className="submit-btn" disabled={jobBusy}>{jobBusy ? <><span className="spinner"/>Sending request…</> : <><i className="fas fa-paper-plane"/>Send request to {getName(picked).split(' ')[0]}</>}</button>
+                  <button type="submit" className="submit-btn" disabled={jobBusy}>
+                    {jobBusy
+                      ? <><span className="spinner"/>Sending request…</>
+                      : <><i className="fas fa-paper-plane"/>Send request to {getName(picked).split(' ')[0]}</>
+                    }
+                  </button>
                 </form>
               </div>
             </>
           )}
 
-          {/* MY REQUESTS */}
+          {/* ══ MY REQUESTS ══ */}
           {tab === 'requests' && (
             <div className="card" style={{ padding:0, overflow:'hidden' }}>
               {jobs.length === 0 ? (
-                <div style={{ padding:'2.25rem' }}><div className="empty"><div className="empty-icon"><i className="fas fa-clipboard-list"/></div><h3>No requests yet</h3><p>Find a craftsman and send your first request to get started</p></div></div>
-              ) : (
-                <div className="tbl-wrap">
-                  <table className="tbl">
-                    <thead><tr><th>Service</th><th>Craftsman</th><th>Budget</th><th>Scheduled</th><th>Status</th><th>Quote</th><th>Work photos</th><th>Action</th></tr></thead>
-                    <tbody>
-                      {jobs.map(job => {
-                        const hasQ = !!(job.quote_file_url || job.quote_details), isQS = job.status === 'Quote Submitted';
-                        const cName = getJobCraftsmanName(job) || (job.craftsman && typeof job.craftsman === 'number' ? `Craftsman #${job.craftsman}` : '—');
-                        const cAv = getAvatar(job.craftsman) || avi(cName);
-                        const proofs = job.proof_images || [];
-                        return (
-                          <tr key={job.id}>
-                            <td><strong>{job.service}</strong></td>
-                            <td><div style={{ display:'flex', alignItems:'center', gap:8 }}>{cName !== '—' && <img src={cAv} alt={cName} style={{ width:30, height:30, borderRadius:'50%', objectFit:'cover', border:'2px solid #FFD700', flexShrink:0 }} onError={e => { e.target.src = avi(cName); }}/>}<span style={{ fontSize:'.83rem', color:'#64748b', fontWeight:600 }}>{cName}</span></div></td>
-                            <td style={{ fontWeight:800 }}>{job.budget ? `KSh ${Number(job.budget).toLocaleString()}` : '—'}</td>
-                            <td style={{ fontSize:'.8rem', color:'#64748b' }}>{job.schedule ? new Date(job.schedule).toLocaleDateString('en-KE', { day:'numeric', month:'short', year:'numeric' }) : '—'}</td>
-                            <td><span className={badgeCls(job.status)}><span className="bdg-dot"/>{job.status === 'Quote Submitted' ? 'Quote Received' : job.status || 'Pending'}</span></td>
-                            <td>{job.quote_file_url ? <a href={job.quote_file_url} target="_blank" rel="noopener noreferrer" style={{ color:'#15803d', fontWeight:700, fontSize:'.8rem' }}>View file</a> : job.quote_details ? <button className="act act-ok" onClick={() => setQuoteJob(job)}>View Quote</button> : <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>}</td>
-                            <td><ProofThumbs proofs={proofs} onOpen={(p, i) => setLightbox({ proofs:p, idx:i })}/></td>
-                            <td><div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                              {isQS && hasQ && <><button className="act act-ok" onClick={() => quoteDecide(job.id,'approve')}>Approve</button><button className="act act-bad" onClick={() => quoteDecide(job.id,'reject')}>Reject</button></>}
-                              {canPay(job) && !isQS && <button className="act act-pay" onClick={() => { setPayJob(job); setPayState('idle'); setPayMsg(''); }}><i className="fas fa-mobile-alt" style={{ marginRight:4 }}/>Pay</button>}
-                              {!isQS && !canPay(job) && <span style={{ fontSize:'.8rem', color:'#64748b' }}>—</span>}
-                            </div></td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div style={{ padding:'2.25rem' }}>
+                  <div className="empty">
+                    <div className="empty-icon"><i className="fas fa-clipboard-list"/></div>
+                    <h3>No requests yet</h3>
+                    <p>Find a craftsman and send your first request to get started</p>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <div style={{ padding:'14px 20px 0', display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:'.72rem', color:'#64748b', fontWeight:600, display:'flex', alignItems:'center', gap:5 }}>
+                      <i className="fas fa-info-circle" style={{ color:'#3b82f6' }}/>
+                      Pay activates after the craftsman completes work and uploads photos. After paying, leave a review.
+                    </span>
+                  </div>
+                  <div className="tbl-wrap">
+                    <table className="tbl">
+                      <thead>
+                        <tr>
+                          <th>Service</th><th>Craftsman</th><th>Budget</th>
+                          <th>Scheduled</th><th>Status</th><th>Quote</th>
+                          <th>Work Photos</th><th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {jobs.map(job => {
+                          const hasQ    = !!(job.quote_file_url || job.quote_details);
+                          const isQS    = job.status === 'Quote Submitted';
+                          const proofs  = job.proof_images || [];
+                          const cName   = getJobCraftsmanName(job) || (job.craftsman && typeof job.craftsman === 'number' ? `Craftsman #${job.craftsman}` : '—');
+                          const cAv     = getAvatar(job.craftsman) || avi(cName);
+                          const payOk   = canPay(job);
+                          const payWait = payPendingPhotos(job);
+                          const paid    = isPaid(job);
+
+                          return (
+                            <tr key={job.id}>
+                              <td><strong>{job.service}</strong></td>
+                              <td>
+                                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                  {cName !== '—' && (
+                                    <img src={cAv} alt={cName}
+                                      style={{ width:30, height:30, borderRadius:'50%', objectFit:'cover', border:'2px solid #FFD700', flexShrink:0 }}
+                                      onError={e => { e.target.src = avi(cName); }}
+                                    />
+                                  )}
+                                  <span style={{ fontSize:'.83rem', color:'#64748b', fontWeight:600 }}>{cName}</span>
+                                </div>
+                              </td>
+                              <td style={{ fontWeight:800 }}>
+                                {job.budget ? `KSh ${Number(job.budget).toLocaleString()}` : '—'}
+                              </td>
+                              <td style={{ fontSize:'.8rem', color:'#64748b' }}>
+                                {job.schedule
+                                  ? new Date(job.schedule).toLocaleDateString('en-KE', { day:'numeric', month:'short', year:'numeric' })
+                                  : '—'}
+                              </td>
+                              <td>
+                                <span className={badgeCls(job.status)}>
+                                  <span className="bdg-dot"/>
+                                  {job.status === 'Quote Submitted' ? 'Quote Received' : job.status || 'Pending'}
+                                </span>
+                              </td>
+                              <td>
+                                {job.quote_file_url
+                                  ? <a href={job.quote_file_url} target="_blank" rel="noopener noreferrer"
+                                      style={{ color:'#15803d', fontWeight:700, fontSize:'.8rem' }}>View file</a>
+                                  : job.quote_details
+                                    ? <button className="act act-ok" onClick={() => setQuoteJob(job)}>View Quote</button>
+                                    : <span style={{ color:'#64748b', fontSize:'.8rem' }}>—</span>
+                                }
+                              </td>
+                              <td>
+                                <ProofGalleryCell
+                                  proofs={proofs}
+                                  onViewAll={(p, i) => setLightbox({ proofs: p, idx: i })}
+                                />
+                              </td>
+
+                              {/* ── ACTION COLUMN ── */}
+                              <td>
+                                <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+
+                                  {/* Quote approve / reject */}
+                                  {isQS && hasQ && (
+                                    <>
+                                      <button className="act act-ok" onClick={() => quoteDecide(job.id,'approve')}>Approve</button>
+                                      <button className="act act-bad" onClick={() => quoteDecide(job.id,'reject')}>Reject</button>
+                                    </>
+                                  )}
+
+                                  {/* Pay — craftsman completed + photos uploaded */}
+                                  {payOk && !isQS && (
+                                    <button className="act act-pay"
+                                      onClick={() => { setPayJob(job); setPayState('idle'); setPayMsg(''); }}>
+                                      <i className="fas fa-mobile-alt" style={{ marginRight:4 }}/>Pay
+                                    </button>
+                                  )}
+
+                                  {/* Waiting for craftsman to upload photos */}
+                                  {payWait && !isQS && (
+                                    <span className="pay-locked" title="Waiting for craftsman to upload work photos">
+                                      <i className="fas fa-camera"/>&nbsp;Photos needed
+                                    </span>
+                                  )}
+
+                                  {/* ── PAID: Leave Review button ── */}
+                                  {paid && (
+                                    <button
+                                      className="act act-review"
+                                      onClick={() => setTab('reviews')}
+                                      title="Go to Reviews tab to rate this job"
+                                    >
+                                      ⭐ Review
+                                    </button>
+                                  )}
+
+                                  {/* Nothing relevant to show */}
+                                  {!isQS && !payOk && !payWait && !paid && (
+                                    <span style={{ fontSize:'.8rem', color:'#64748b' }}>—</span>
+                                  )}
+
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}
 
-          {/* REVIEWS */}
+          {/* ══ REVIEWS — only after job is PAID ══ */}
           {tab === 'reviews' && (
             <>
-              {jobs.filter(j => j.status === 'Completed').length === 0 ? (
-                <div className="card"><div className="empty"><div className="empty-icon"><i className="fas fa-star"/></div><h3>No completed jobs yet</h3><p>Completed jobs will appear here for you to review</p></div></div>
+              {paidJobs.length === 0 ? (
+                <div className="card"><div className="empty">
+                  <div className="empty-icon"><i className="fas fa-star"/></div>
+                  <h3>No paid jobs yet</h3>
+                  <p>Reviews become available once a job is fully completed and paid</p>
+                </div></div>
               ) : (
                 <div className="rev-grid">
-                  {jobs.filter(j => j.status === 'Completed').map(job => {
+                  {paidJobs.map(job => {
                     const cName = getJobCraftsmanName(job);
                     return (
                       <div className="rev-card" key={job.id}>
                         <div className="rev-header">
-                          <div><p className="rev-svc">{job.service}</p><p className="rev-meta">{job.schedule && new Date(job.schedule).toLocaleDateString('en-KE', { day:'numeric', month:'long', year:'numeric' })}{job.budget && ` · KSh ${Number(job.budget).toLocaleString()}`}</p></div>
-                          <span className="bdg bdg-g"><span className="bdg-dot"/>Completed</span>
+                          <div>
+                            <p className="rev-svc">{job.service}</p>
+                            <p className="rev-meta">
+                              {job.schedule && new Date(job.schedule).toLocaleDateString('en-KE', { day:'numeric', month:'long', year:'numeric' })}
+                              {job.budget && ` · KSh ${Number(job.budget).toLocaleString()}`}
+                            </p>
+                          </div>
+                          <span className="bdg bdg-g"><span className="bdg-dot"/>Paid</span>
                         </div>
-                        {cName !== '—' && <div className="rev-craft"><img src={getAvatar(job.craftsman) || avi(cName)} alt={cName} className="rev-craft-av" onError={e => { e.target.src = avi(cName); }}/><span className="rev-craft-name">{cName}</span></div>}
+                        {cName !== '—' && (
+                          <div className="rev-craft">
+                            <img src={getAvatar(job.craftsman) || avi(cName)} alt={cName} className="rev-craft-av"
+                              onError={e => { e.target.src = avi(cName); }}/>
+                            <span className="rev-craft-name">{cName}</span>
+                          </div>
+                        )}
                         <div className="star-row">
-                          {[1,2,3,4,5].map(s => <span key={s} className={`star${(reviews[job.id]?.rating||0) >= s ? ' on' : ''}`} onClick={() => setReviews(p => ({ ...p, [job.id]:{ ...p[job.id], rating:s } }))}>★</span>)}
+                          {[1,2,3,4,5].map(s => (
+                            <span key={s}
+                              className={`star${(reviews[job.id]?.rating||0) >= s ? ' on' : ''}`}
+                              onClick={() => setReviews(p => ({ ...p, [job.id]:{ ...p[job.id], rating:s } }))}>★</span>
+                          ))}
                           {reviews[job.id]?.rating > 0 && <span className="star-val">{reviews[job.id].rating}/5</span>}
                         </div>
-                        <textarea className="ta" rows={3} placeholder="Your review…" value={reviews[job.id]?.review || ''} onChange={e => setReviews(p => ({ ...p, [job.id]:{ ...p[job.id], review:e.target.value } }))} style={{ marginBottom:14, width:'100%' }}/>
-                        <button className="rev-btn" onClick={() => submitReview(job.id)}><i className="fas fa-star"/>Submit Review</button>
+                        <textarea className="ta" rows={3} placeholder="Your review…"
+                          value={reviews[job.id]?.review || ''}
+                          onChange={e => setReviews(p => ({ ...p, [job.id]:{ ...p[job.id], review:e.target.value } }))}
+                          style={{ marginBottom:14, width:'100%' }}/>
+                        <button className="rev-btn" onClick={() => submitReview(job.id)}>
+                          <i className="fas fa-star"/>Submit Review
+                        </button>
                       </div>
                     );
                   })}
@@ -858,25 +965,62 @@ export default function HireCraftsmanPage() {
             </>
           )}
 
-          {/* PAYMENTS */}
+          {/* ══ PAYMENTS ══ */}
           {tab === 'payments' && (
             <>
               <div className="pay-grid">
-                {[{icon:'fas fa-receipt',l:'Total Requests',v:jobs.length},{icon:'fas fa-wallet',l:'Total Spent',v:`KSh ${totalSpent.toLocaleString()}`},{icon:'fas fa-check-circle',l:'Completed',v:completedCount},{icon:'fas fa-hourglass-half',l:'Pending',v:pendingCount}].map((s,i) => (
-                  <div className="pay-stat" key={i}><div className="pay-stat-icon"><i className={s.icon}/></div><p className="pay-stat-v">{s.v}</p><p className="pay-stat-l">{s.l}</p></div>
+                {[
+                  { icon:'fas fa-receipt',       l:'Total Requests', v:jobs.length },
+                  { icon:'fas fa-wallet',         l:'Total Spent',    v:`KSh ${totalSpent.toLocaleString()}` },
+                  { icon:'fas fa-check-circle',   l:'Completed',      v:completedCount },
+                  { icon:'fas fa-hourglass-half', l:'Pending',        v:pendingCount },
+                ].map((s,i) => (
+                  <div className="pay-stat" key={i}>
+                    <div className="pay-stat-icon"><i className={s.icon}/></div>
+                    <p className="pay-stat-v">{s.v}</p>
+                    <p className="pay-stat-l">{s.l}</p>
+                  </div>
                 ))}
               </div>
               <div className="card" style={{ padding:0, overflow:'hidden' }}>
                 {jobs.length === 0 ? (
-                  <div style={{ padding:'2.25rem' }}><div className="empty"><div className="empty-icon"><i className="fas fa-receipt"/></div><h3>No payment records yet</h3><p>Payments will appear here once you hire a craftsman</p></div></div>
+                  <div style={{ padding:'2.25rem' }}>
+                    <div className="empty">
+                      <div className="empty-icon"><i className="fas fa-receipt"/></div>
+                      <h3>No payment records yet</h3>
+                      <p>Payments will appear here once you hire a craftsman</p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="tbl-wrap">
                     <table className="tbl">
-                      <thead><tr><th>Service</th><th>Total</th><th>Platform fee (10%)</th><th>Craftsman receives</th><th>Status</th></tr></thead>
+                      <thead>
+                        <tr>
+                          <th>Service</th><th>Total</th><th>Platform fee (10%)</th>
+                          <th>Craftsman receives</th><th>Status</th>
+                        </tr>
+                      </thead>
                       <tbody>
                         {jobs.map(job => {
-                          const total = Number(job.budget)||0, fee = Math.round(total*.1), net = total-fee, paid = /paid/i.test(job.status||''), cName = getJobCraftsmanName(job);
-                          return (<tr key={job.id}><td><strong>{job.service}</strong>{cName !== '—' && <p style={{ fontSize:'.76rem', color:'#64748b', fontWeight:500, marginTop:2 }}>{cName}</p>}</td><td style={{ fontWeight:800 }}>KSh {total.toLocaleString()}</td><td style={{ color:'#64748b', fontWeight:600 }}>KSh {fee.toLocaleString()}</td><td style={{ fontWeight:800, color:'#15803d' }}>KSh {net.toLocaleString()}</td><td><span className={`bdg ${paid?'bdg-g':'bdg-y'}`}><span className="bdg-dot"/>{paid?'Paid':'Pending'}</span></td></tr>);
+                          const total = Number(job.budget)||0, fee = Math.round(total*.1), net = total-fee;
+                          const paid  = /paid/i.test(job.status||'');
+                          const cName = getJobCraftsmanName(job);
+                          return (
+                            <tr key={job.id}>
+                              <td>
+                                <strong>{job.service}</strong>
+                                {cName !== '—' && <p style={{ fontSize:'.76rem', color:'#64748b', fontWeight:500, marginTop:2 }}>{cName}</p>}
+                              </td>
+                              <td style={{ fontWeight:800 }}>KSh {total.toLocaleString()}</td>
+                              <td style={{ color:'#64748b', fontWeight:600 }}>KSh {fee.toLocaleString()}</td>
+                              <td style={{ fontWeight:800, color:'#15803d' }}>KSh {net.toLocaleString()}</td>
+                              <td>
+                                <span className={`bdg ${paid?'bdg-g':'bdg-y'}`}>
+                                  <span className="bdg-dot"/>{paid?'Paid':'Pending'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
                         })}
                       </tbody>
                     </table>
@@ -886,16 +1030,47 @@ export default function HireCraftsmanPage() {
             </>
           )}
 
-          {/* PROFILE */}
+          {/* ══ PROFILE ══ */}
           {tab === 'profile' && (
             <>
               <div className="prof-hero">
-                <div className="prof-top"><img src={avi(client.full_name)} alt={client.full_name} className="prof-av"/><div><h2 className="prof-name">{client.full_name||'Client'}</h2><span className="prof-role">Client Account</span>{client.email && <p className="prof-email">{client.email}</p>}</div></div>
-                <div className="prof-stats-row">{[{v:jobs.length,l:'Requests'},{v:completedCount,l:'Completed'},{v:`KSh ${totalSpent.toLocaleString()}`,l:'Total Spent'}].map((s,i) => <div className="prof-stat" key={i}><p className="prof-stat-v">{s.v}</p><p className="prof-stat-l">{s.l}</p></div>)}</div>
+                <div className="prof-top">
+                  <img src={avi(client.full_name)} alt={client.full_name} className="prof-av"/>
+                  <div>
+                    <h2 className="prof-name">{client.full_name||'Client'}</h2>
+                    <span className="prof-role">Client Account</span>
+                    {client.email && <p className="prof-email">{client.email}</p>}
+                  </div>
+                </div>
+                <div className="prof-stats-row">
+                  {[
+                    { v:jobs.length, l:'Requests' },
+                    { v:completedCount, l:'Completed' },
+                    { v:`KSh ${totalSpent.toLocaleString()}`, l:'Total Spent' },
+                  ].map((s,i) => (
+                    <div className="prof-stat" key={i}>
+                      <p className="prof-stat-v">{s.v}</p>
+                      <p className="prof-stat-l">{s.l}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="prof-grid" style={{ marginBottom:24 }}>
-                {[{icon:'fas fa-envelope',label:'Email',val:client.email||'—'},{icon:'fas fa-phone',label:'Phone',val:client.phone||client.phone_number||'—'},{icon:'fas fa-id-badge',label:'Account type',val:'Client'},{icon:'fas fa-clipboard-list',label:'Total requests',val:jobs.length},{icon:'fas fa-check-circle',label:'Completed jobs',val:completedCount},{icon:'fas fa-wallet',label:'Total spent',val:`KSh ${totalSpent.toLocaleString()}`}].map((item,i) => (
-                  <div className="prof-item" key={i}><div className="prof-item-icon"><i className={item.icon}/></div><div><p className="prof-item-lbl">{item.label}</p><p className="prof-item-val">{item.val}</p></div></div>
+                {[
+                  { icon:'fas fa-envelope',      label:'Email',          val:client.email||'—' },
+                  { icon:'fas fa-phone',          label:'Phone',          val:client.phone||client.phone_number||'—' },
+                  { icon:'fas fa-id-badge',       label:'Account type',   val:'Client' },
+                  { icon:'fas fa-clipboard-list', label:'Total requests', val:jobs.length },
+                  { icon:'fas fa-check-circle',   label:'Completed jobs', val:completedCount },
+                  { icon:'fas fa-wallet',         label:'Total spent',    val:`KSh ${totalSpent.toLocaleString()}` },
+                ].map((item,i) => (
+                  <div className="prof-item" key={i}>
+                    <div className="prof-item-icon"><i className={item.icon}/></div>
+                    <div>
+                      <p className="prof-item-lbl">{item.label}</p>
+                      <p className="prof-item-val">{item.val}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
             </>
@@ -904,76 +1079,225 @@ export default function HireCraftsmanPage() {
         </main>
       </div>
 
-      {/* ── BOTTOM NAV (mobile only) ── */}
+      {/* ── BOTTOM NAV ── */}
       <nav className="bottom-nav" aria-label="Navigation">
         {[
           { id:'browse',   label:'Browse',   icon:'fas fa-search' },
-          { id:'requests', label:'Requests',  icon:'fas fa-clipboard-list' },
-          { id:'reviews',  label:'Reviews',   icon:'fas fa-star' },
-          { id:'payments', label:'Payments',  icon:'fas fa-receipt' },
-          { id:'profile',  label:'Profile',   icon:'fas fa-user' },
+          { id:'requests', label:'Requests', icon:'fas fa-clipboard-list' },
+          { id:'reviews',  label:'Reviews',  icon:'fas fa-star' },
+          { id:'payments', label:'Payments', icon:'fas fa-receipt' },
+          { id:'profile',  label:'Profile',  icon:'fas fa-user' },
         ].map(t => (
           <button key={t.id}
             className={`bn-item${(tab === t.id || (tab === 'hire' && t.id === 'browse')) ? ' on' : ''}`}
-            onClick={() => setTab(t.id)}
-            style={{ position:'relative' }}>
+            onClick={() => setTab(t.id)} style={{ position:'relative' }}>
             <i className={t.icon}/>
             <span>{t.label}</span>
           </button>
         ))}
       </nav>
 
-      {/* QUOTE MODAL */}
+      {/* ── QUOTE MODAL ── */}
       {quoteJob && (
         <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) setQuoteJob(null); }}>
           <div className="modal-box">
             <div className="modal-hd light" style={{ position:'relative' }}>
               <button className="modal-close" onClick={() => setQuoteJob(null)}>✕</button>
-              <h5>Quote Summary</h5>{getJobCraftsmanName(quoteJob) !== '—' && <p>From {getJobCraftsmanName(quoteJob)}</p>}
+              <h5>Quote Summary</h5>
+              {getJobCraftsmanName(quoteJob) !== '—' && <p>From {getJobCraftsmanName(quoteJob)}</p>}
             </div>
             <div className="modal-body">
               {quoteJob.quote_details ? (
                 <>
-                  {['plumberName','workType','duration','paymentTerms'].map(k => quoteJob.quote_details[k] && (<div key={k} style={{ display:'flex', gap:14, marginBottom:10, fontSize:'.88rem' }}><span style={{ fontWeight:700, minWidth:125, color:'#64748b', textTransform:'capitalize' }}>{k==='plumberName'?'From':k==='workType'?'Work type':k==='paymentTerms'?'Payment terms':'Duration'}</span><span style={{ fontWeight:600 }}>{quoteJob.quote_details[k]}</span></div>))}
-                  {Array.isArray(quoteJob.quote_details.items) && quoteJob.quote_details.items.length > 0 && (<><hr className="modal-hr"/><p style={{ fontWeight:700, fontSize:'.72rem', textTransform:'uppercase', letterSpacing:'.06em', color:'#64748b', marginBottom:12 }}>Line items</p>{quoteJob.quote_details.items.map((item,i) => <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:9, fontSize:'.88rem', padding:'9px 0', borderBottom:'1px solid #f1f5f9' }}><span>{item.desc||`Item ${i+1}`}</span><strong>KSh {(item.qty*item.price).toLocaleString()}</strong></div>)}</>)}
-                  {quoteJob.quote_details.total && (<><hr className="modal-hr"/><div style={{ display:'flex', justifyContent:'space-between', fontWeight:800, fontSize:'1.02rem' }}><span>Total</span><span style={{ color:'#15803d' }}>KSh {Number(quoteJob.quote_details.total).toLocaleString()}</span></div></>)}
+                  {['plumberName','workType','duration','paymentTerms'].map(k =>
+                    quoteJob.quote_details[k] && (
+                      <div key={k} style={{ display:'flex', gap:14, marginBottom:10, fontSize:'.88rem' }}>
+                        <span style={{ fontWeight:700, minWidth:125, color:'#64748b', textTransform:'capitalize' }}>
+                          {k==='plumberName'?'From':k==='workType'?'Work type':k==='paymentTerms'?'Payment terms':'Duration'}
+                        </span>
+                        <span style={{ fontWeight:600 }}>{quoteJob.quote_details[k]}</span>
+                      </div>
+                    )
+                  )}
+                  {Array.isArray(quoteJob.quote_details.items) && quoteJob.quote_details.items.length > 0 && (
+                    <>
+                      <hr className="modal-hr"/>
+                      <p style={{ fontWeight:700, fontSize:'.72rem', textTransform:'uppercase', letterSpacing:'.06em', color:'#64748b', marginBottom:12 }}>Line items</p>
+                      {quoteJob.quote_details.items.map((item,i) => (
+                        <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:9, fontSize:'.88rem', padding:'9px 0', borderBottom:'1px solid #f1f5f9' }}>
+                          <span>{item.desc||`Item ${i+1}`}</span>
+                          <strong>KSh {(item.qty*item.price).toLocaleString()}</strong>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {quoteJob.quote_details.total && (
+                    <>
+                      <hr className="modal-hr"/>
+                      <div style={{ display:'flex', justifyContent:'space-between', fontWeight:800, fontSize:'1.02rem' }}>
+                        <span>Total</span>
+                        <span style={{ color:'#15803d' }}>KSh {Number(quoteJob.quote_details.total).toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
                 </>
               ) : <p style={{ color:'#64748b' }}>No quote details available.</p>}
             </div>
             <div className="modal-ft">
               <button className="mbl mbl-light" onClick={() => setQuoteJob(null)}>Close</button>
-              {jobs.find(j => j.id === quoteJob.id)?.status === 'Quote Submitted' && <><button className="mbl mbl-red" onClick={() => quoteDecide(quoteJob.id,'reject')}>Reject Quote</button><button className="mbl mbl-gold" onClick={() => quoteDecide(quoteJob.id,'approve')}>Approve Quote</button></>}
+              {jobs.find(j => j.id === quoteJob.id)?.status === 'Quote Submitted' && (
+                <>
+                  <button className="mbl mbl-red" onClick={() => quoteDecide(quoteJob.id,'reject')}>Reject Quote</button>
+                  <button className="mbl mbl-gold" onClick={() => quoteDecide(quoteJob.id,'approve')}>Approve Quote</button>
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* M-PESA MODAL */}
+      {/* ── M-PESA MODAL ── */}
       {payJob && (
         <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) { clearInterval(pollRef.current); setPayJob(null); setPayState('idle'); } }}>
           <div className="modal-box">
             <div className="modal-hd dark" style={{ position:'relative' }}>
               <button className="modal-close" onClick={() => { clearInterval(pollRef.current); setPayJob(null); setPayState('idle'); }}>✕</button>
-              <h5>Pay via M-Pesa</h5><p>Job: {payJob.service} · {getJobCraftsmanName(payJob)}</p>
+              <h5>Pay via M-Pesa</h5>
+              <p>Job: {payJob.service} · {getJobCraftsmanName(payJob)}</p>
             </div>
             <div className="modal-body">
-              {payState === 'complete' && (<div style={{ textAlign:'center', padding:'24px 0' }}><div style={{ width:64, height:64, borderRadius:'50%', background:'#f0fdf4', border:'2px solid #22c55e', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}><i className="fas fa-check" style={{ fontSize:'1.7rem', color:'#16a34a' }}/></div><p style={{ fontWeight:800, fontSize:'1.1rem', color:'#1e293b', marginBottom:6 }}>Payment Confirmed!</p><p style={{ fontSize:'.85rem', color:'#64748b', lineHeight:1.7 }}>KSh {Number(payJob.budget).toLocaleString()} received.<br/>Craftsman has been notified. Closing…</p></div>)}
-              {payState === 'failed' && (<div style={{ textAlign:'center', padding:'24px 0' }}><div style={{ width:64, height:64, borderRadius:'50%', background:'#fef2f2', border:'2px solid #fca5a5', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}><i className="fas fa-times" style={{ fontSize:'1.7rem', color:'#b91c1c' }}/></div><p style={{ fontWeight:800, fontSize:'1.05rem', color:'#1e293b', marginBottom:8 }}>Payment not completed</p><p style={{ fontSize:'.85rem', color:'#64748b', lineHeight:1.7, marginBottom:18 }}>{payMsg}</p><button className="mpesa-btn" onClick={() => setPayState('idle')} style={{ maxWidth:240, margin:'0 auto' }}><i className="fas fa-redo"/> Try again</button></div>)}
-              {(payState === 'stk_sent' || payState === 'polling') && (<div style={{ textAlign:'center', padding:'24px 0' }}><div style={{ width:64, height:64, borderRadius:'50%', background:'#fffbeb', border:'2px solid #fde68a', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}><span className="spinner-lg"/></div><p style={{ fontWeight:800, fontSize:'1.05rem', color:'#1e293b', marginBottom:8 }}>{payState === 'stk_sent' ? 'Check your phone' : 'Confirming payment…'}</p><p style={{ fontSize:'.85rem', color:'#64748b', lineHeight:1.7 }}>{payMsg || 'Enter your M-Pesa PIN when prompted.'}</p><p style={{ fontSize:'.75rem', color:'#94a3b8', marginTop:10 }}>Checking automatically every 2 seconds…</p></div>)}
+
+              {(payJob.proof_images || []).length > 0 && (
+                <div style={{ marginBottom:18 }}>
+                  <p style={{ fontSize:'.72rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'.06em', color:'#64748b', marginBottom:8 }}>
+                    <i className="fas fa-camera" style={{ marginRight:5, color:'#16a34a' }}/>
+                    Work photos ({payJob.proof_images.length})
+                  </p>
+                  <div className="proof-modal-grid">
+                    {payJob.proof_images.map((img, i) => {
+                      const url  = img.image_url || img.image || (typeof img === 'string' ? img : null);
+                      const full = url ? (url.startsWith('http') ? url : `${MEDIA_BASE}${url.startsWith('/') ? '' : '/'}${url}`) : null;
+                      if (!full) return null;
+                      return (
+                        <img key={i} src={full} alt={`Work ${i+1}`}
+                          className="proof-modal-img"
+                          onClick={() => setLightbox({ proofs: payJob.proof_images, idx: i })}
+                          onError={e => { e.target.style.display='none'; }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p style={{ fontSize:'.7rem', color:'#64748b', marginTop:6 }}>
+                    Click any photo to view full size. Review the work before paying.
+                  </p>
+                </div>
+              )}
+
+              {payState === 'complete' && (
+                <div style={{ textAlign:'center', padding:'24px 0' }}>
+                  <div style={{ width:64, height:64, borderRadius:'50%', background:'#f0fdf4', border:'2px solid #22c55e', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                    <i className="fas fa-check" style={{ fontSize:'1.7rem', color:'#16a34a' }}/>
+                  </div>
+                  <p style={{ fontWeight:800, fontSize:'1.1rem', color:'#1e293b', marginBottom:6 }}>Payment Confirmed!</p>
+                  <p style={{ fontSize:'.85rem', color:'#64748b', lineHeight:1.7 }}>
+                    KSh {Number(payJob.budget).toLocaleString()} received.<br/>Craftsman has been notified. Closing…
+                  </p>
+                </div>
+              )}
+
+              {payState === 'failed' && (
+                <div style={{ textAlign:'center', padding:'24px 0' }}>
+                  <div style={{ width:64, height:64, borderRadius:'50%', background:'#fef2f2', border:'2px solid #fca5a5', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                    <i className="fas fa-times" style={{ fontSize:'1.7rem', color:'#b91c1c' }}/>
+                  </div>
+                  <p style={{ fontWeight:800, fontSize:'1.05rem', color:'#1e293b', marginBottom:8 }}>Payment not completed</p>
+                  <p style={{ fontSize:'.85rem', color:'#64748b', lineHeight:1.7, marginBottom:18 }}>{payMsg}</p>
+                  <button className="mpesa-btn" onClick={() => setPayState('idle')} style={{ maxWidth:240, margin:'0 auto' }}>
+                    <i className="fas fa-redo"/> Try again
+                  </button>
+                </div>
+              )}
+
+              {(payState === 'stk_sent' || payState === 'polling') && (
+                <div style={{ textAlign:'center', padding:'24px 0' }}>
+                  <div style={{ width:64, height:64, borderRadius:'50%', background:'#fffbeb', border:'2px solid #fde68a', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                    <span className="spinner-lg"/>
+                  </div>
+                  <p style={{ fontWeight:800, fontSize:'1.05rem', color:'#1e293b', marginBottom:8 }}>
+                    {payState === 'stk_sent' ? 'Check your phone' : 'Confirming payment…'}
+                  </p>
+                  <p style={{ fontSize:'.85rem', color:'#64748b', lineHeight:1.7 }}>{payMsg || 'Enter your M-Pesa PIN when prompted.'}</p>
+                  <p style={{ fontSize:'.75rem', color:'#94a3b8', marginTop:10 }}>Checking automatically every 2 seconds…</p>
+                </div>
+              )}
+
               {payState === 'idle' && (
                 <>
-                  <div className="mpesa-logo-row"><span className="mpesa-logo">M-PESA</span><span style={{ fontSize:'.78rem', color:'#64748b', fontWeight:600 }}>Powered by Safaricom</span></div>
-                  <div className="mpesa-amt"><div><p className="mpesa-amt-lbl">Amount to pay</p><p className="mpesa-amt-val">KSh {Number(payJob.budget).toLocaleString()}</p></div><div style={{ textAlign:'right' }}><p className="mpesa-amt-lbl">To craftsman</p><p style={{ fontSize:'.88rem', fontWeight:700, color:'rgba(255,255,255,.7)' }}>KSh {Math.round(Number(payJob.budget)*.9).toLocaleString()}</p><p style={{ fontSize:'.68rem', color:'rgba(255,255,255,.35)', marginTop:2 }}>After 10% platform fee</p></div></div>
-                  <div className="mpesa-steps">{[{n:1,title:'Enter your M-Pesa number',text:'Use the number registered with M-Pesa'},{n:2,title:'Check your phone',text:"You'll receive a prompt from M-Pesa"},{n:3,title:'Enter your PIN',text:'Confirm — status updates automatically here'}].map(s => <div className="mpesa-step" key={s.n}><span className="mpesa-num">{s.n}</span><div><p className="mpesa-step-title">{s.title}</p><p className="mpesa-step-text">{s.text}</p></div></div>)}</div>
-                  <div className="mpesa-inp-wrap"><label className="lbl" style={{ marginBottom:6, display:'block' }}>M-Pesa phone number</label><input type="tel" className="inp" placeholder="0712345678 or 254712345678" value={payPhone} onChange={e => setPayPhone(e.target.value.replace(/\D/g,''))} maxLength={12}/></div>
+                  <div className="mpesa-logo-row">
+                    <span className="mpesa-logo">M-PESA</span>
+                    <span style={{ fontSize:'.78rem', color:'#64748b', fontWeight:600 }}>Powered by Safaricom</span>
+                  </div>
+                  <div className="mpesa-amt">
+                    <div>
+                      <p className="mpesa-amt-lbl">Amount to pay</p>
+                      <p className="mpesa-amt-val">KSh {Number(payJob.budget).toLocaleString()}</p>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <p className="mpesa-amt-lbl">To craftsman</p>
+                      <p style={{ fontSize:'.88rem', fontWeight:700, color:'rgba(255,255,255,.7)' }}>
+                        KSh {Math.round(Number(payJob.budget)*.9).toLocaleString()}
+                      </p>
+                      <p style={{ fontSize:'.68rem', color:'rgba(255,255,255,.35)', marginTop:2 }}>After 10% platform fee</p>
+                    </div>
+                  </div>
+                  <div className="mpesa-steps">
+                    {[
+                      { n:1, title:'Enter your M-Pesa number', text:'Use the number registered with M-Pesa' },
+                      { n:2, title:'Check your phone',         text:"You'll receive a prompt from M-Pesa" },
+                      { n:3, title:'Enter your PIN',           text:'Confirm — status updates automatically here' },
+                    ].map(s => (
+                      <div className="mpesa-step" key={s.n}>
+                        <span className="mpesa-num">{s.n}</span>
+                        <div>
+                          <p className="mpesa-step-title">{s.title}</p>
+                          <p className="mpesa-step-text">{s.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mpesa-inp-wrap">
+                    <label className="lbl" style={{ marginBottom:6, display:'block' }}>M-Pesa phone number</label>
+                    <input type="tel" className="inp"
+                      placeholder="0712345678 or 254712345678"
+                      value={payPhone}
+                      onChange={e => setPayPhone(e.target.value.replace(/\D/g,''))}
+                      maxLength={12}
+                    />
+                  </div>
                   <button className="mpesa-btn" onClick={initiateMpesa} disabled={payBusy}>
-                    {payBusy ? <><span className="spinner-white"/>Sending</> : <><svg width="100" height="24" viewBox="0 0 260 54" fill="none" style={{ flexShrink:0, display:'inline-block', verticalAlign:'middle' }}><text x="2" y="44" fontFamily="Arial Black, sans-serif" fontSize="48" fontWeight="900" fill="#ffffff">M-</text><text x="80" y="44" fontFamily="Arial Black, sans-serif" fontSize="48" fontWeight="900" fill="#e8ff00">PESA</text></svg>Send · KSh {Number(payJob.budget).toLocaleString()}</>}
+                    {payBusy
+                      ? <><span className="spinner-white"/>Sending</>
+                      : <>
+                          <svg width="100" height="24" viewBox="0 0 260 54" fill="none" style={{ flexShrink:0, display:'inline-block', verticalAlign:'middle' }}>
+                            <text x="2" y="44" fontFamily="Arial Black, sans-serif" fontSize="48" fontWeight="900" fill="#ffffff">M-</text>
+                            <text x="80" y="44" fontFamily="Arial Black, sans-serif" fontSize="48" fontWeight="900" fill="#e8ff00">PESA</text>
+                          </svg>
+                          Send · KSh {Number(payJob.budget).toLocaleString()}
+                        </>
+                    }
                   </button>
-                  <p className="mpesa-note">Secure payment via Safaricom M-Pesa.<br/>Platform fee: KSh {Math.round(Number(payJob.budget)*.1).toLocaleString()} (10%)</p>
+                  <p className="mpesa-note">
+                    Secure payment via Safaricom M-Pesa.<br/>
+                    Platform fee: KSh {Math.round(Number(payJob.budget)*.1).toLocaleString()} (10%)
+                  </p>
                 </>
               )}
             </div>
-            <div className="modal-ft"><button className="mbl mbl-light" onClick={() => { clearInterval(pollRef.current); setPayJob(null); setPayState('idle'); }}>{payState === 'complete' ? 'Done' : 'Cancel'}</button></div>
+            <div className="modal-ft">
+              <button className="mbl mbl-light" onClick={() => { clearInterval(pollRef.current); setPayJob(null); setPayState('idle'); }}>
+                {payState === 'complete' ? 'Done' : 'Cancel'}
+              </button>
+            </div>
           </div>
         </div>
       )}

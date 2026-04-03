@@ -50,6 +50,11 @@ class Craftsman(models.Model):
         ('rejected', 'Rejected'),
     ]
 
+    AVAILABILITY_CHOICES = [
+        ('online', 'Online'),
+        ('busy', 'Busy'),
+    ]
+
     user         = models.OneToOneField(User, on_delete=models.CASCADE)
     profile      = models.ImageField(upload_to='profiles/', blank=True, null=True)
     full_name    = models.CharField(max_length=255, blank=True, null=True)
@@ -57,45 +62,56 @@ class Craftsman(models.Model):
     company_name = models.CharField(max_length=255, blank=True, null=True)
     member_since = models.DateField(null=True, blank=True)
     location     = models.CharField(max_length=255, blank=True, null=True)
-
-    # Skills stored as comma-separated string; API layer converts ↔ list
-    skills = models.TextField(blank=True, null=True)
-
+    skills       = models.TextField(blank=True, null=True)
     experience_level = models.CharField(
         max_length=50, choices=EXPERIENCE_LEVEL_CHOICES, blank=True, null=True
     )
-
     proof_document = models.FileField(upload_to='proof_documents/', blank=True, null=True)
-
     primary_service = models.CharField(
         max_length=255, choices=PRIMARY_SERVICE_CHOICES, blank=True, null=True
     )
     video         = models.URLField(blank=True, null=True)
     service_image = models.ImageField(upload_to='services/', blank=True, null=True)
     description   = models.TextField(default="No description provided")
-
     status      = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     is_approved = models.BooleanField(default=False)
     is_active   = models.BooleanField(default=True)
-
     account_type = models.CharField(
         max_length=20,
         choices=[('Individual', 'Individual'), ('Company', 'Company')],
         default='Individual',
     )
-
-    # ── Payment wallet ────────────────────────────────────────────────────────
-    # Set automatically when craftsman first saves their profile.
-    # The ID comes from the jay4t.org gateway (POST /api/v1/intasend/wallet).
-    # Used as walletId in every STK push so money goes to this craftsman.
-    wallet_id = models.IntegerField(
-        null=True, blank=True,
-        help_text="jay4t.org gateway wallet ID — set at first profile save"
+    wallet_id = models.IntegerField(null=True, blank=True)
+    availability_status = models.CharField(
+        max_length=10,
+        choices=AVAILABILITY_CHOICES,
+        default='online',
     )
-    # ─────────────────────────────────────────────────────────────────────────
+    last_seen = models.DateTimeField(null=True, blank=True)
 
     slug = models.SlugField(unique=True, blank=True, null=True)
+    
 
+    # ─────────────────────────────────────────
+    # Availability logic
+    # ─────────────────────────────────────────
+    def get_computed_availability(self):
+        BUSY_STATUSES = ['Accepted', 'In Progress']
+        return 'busy' if self.jobs.filter(status__in=BUSY_STATUSES).exists() else 'online'
+
+    def sync_availability(self):
+        from django.utils import timezone
+        new_status = self.get_computed_availability()
+        if self.availability_status != new_status:
+            self.availability_status = new_status
+            self.last_seen = timezone.now()
+            self.save(update_fields=['availability_status', 'last_seen'])
+            return True
+        return False
+
+    # ─────────────────────────────────────────
+    # Save (slug generator)
+    # ─────────────────────────────────────────
     def save(self, *args, **kwargs):
         if not self.slug and self.user.full_name:
             self.slug = slugify(self.user.full_name)
@@ -104,7 +120,7 @@ class Craftsman(models.Model):
     def __str__(self):
         return self.full_name or str(self.user)
 
-
+    
 class Service(models.Model):
     craftsman = models.ForeignKey(
         Craftsman, on_delete=models.CASCADE, related_name='services'
@@ -366,3 +382,83 @@ class CraftsmanMember(models.Model):
 
     def __str__(self):
         return f"{self.full_name} ({self.role}) — {self.craftsman}"
+    
+
+
+class AvailabilityNotificationRequest(models.Model):
+    """Client subscribes to be notified when a craftsman becomes available."""
+    client     = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='availability_notifications'
+    )
+    craftsman  = models.ForeignKey(
+        Craftsman, on_delete=models.CASCADE,
+        related_name='notify_requests'
+    )
+    notified    = models.BooleanField(default=False)
+    notified_at = models.DateTimeField(null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('client', 'craftsman')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.client} waiting for {self.craftsman}"
+
+
+class BookingRequest(models.Model):
+    """Client requests a time slot — only allowed when craftsman is online."""
+    class Status(models.TextChoices):
+        PENDING   = 'pending',   'Pending'
+        ACCEPTED  = 'accepted',  'Accepted'
+        DECLINED  = 'declined',  'Declined'
+        CANCELLED = 'cancelled', 'Cancelled'
+
+    client       = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='booking_requests'
+    )
+    craftsman    = models.ForeignKey(
+        Craftsman, on_delete=models.CASCADE,
+        related_name='booking_requests'
+    )
+    job_request  = models.OneToOneField(
+        'JobRequest', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='booking'
+    )
+    requested_at = models.DateTimeField()
+    message      = models.TextField(blank=True)
+    service      = models.CharField(
+        max_length=255, choices=PRIMARY_SERVICE_CHOICES, blank=True
+    )
+    status       = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.PENDING
+    )
+    created_at   = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.client} → {self.craftsman} ({self.status})"
+
+
+class PlatformSettings(models.Model):
+    """Singleton — always use pk=1"""
+    commission_pct    = models.FloatField(default=10)
+    min_budget        = models.IntegerField(default=500)
+    max_budget        = models.IntegerField(default=500000)
+    mpesa_shortcode   = models.CharField(max_length=20, blank=True)
+    enabled_services  = models.JSONField(default=list)
+    enabled_locations = models.JSONField(default=list)
+    notifications     = models.JSONField(default=dict)
+
+    class Meta:
+        verbose_name = "Platform Settings"
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

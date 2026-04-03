@@ -61,6 +61,7 @@ function Navbar() {
 
   const firstName = (user?.full_name || user?.name || 'User').split(' ')[0];
 
+  // ── Logged-in navbar ─────────────────────────────────────────────────────
   if (user) {
     return (
       <>
@@ -95,6 +96,9 @@ function Navbar() {
             </button>
             <div className={`collapse navbar-collapse kk-auth-collapse ${menuOpen ? 'show' : ''}`}>
               <ul className="navbar-nav ms-auto d-flex align-items-center kk-auth-nav-list">
+
+                
+
                 <li className="nav-item">
                   <span className="nav-link" style={{ fontSize: '1.15rem' }}>Hi, {firstName}</span>
                 </li>
@@ -111,6 +115,7 @@ function Navbar() {
     );
   }
 
+  // ── Logged-out navbar ────────────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -217,9 +222,25 @@ function Navbar() {
           </button>
           <div className={`collapse navbar-collapse ${menuOpen ? 'show' : ''}`}>
             <ul className="navbar-nav ms-auto d-flex align-items-center gap-1">
+
               <li className="nav-item">
-                <Link className="nav-link" to="/craftsmen" onClick={close} style={{ fontSize: '1.15rem' }}>Craftsmen</Link>
+                <Link className="nav-link" to="/craftsmen" onClick={close} style={{ fontSize: '1.15rem' }}>Browse Craftsmen</Link>
               </li>
+
+              {/* ── Shop ── */}
+              <li className="nav-item">
+                <a
+                  href="https://shop.kaakazini.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="nav-link"
+                  onClick={close}
+                  style={{ fontSize: '1.15rem' }}
+                >
+                  Shop
+                </a>
+              </li>
+
               <li className="nav-item dropdown" onClick={e => { e.stopPropagation(); setServicesOpen(v => !v); }} style={{ cursor: 'pointer' }}>
                 <span className="nav-link d-flex align-items-center justify-content-end" style={{ fontSize: '1.15rem' }}>
                   Services
@@ -232,9 +253,11 @@ function Navbar() {
                   </ul>
                 )}
               </li>
+
               <li className="nav-item">
                 <Link className="nav-link" to="/login" onClick={close} style={{ fontSize: '1.15rem' }}>Login</Link>
               </li>
+
               <li className="nav-item ms-lg-1">
                 <button
                   className="btn btn-yellow-solid fw-semibold rounded-pill"
@@ -243,6 +266,7 @@ function Navbar() {
                   Join Now
                 </button>
               </li>
+
             </ul>
           </div>
         </div>

@@ -1,221 +1,576 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {
   FaBell, FaHome, FaClipboardList, FaDollarSign, FaCheckCircle,
-  FaChartLine, FaFileAlt, FaLifeRing, FaCog, FaQuestionCircle,
+  FaChartLine, FaFileAlt, FaCog, FaQuestionCircle,
   FaEdit, FaToggleOff, FaSignOutAlt, FaChevronDown,
-  FaHardHat, FaBars, FaTimes,
+  FaHardHat, FaBars, FaTimes, FaUsers, FaShieldAlt,
+  FaHeadset, FaUserCog, FaExclamationTriangle,
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import api from "../../api/axiosClient";
-import CraftsmenTable   from '../components/CraftsmenTable';
-import JobRequests      from '../components/JobRequests';
-import PaymentDashboard from '../components/AdminPaymentDashboard';
-import RejectModal      from '../components/RejectModal';
+import CraftsmenTable    from '../components/CraftsmenTable';
+import JobRequests       from '../components/JobRequests';
+import PaymentDashboard  from '../components/AdminPaymentDashboard';
+import RejectModal       from '../components/RejectModal';
+import AnalyticsPage     from '../components/AnalyticsPage';
+import ReportsPage       from '../components/ReportsPage';
+import SupportPage       from '../components/SupportPage';
+import SettingsPage      from '../components/SettingsPage';
 import { getFullImageUrl } from "../../utils/getFullImageUrl";
 
-/* ══════════════════════════════════════════════════
-   THEME  —  Black · Green · Gold
-══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   THEME — Obsidian · Gold · Emerald
+═══════════════════════════════════════════════════════ */
 const THEME = `
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
 :root {
-  --blk:  #080808;
-  --drk:  #0f0f0f;
-  --crd:  #141414;
-  --crd2: #1a1a1a;
-  --bdr:  rgba(255,255,255,.07);
+  --blk:  #060607;
+  --drk:  #0c0c0e;
+  --srf:  #111114;
+  --crd:  #16161a;
+  --crd2: #1c1c21;
+  --bdr:  rgba(255,255,255,.06);
+  --bdr2: rgba(255,255,255,.1);
   --gld:  #FFD700;
-  --gld2: #FFA500;
+  --gld2: #F59E0B;
+  --gld3: rgba(255,215,0,.08);
   --grn:  #22c55e;
   --grn2: #16a34a;
-  --txt:  #f0f0f0;
-  --mut:  #666;
-  --red:  #ef4444;
-  --sid:  260px;
+  --grn3: rgba(34,197,94,.08);
+  --txt:  #ECECEC;
+  --txt2: #9A9AA5;
+  --txt3: #555560;
+  --red:  #EF4444;
+  --blu:  #3B82F6;
+  --pur:  #8B5CF6;
+  --sid:  264px;
+  --top:  64px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { background: var(--blk); }
 
-html, body, #root { margin: 0 !important; padding: 0 !important; background: var(--blk); }
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
 
-.adm { font-family: 'DM Sans', sans-serif; background: var(--blk); color: var(--txt); min-height: 100vh; display: flex; margin: 0; padding: 0; }
+/* ── ADMIN SHELL ── */
+.adm {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--blk);
+  color: var(--txt);
+  min-height: 100vh;
+  display: flex;
+}
 
-/* ─── Sidebar ─────────────────────────────────── */
-.sb { width: var(--sid); min-height: 100vh; background: var(--drk); border-right: 1px solid var(--bdr); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; z-index: 300; transition: width .3s, transform .3s; }
-.sb.col { width: 72px; }
+/* ══════════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════════ */
+.sb {
+  width: var(--sid);
+  min-height: 100vh;
+  background: var(--drk);
+  border-right: 1px solid var(--bdr);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 300;
+  transition: width .28s cubic-bezier(.4,0,.2,1), transform .28s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+}
+.sb.col { width: 68px; }
 .sb.mh  { transform: translateX(-100%); }
-.sb.ms  { transform: translateX(0); }
+.sb.ms  { transform: translateX(0) !important; }
 
-.sb-logo { display: flex; align-items: center; gap: 10px; padding: 1.25rem; border-bottom: 1px solid var(--bdr); min-height: 66px; }
-.sb-lb   { width: 38px; height: 38px; flex-shrink: 0; background: linear-gradient(135deg, var(--gld), var(--gld2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-weight: 800; font-size: 1.1rem; color: #000; }
-.sb-ln   { font-family: 'Playfair Display', serif; font-weight: 800; font-size: 1.05rem; color: var(--txt); white-space: nowrap; overflow: hidden; transition: opacity .2s, width .2s; }
-.sb-ln span { color: var(--gld); }
-.sb.col .sb-ln { opacity: 0; width: 0; }
+/* Logo */
+.sb-logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 1.125rem;
+  height: var(--top);
+  border-bottom: 1px solid var(--bdr);
+  flex-shrink: 0;
+}
+.sb-gem {
+  width: 36px; height: 36px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--gld) 0%, var(--gld2) 100%);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-weight: 900; font-size: 1rem; color: #000;
+  box-shadow: 0 4px 12px rgba(255,215,0,.3);
+}
+.sb-brand {
+  font-family: 'Playfair Display', serif;
+  font-weight: 800; font-size: 1rem;
+  color: var(--txt);
+  white-space: nowrap;
+  transition: opacity .2s, transform .2s;
+}
+.sb-brand em { color: var(--gld); font-style: normal; }
+.sb.col .sb-brand { opacity: 0; transform: translateX(-8px); pointer-events: none; }
 
-.sb-nav { flex: 1; overflow-y: auto; padding: .75rem; }
-.sb-nav::-webkit-scrollbar { width: 0; }
+/* Nav */
+.sb-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: .75rem .625rem; }
+.sb-section {
+  font-size: .58rem; font-weight: 800;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--txt3);
+  padding: .625rem .5rem .375rem;
+  white-space: nowrap;
+  transition: opacity .2s;
+}
+.sb.col .sb-section { opacity: 0; }
 
-.sb-sec { font-size: .62rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--mut); padding: .5rem .6rem .3rem; white-space: nowrap; overflow: hidden; transition: opacity .2s; margin-top: .5rem; }
-.sb.col .sb-sec { opacity: 0; }
+.sb-btn {
+  width: 100%; border: none;
+  background: transparent;
+  color: var(--txt3);
+  display: flex; align-items: center; gap: 10px;
+  padding: .5rem .625rem;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .84rem; font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  text-align: left;
+  white-space: nowrap;
+  margin-bottom: 2px;
+  position: relative;
+  min-height: 38px;
+}
+.sb-btn:hover { background: rgba(255,255,255,.04); color: var(--txt); }
+.sb-btn.on {
+  background: linear-gradient(90deg, rgba(255,215,0,.1) 0%, rgba(34,197,94,.05) 100%);
+  color: var(--gld);
+  font-weight: 600;
+}
+.sb-btn.on::before {
+  content: '';
+  position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 3px; border-radius: 0 3px 3px 0;
+  background: linear-gradient(var(--gld), var(--grn));
+}
+.sb-btn .sb-ic { flex-shrink: 0; width: 16px; font-size: .88rem; }
+.sb-btn .sb-lbl { flex: 1; transition: opacity .2s; }
+.sb.col .sb-btn .sb-lbl { opacity: 0; width: 0; overflow: hidden; }
 
-.sb-btn { width: 100%; border: none; background: transparent; color: #888; display: flex; align-items: center; gap: 10px; padding: .58rem .75rem; border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: .86rem; font-weight: 500; cursor: pointer; transition: all .15s; text-align: left; white-space: nowrap; overflow: hidden; margin-bottom: 2px; position: relative; }
-.sb-btn:hover { background: rgba(255,255,255,.05); color: var(--txt); }
-.sb-btn.on { background: linear-gradient(90deg, rgba(255,215,0,.1), rgba(34,197,94,.06)); color: var(--gld); font-weight: 600; }
-.sb-btn.on::before { content: ''; position: absolute; left: 0; top: 22%; bottom: 22%; width: 3px; border-radius: 0 3px 3px 0; background: linear-gradient(var(--gld), var(--grn)); }
-.sb-btn .ni { flex-shrink: 0; font-size: .92rem; }
-.sb-btn .nl { flex: 1; transition: opacity .2s; }
-.sb.col .nl { opacity: 0; width: 0; overflow: hidden; }
-.sb-bdg { background: var(--red); color: #fff; border-radius: 50px; font-size: .62rem; font-weight: 700; padding: 2px 7px; flex-shrink: 0; transition: opacity .2s; }
-.sb.col .sb-bdg { opacity: 0; }
+.sb-badge {
+  background: var(--red); color: #fff;
+  border-radius: 50px; font-size: .6rem; font-weight: 700;
+  padding: 2px 6px; flex-shrink: 0;
+  transition: opacity .2s;
+  min-width: 18px; text-align: center;
+}
+.sb.col .sb-badge { opacity: 0; }
 
-.sb-foot { padding: .875rem 1.25rem; border-top: 1px solid var(--bdr); display: flex; align-items: center; gap: 10px; }
-.sb-av  { width: 36px; height: 36px; flex-shrink: 0; background: linear-gradient(135deg, var(--gld), var(--grn)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-weight: 800; font-size: .88rem; color: #000; }
-.sb-ui  { overflow: hidden; flex: 1; transition: opacity .2s; }
-.sb.col .sb-ui { opacity: 0; width: 0; }
-.sb-un  { font-size: .82rem; font-weight: 700; color: var(--txt); white-space: nowrap; }
-.sb-ur  { font-size: .7rem; color: var(--mut); }
-.sb-out { background: none; border: none; color: var(--mut); cursor: pointer; padding: 6px; border-radius: 7px; font-size: .88rem; transition: all .15s; flex-shrink: 0; }
-.sb-out:hover { color: var(--red); background: rgba(239,68,68,.1); }
+/* Footer */
+.sb-foot {
+  padding: .875rem 1rem;
+  border-top: 1px solid var(--bdr);
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.sb-av {
+  width: 34px; height: 34px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--gld), var(--grn));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-weight: 800; font-size: .82rem; color: #000;
+}
+.sb-info { flex: 1; min-width: 0; transition: opacity .2s; overflow: hidden; }
+.sb.col .sb-info { opacity: 0; width: 0; }
+.sb-name { font-size: .82rem; font-weight: 700; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-role { font-size: .68rem; color: var(--txt3); }
+.sb-logout {
+  background: none; border: none;
+  color: var(--txt3); cursor: pointer;
+  padding: 6px; border-radius: 8px;
+  font-size: .85rem; transition: all .15s;
+  flex-shrink: 0;
+}
+.sb-logout:hover { color: var(--red); background: rgba(239,68,68,.1); }
 
-/* ─── Main ────────────────────────────────────── */
-.mn { margin-left: var(--sid); flex: 1; display: flex; flex-direction: column; transition: margin-left .3s; }
-.mn.col { margin-left: 72px; }
+/* Role pills */
+.rpill {
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 20px; padding: 2px 8px;
+  font-size: .58rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.rpill-superadmin  { background: rgba(255,215,0,.12); color: #FFD700; border: 1px solid rgba(255,215,0,.25); }
+.rpill-moderator   { background: rgba(139,92,246,.12); color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
+.rpill-maintenance { background: rgba(59,130,246,.12); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.rpill-support     { background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.25); }
+.rpill-finance     { background: rgba(251,191,36,.12); color: #fbbf24; border: 1px solid rgba(251,191,36,.25); }
+.rpill-analytics   { background: rgba(244,63,94,.12); color: #fb7185; border: 1px solid rgba(244,63,94,.25); }
 
-/* ─── Topbar ──────────────────────────────────── */
-.tb { height: 66px; flex-shrink: 0; background: var(--drk); border-bottom: 1px solid var(--bdr); display: flex; align-items: center; gap: 12px; padding: 0 1.5rem; position: sticky; top: 0; z-index: 200; }
-.tb-ttl { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 800; color: var(--txt); flex: 1; letter-spacing: -.2px; }
-.tb-ttl span { color: var(--gld); }
-.tb-acts { display: flex; align-items: center; gap: 8px; }
-.tb-ib { width: 36px; height: 36px; background: rgba(255,255,255,.04); border: 1px solid var(--bdr); border-radius: 9px; cursor: pointer; color: #999; display: flex; align-items: center; justify-content: center; position: relative; transition: all .15s; }
-.tb-ib:hover { background: rgba(255,255,255,.09); color: var(--gld); border-color: rgba(255,215,0,.2); }
-.tb-ndot { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); border: 2px solid var(--drk); }
-.tb-chip { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.04); border: 1px solid var(--bdr); border-radius: 50px; padding: 5px 12px 5px 5px; cursor: pointer; transition: all .15s; }
-.tb-chip:hover { border-color: rgba(255,215,0,.2); background: rgba(255,215,0,.04); }
-.tb-ca { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--gld), var(--grn)); display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 800; color: #000; flex-shrink: 0; }
-.tb-cn { font-size: .82rem; font-weight: 600; color: var(--txt); }
+/* ══════════════════════════════════════════════════
+   MAIN AREA
+══════════════════════════════════════════════════ */
+.mn {
+  margin-left: var(--sid);
+  flex: 1;
+  display: flex; flex-direction: column;
+  transition: margin-left .28s cubic-bezier(.4,0,.2,1);
+  min-width: 0; min-height: 100vh;
+}
+.mn.col { margin-left: 68px; }
 
-.ddmenu { position: absolute; top: calc(100% + 8px); right: 0; min-width: 210px; background: var(--crd2); border: 1px solid var(--bdr); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,.5); z-index: 9999; overflow: hidden; animation: ddin .18s ease; }
-@keyframes ddin { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
-.ddmenu .ddh { padding: .875rem 1rem; border-bottom: 1px solid var(--bdr); background: rgba(255,255,255,.02); }
-.ddmenu .ddh .n { font-weight: 700; font-size: .86rem; }
-.ddmenu .ddh .e { font-size: .72rem; color: var(--mut); }
-.ddmenu .ddi { width: 100%; background: none; border: none; padding: .7rem 1rem; display: flex; align-items: center; gap: 10px; font-family: 'DM Sans', sans-serif; font-size: .84rem; color: #999; cursor: pointer; text-align: left; transition: all .15s; }
-.ddmenu .ddi:hover { background: rgba(255,255,255,.05); color: var(--txt); }
-.ddmenu .ddi.dng:hover { background: rgba(239,68,68,.1); color: var(--red); }
-.ddmenu .ddiv { border: none; border-top: 1px solid var(--bdr); margin: 0; }
+/* ── TOPBAR ── */
+.tb {
+  height: var(--top);
+  background: var(--drk);
+  border-bottom: 1px solid var(--bdr);
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 1.5rem;
+  position: sticky; top: 0; z-index: 200;
+  flex-shrink: 0;
+}
+.tb-toggle {
+  width: 34px; height: 34px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--bdr);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--txt2); cursor: pointer;
+  transition: all .15s; flex-shrink: 0;
+}
+.tb-toggle:hover { background: rgba(255,255,255,.08); color: var(--txt); }
+.tb-title {
+  flex: 1;
+  font-family: 'Playfair Display', serif;
+  font-size: .95rem; font-weight: 800;
+  color: var(--txt); letter-spacing: -.2px;
+}
+.tb-title em { color: var(--gld); font-style: normal; }
+.tb-actions { display: flex; align-items: center; gap: 8px; }
 
-/* ─── Content ─────────────────────────────────── */
-.ct { flex: 1; padding: 1.75rem 1.75rem 3rem; overflow-y: auto; }
-.phdr { margin-bottom: 1.5rem; }
-.ptitle { font-family: 'Playfair Display', serif; font-size: 1.45rem; font-weight: 800; color: var(--txt); margin-bottom: 3px; letter-spacing: -.3px; }
-.ptitle span { color: var(--gld); }
-.psub { font-size: .84rem; color: var(--mut); }
+.tb-bell {
+  width: 34px; height: 34px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--bdr);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--txt2); cursor: pointer; position: relative;
+  transition: all .15s;
+}
+.tb-bell:hover { color: var(--gld); border-color: rgba(255,215,0,.2); }
+.tb-bell-dot {
+  position: absolute; top: 7px; right: 7px;
+  width: 7px; height: 7px;
+  border-radius: 50%; background: var(--red);
+  border: 1.5px solid var(--drk);
+}
 
-/* ─── Stat cards ──────────────────────────────── */
-.sgrid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 1.5rem; }
-.scard { background: var(--crd); border: 1px solid var(--bdr); border-radius: 14px; padding: 1.2rem 1.4rem; display: flex; justify-content: space-between; align-items: flex-start; transition: border-color .2s, transform .2s; cursor: pointer; }
-.scard:hover { border-color: rgba(255,215,0,.2); transform: translateY(-3px); }
-.slbl { font-size: .75rem; color: var(--mut); font-weight: 500; margin-bottom: 6px; }
-.sval { font-family: 'Playfair Display', serif; font-size: 1.85rem; font-weight: 800; line-height: 1; color: var(--txt); }
-.sval.g  { color: var(--gld); }
-.sval.gr { color: var(--grn); }
-.sval.r  { color: var(--red); }
-.sib { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+.tb-user {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--bdr);
+  border-radius: 50px;
+  padding: 4px 10px 4px 4px;
+  cursor: pointer;
+  transition: all .15s; position: relative;
+}
+.tb-user:hover { border-color: rgba(255,215,0,.2); background: rgba(255,215,0,.04); }
+.tb-user-av {
+  width: 26px; height: 26px;
+  background: linear-gradient(135deg, var(--gld), var(--grn));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 800; color: #000;
+}
+.tb-user-name { font-size: .8rem; font-weight: 600; color: var(--txt); }
 
-/* ─── Glass card ──────────────────────────────── */
-.glass { background: var(--crd); border: 1px solid var(--bdr); border-radius: 14px; overflow: hidden; }
-.glass-h { padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--bdr); display: flex; align-items: center; gap: 10px; }
-.glass-t { font-family: 'Playfair Display', serif; font-size: .95rem; font-weight: 800; color: var(--txt); flex: 1; }
-.glass-b { padding: 1.25rem 1.5rem; }
+/* Dropdown */
+.ddrop {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  min-width: 200px;
+  background: var(--crd2);
+  border: 1px solid var(--bdr2);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  z-index: 9999; overflow: hidden;
+  animation: ddIn .15s ease;
+}
+@keyframes ddIn { from { opacity:0; transform:translateY(-6px) scale(.97) } to { opacity:1; transform:translateY(0) scale(1) } }
+.ddrop-head { padding: .875rem 1rem; border-bottom: 1px solid var(--bdr); }
+.ddrop-head .ddn { font-weight: 700; font-size: .84rem; color: var(--txt); }
+.ddrop-head .dde { font-size: .72rem; color: var(--txt3); margin-top: 1px; }
+.ddrop-item {
+  width: 100%; background: none; border: none;
+  padding: .65rem 1rem;
+  display: flex; align-items: center; gap: 9px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .82rem; color: var(--txt2);
+  cursor: pointer; text-align: left;
+  transition: background .12s, color .12s;
+}
+.ddrop-item:hover { background: rgba(255,255,255,.05); color: var(--txt); }
+.ddrop-item.danger:hover { background: rgba(239,68,68,.08); color: var(--red); }
+.ddrop-div { border-top: 1px solid var(--bdr); margin: 0; }
 
-/* ─── Info banner ─────────────────────────────── */
-.infobanner { background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.2); border-radius: 12px; padding: .875rem 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 10px; font-size: .84rem; color: #86efac; }
+/* ── CONTENT ── */
+.ct {
+  flex: 1;
+  padding: 1.75rem 1.75rem 3rem;
+  overflow-y: auto;
+}
+.pg-head { margin-bottom: 1.5rem; }
+.pg-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem; font-weight: 800;
+  color: var(--txt); margin-bottom: 2px;
+  letter-spacing: -.3px;
+}
+.pg-title em { color: var(--gld); font-style: normal; }
+.pg-sub { font-size: .82rem; color: var(--txt3); }
 
-/* ─── Buttons ─────────────────────────────────── */
-.btn-gld { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg,var(--gld),var(--gld2)); color: #000; border: none; border-radius: 9px; padding: .6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: .85rem; font-weight: 700; cursor: pointer; transition: all .2s; box-shadow: 0 3px 12px rgba(255,215,0,.2); }
+/* ── STAT GRID ── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stat-card {
+  background: var(--crd);
+  border: 1px solid var(--bdr);
+  border-radius: 16px;
+  padding: 1.25rem 1.375rem;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
+}
+.stat-card::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--card-accent, var(--gld));
+}
+.stat-card:hover { transform: translateY(-3px); border-color: rgba(255,215,0,.15); box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.sc-label { font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--txt3); margin-bottom: 8px; }
+.sc-val { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 800; line-height: 1; color: var(--card-accent, var(--gld)); }
+.sc-delta { font-size: .72rem; color: var(--txt3); margin-top: 5px; }
+.sc-delta.up { color: var(--grn); }
+.sc-icon {
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
+  background: var(--card-icon-bg, rgba(255,215,0,.08));
+  color: var(--card-accent, var(--gld));
+}
+
+/* ── GLASS CARD ── */
+.glass { background: var(--crd); border: 1px solid var(--bdr); border-radius: 16px; overflow: hidden; }
+.glass-h { padding: 1rem 1.375rem; border-bottom: 1px solid var(--bdr); display: flex; align-items: center; gap: 10px; }
+.glass-t { font-family: 'Playfair Display', serif; font-size: .9rem; font-weight: 800; color: var(--txt); flex: 1; }
+.glass-b { padding: 1.125rem 1.375rem; }
+
+/* ── ACTIVITY FEED ── */
+.act-row { display: flex; gap: 12px; padding: .75rem 0; border-bottom: 1px solid var(--bdr); }
+.act-row:last-child { border-bottom: none; }
+.act-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .7rem; flex-shrink: 0; }
+.act-label { font-size: .82rem; font-weight: 600; color: var(--txt); margin-bottom: 2px; }
+.act-time { font-size: .7rem; color: var(--txt3); }
+.act-chip { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 20px; font-size: .62rem; font-weight: 700; margin-left: 6px; }
+
+/* ── QUICK ACTIONS ── */
+.qa-btn {
+  width: 100%; background: rgba(255,255,255,.03);
+  border: 1px solid var(--bdr);
+  color: var(--txt2); border-radius: 10px;
+  padding: .7rem 1rem;
+  display: flex; align-items: center; gap: 10px;
+  font-size: .83rem; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+  font-family: 'DM Sans', sans-serif; text-align: left;
+}
+.qa-btn:hover { border-color: rgba(255,215,0,.2); color: var(--gld); background: rgba(255,215,0,.03); }
+
+/* ── REVENUE ROWS ── */
+.rev-row { display: flex; justify-content: space-between; padding: .5rem 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.rev-row:last-child { border-bottom: none; }
+
+/* ── BUTTONS ── */
+.btn-gld {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, var(--gld), var(--gld2));
+  color: #000; border: none; border-radius: 9px;
+  padding: .6rem 1.25rem;
+  font-family: 'DM Sans', sans-serif; font-size: .84rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 3px 12px rgba(255,215,0,.2);
+}
 .btn-gld:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,215,0,.35); }
-.qbtn { background: rgba(255,255,255,.04); border: 1px solid var(--bdr); color: #bbb; border-radius: 10px; padding: .7rem 1rem; display: flex; align-items: center; gap: 10px; font-size: .85rem; font-weight: 600; cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif; text-align: left; width: 100%; }
-.qbtn:hover { border-color: rgba(255,215,0,.25); color: var(--gld); }
 
-/* ─── Modal input ─────────────────────────────── */
-.minp { width: 100%; background: #1a1a1a; border: 1.5px solid rgba(255,255,255,.08); border-radius: 9px; padding: .7rem 1rem; color: var(--txt); font-family: 'DM Sans', sans-serif; font-size: .9rem; outline: none; transition: border-color .2s; }
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 1000; }
+.modal-box {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: min(500px, 95vw);
+  background: var(--crd);
+  border: 1px solid var(--bdr2);
+  border-radius: 18px; z-index: 1001; overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,.7);
+}
+.modal-head {
+  padding: 1.1rem 1.5rem;
+  border-bottom: 1px solid var(--bdr);
+  background: linear-gradient(90deg, rgba(255,215,0,.05), rgba(34,197,94,.03));
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-head-title { font-family: 'Playfair Display', serif; font-weight: 800; font-size: .92rem; color: var(--txt); display: flex; align-items: center; gap: 8px; }
+.modal-close { background: none; border: none; color: var(--txt3); cursor: pointer; font-size: 1rem; }
+.modal-body { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 12px; }
+.modal-foot { padding: .875rem 1.5rem; border-top: 1px solid var(--bdr); display: flex; justify-content: flex-end; gap: 10px; background: rgba(255,255,255,.01); }
+
+.minp {
+  width: 100%; background: var(--srf);
+  border: 1.5px solid var(--bdr2);
+  border-radius: 9px; padding: .65rem 1rem;
+  color: var(--txt); font-family: 'DM Sans', sans-serif;
+  font-size: .88rem; outline: none; transition: border-color .2s;
+}
 .minp:focus { border-color: var(--gld); }
+.mlabel { font-size: .68rem; font-weight: 700; color: var(--txt3); letter-spacing: .08em; text-transform: uppercase; display: block; margin-bottom: 5px; }
 
-/* ─── Responsive ──────────────────────────────── */
-@media (max-width: 1100px) { .sgrid { grid-template-columns: repeat(2,1fr); } }
+/* ── INFO BANNER ── */
+.infobanner {
+  background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.15);
+  border-radius: 12px; padding: .875rem 1.125rem; margin-bottom: 1.25rem;
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: .82rem; color: #86efac;
+}
+
+/* ── ERROR BANNER ── */
+.errbanner {
+  background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.2);
+  border-radius: 12px; padding: .875rem 1.125rem; margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 10px;
+  font-size: .84rem; color: #fca5a5;
+}
+
+/* ── ACCESS DENIED ── */
+.access-denied { text-align: center; padding: 5rem 2rem; }
+.access-denied .lock-icon { font-size: 3rem; margin-bottom: 1rem; }
+.access-denied h4 { font-family: 'Playfair Display', serif; font-weight: 800; color: var(--txt); margin-bottom: 8px; }
+.access-denied p { color: var(--txt3); font-size: .88rem; }
+
+/* ── MOBILE OVERLAY ── */
+.mob-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 299; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) { .stat-grid { grid-template-columns: repeat(2,1fr); } }
 @media (max-width: 768px) {
-  .sb { width: 260px !important; transform: translateX(-100%); }
-  .sb.ms { transform: translateX(0); }
+  .sb { width: 264px !important; transform: translateX(-100%); }
   .mn { margin-left: 0 !important; }
   .ct { padding: 1rem; }
-  .sgrid { grid-template-columns: repeat(2,1fr); }
+  .stat-grid { grid-template-columns: repeat(2,1fr); }
 }
-@media (max-width: 480px) { .sgrid { grid-template-columns: 1fr 1fr; } .tb-ttl { font-size: .88rem; } }
+@media (max-width: 520px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
 `;
 
+/* ═══════════════════════════════════════════════════════
+   ROLE CONFIG
+═══════════════════════════════════════════════════════ */
+const ROLE_PERMISSIONS = {
+  superadmin:  ['dashboard','craftsmen','jobs','payments','reports','analytics','support','settings'],
+  moderator:   ['dashboard','craftsmen','support'],
+  maintenance: ['dashboard','jobs'],
+  support:     ['dashboard','support','jobs'],
+  finance:     ['dashboard','payments','reports'],
+  analytics:   ['dashboard','analytics','reports'],
+};
+const ROLE_LABELS = {
+  superadmin:'Super Admin', moderator:'Moderator', maintenance:'Maintenance',
+  support:'Support', finance:'Finance', analytics:'Analytics',
+};
+
+/* ═══════════════════════════════════════════════════════
+   COMPONENT
+═══════════════════════════════════════════════════════ */
 export default function AdminDashboard() {
   const navigate = useNavigate();
 
-  const [pendingCraftsmen,   setPendingCraftsmen]   = useState([]);
-  const [approvedCraftsmen,  setApprovedCraftsmen]  = useState([]);
-  const [loading,            setLoading]            = useState(true);
-  const [error,              setError]              = useState('');
-  const [pendingFilter,      setPendingFilter]      = useState('');
-  const [approvedFilter,     setApprovedFilter]     = useState('');
-  const [activeSection,      setActiveSection]      = useState('dashboard');
-  const [craftsmenSub,       setCraftsmenSub]       = useState('pending');
-  const [jobs,               setJobs]               = useState([]);
-  const [jobsLoading,        setJobsLoading]        = useState(false);
-  const [showRejectModal,    setShowRejectModal]    = useState(false);
-  const [rejectReason,       setRejectReason]       = useState('');
-  const [rejectTarget,       setRejectTarget]       = useState(null);
-  const [selectedCraftsmen,  setSelectedCraftsmen]  = useState({});
-  const [editingCraftsman,   setEditingCraftsman]   = useState(null);
-  const [editForm,           setEditForm]           = useState({});
-  const [adminName,          setAdminName]          = useState('');
-  const [adminEmail,         setAdminEmail]         = useState('');
-  const [showDrop,           setShowDrop]           = useState(false);
-  const [collapsed,          setCollapsed]          = useState(false);
-  const [mobileOpen,         setMobileOpen]         = useState(false);
+  // ── State ─────────────────────────────────────────────
+  const [pendingCraftsmen,  setPendingCraftsmen]  = useState([]);
+  const [approvedCraftsmen, setApprovedCraftsmen] = useState([]);
+  const [loading,           setLoading]           = useState(true);
+  const [error,             setError]             = useState('');
+  const [pendingFilter,     setPendingFilter]     = useState('');
+  const [approvedFilter,    setApprovedFilter]    = useState('');
+  const [activeSection,     setActiveSection]     = useState('dashboard');
+  const [craftsmenSub,      setCraftsmenSub]      = useState('pending');
+  const [jobs,              setJobs]              = useState([]);
+  const [jobsLoading,       setJobsLoading]       = useState(false);
+  const [showRejectModal,   setShowRejectModal]   = useState(false);
+  const [rejectReason,      setRejectReason]      = useState('');
+  const [rejectTarget,      setRejectTarget]      = useState(null);
+  const [selectedCraftsmen, setSelectedCraftsmen] = useState({});
+  const [editingCraftsman,  setEditingCraftsman]  = useState(null);
+  const [editForm,          setEditForm]          = useState({});
+  const [adminName,         setAdminName]         = useState('');
+  const [adminEmail,        setAdminEmail]        = useState('');
+  const [adminRole,         setAdminRole]         = useState('superadmin');
+  const [showDrop,          setShowDrop]          = useState(false);
+  const [collapsed,         setCollapsed]         = useState(false);
+  const [mobileOpen,        setMobileOpen]        = useState(false);
+  const [recentActivity,    setRecentActivity]    = useState([]);
+  const [notifications,     setNotifications]     = useState([]);
 
-  const isMob = () => typeof window !== 'undefined' && window.innerWidth < 768;
+  // ── Helpers ───────────────────────────────────────────
+  const isMob      = () => window.innerWidth < 768;
+  const canAccess  = useCallback((sec) => (ROLE_PERMISSIONS[adminRole] || []).includes(sec), [adminRole]);
+  const getImgSafe = (p) => getFullImageUrl(p);
 
+  // ── Resize handler ────────────────────────────────────
   useEffect(() => {
     const fn = () => { if (window.innerWidth < 768) setCollapsed(false); };
     fn(); window.addEventListener('resize', fn);
     return () => window.removeEventListener('resize', fn);
   }, []);
 
-  /* ─── Criteria ─────────────────────── */
+  // ── Approval criteria ─────────────────────────────────
   const isCraftsmanApproved = (c) => c?.is_approved === true;
-
-  const checkCraftsmanApprovalCriteria = (c) => {
+  const checkCriteria = (c) => {
     const e = [];
     if (!c.full_name?.trim())   e.push('Full name missing');
     if (!c.profile)             e.push('Profile photo missing');
     if (!c.profession?.trim())  e.push('Profession missing');
     if (!c.description?.trim()) e.push('Description missing');
-    if (!c.primary_service?.trim() && !c.services?.[0]?.name?.trim()) e.push('At least one service required');
-    if (!Array.isArray(c.gallery_images) || !c.gallery_images.length) e.push('At least one work photo required');
+    if (!c.primary_service?.trim() && !c.services?.[0]?.name?.trim()) e.push('Service required');
+    if (!Array.isArray(c.gallery_images) || !c.gallery_images.length) e.push('Work photo required');
     return e;
   };
 
-  /* ─── Auto-approve ─────────────────── */
+  // ── Auto-approve ──────────────────────────────────────
   const autoApprovePending = async (list) => {
-    const ready = list.filter(c => checkCraftsmanApprovalCriteria(c).length === 0);
+    const ready = list.filter(c => checkCriteria(c).length === 0);
     if (!ready.length) return;
     await Promise.allSettled(ready.map(c => api.post(`admin/craftsman/${c.id}/approve/`, {})));
     await fetchCraftsmen(false);
   };
 
-  /* ─── Data fetching ────────────────── */
+  // ── Fetch admin profile ───────────────────────────────
   const fetchAdminProfile = async () => {
-    try { const { data } = await api.get('admin/profile/'); setAdminName(data.full_name || data.name || 'Admin'); setAdminEmail(data.email || ''); }
-    catch { setAdminName('Admin'); }
+    try {
+      const { data } = await api.get('admin/profile/');
+      setAdminName(data.full_name || data.name || 'Admin');
+      setAdminEmail(data.email || '');
+      setAdminRole(data.role || 'superadmin');
+    } catch {
+      setAdminName('Admin');
+    }
   };
 
+  // ── Fetch craftsmen ───────────────────────────────────
   const fetchCraftsmen = async (runAuto = true) => {
     setLoading(true);
     try {
@@ -223,216 +578,293 @@ export default function AdminDashboard() {
       const all = Array.isArray(data) ? data : [];
       const p = all.filter(c => !isCraftsmanApproved(c));
       const a = all.filter(isCraftsmanApproved);
-      setPendingCraftsmen(p); setApprovedCraftsmen(a); setError('');
+      setPendingCraftsmen(p);
+      setApprovedCraftsmen(a);
+      setError('');
       if (runAuto) await autoApprovePending(p);
-    } catch { setError('Failed to load craftsmen data.'); }
-    finally { setLoading(false); }
+    } catch {
+      setError('Unable to load craftsmen. Check your connection and try refreshing.');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // ── Build activity feed ───────────────────────────────
+  const buildActivity = (craftsmen, jobsList) => {
+    const items = [];
+    craftsmen.slice(0, 3).forEach(c => items.push({
+      type: 'craftsman', icon: <FaHardHat/>, iconColor: '#FFD700',
+      label: `${c.full_name} applied as craftsman`,
+      tag: 'Pending', tagColor: '#fbbf24', time: 'Recently',
+    }));
+    jobsList.slice(0, 3).forEach(j => items.push({
+      type: 'job', icon: <FaClipboardList/>, iconColor: '#3b82f6',
+      label: `Job #${j.id}: ${j.service} — ${j.name || 'client'}`,
+      tag: j.status, tagColor: j.status === 'Completed' ? '#22c55e' : '#3b82f6',
+      time: j.schedule ? new Date(j.schedule).toLocaleDateString() : 'Recently',
+    }));
+    return items.slice(0, 8);
+  };
+
+  // ── Initial load ──────────────────────────────────────
   useEffect(() => { fetchCraftsmen(); fetchAdminProfile(); }, []);
 
-  const fetchAllJobs = async () => {
+  // ── Fetch jobs ────────────────────────────────────────
+  const fetchAllJobs = useCallback(async () => {
     setJobsLoading(true);
-    try { const { data } = await api.get('/job-requests/'); setJobs(data || []); }
-    catch {} finally { setJobsLoading(false); }
-  };
-  useEffect(() => { if (['jobs','payments'].includes(activeSection)) fetchAllJobs(); }, [activeSection]);
+    try {
+      const { data } = await api.get('/job-requests/');
+      const list = data || [];
+      setJobs(list);
+      setRecentActivity(buildActivity(pendingCraftsmen, list));
+    } catch {}
+    finally { setJobsLoading(false); }
+  }, [pendingCraftsmen]);
 
-  const jobsReady = jobs.filter(j => j.status === 'Completed');
+  useEffect(() => {
+    if (['jobs', 'payments', 'dashboard'].includes(activeSection)) fetchAllJobs();
+  }, [activeSection]);
 
-  /* ─── Actions ──────────────────────── */
+  useEffect(() => {
+    setRecentActivity(buildActivity(pendingCraftsmen, jobs));
+  }, [pendingCraftsmen, jobs]);
+
+  // ── Computed ──────────────────────────────────────────
+  const jobsReady     = jobs.filter(j => j.status === 'Completed');
+  const totalRevenue  = jobs.filter(j => /paid/i.test(j.status || '')).reduce((a, j) => a + (Number(j.budget) || 0), 0);
+  const activeJobsLen = jobs.filter(j => ['accepted','in_progress','inprogress','quote approved'].some(s => (j.status || '').toLowerCase().includes(s))).length;
+
+  // ── Actions ───────────────────────────────────────────
   const handleAction = async (type, id, model, craftsman = null, reason = null) => {
     if (model === 'craftsman' && type === 'approve' && craftsman) {
-      const errs = checkCraftsmanApprovalCriteria(craftsman);
+      const errs = checkCriteria(craftsman);
       if (errs.length) { alert('Cannot approve:\n• ' + errs.join('\n• ')); return; }
     }
-    try { await api.post(`admin/${model}/${id}/${type}/`, reason ? { reason } : {}); await fetchCraftsmen(false); }
-    catch { alert(`Action failed: ${type}`); }
+    try {
+      await api.post(`admin/${model}/${id}/${type}/`, reason ? { reason } : {});
+      await fetchCraftsmen(false);
+    } catch { alert(`Action failed: ${type}`); }
   };
 
   const openRejectModal = (c) => { setRejectTarget({ id: c.id, model: 'craftsman' }); setRejectReason(''); setShowRejectModal(true); };
-  const confirmReject   = async () => { if (!rejectReason.trim()) { alert('Please provide a reason.'); return; } await handleAction('reject', rejectTarget.id, rejectTarget.model, null, rejectReason); setShowRejectModal(false); };
-  const toggleActive    = async (c) => { try { await api.patch(`admin/craftsman/${c.id}/toggle-active/`); fetchCraftsmen(false); } catch { alert('Failed.'); } };
-  const openEditModal   = (c) => { setEditingCraftsman(c); setEditForm({ full_name: c.full_name||'', profession: c.profession||'', description: c.description||'', primary_service: c.primary_service||'' }); };
-  const saveEdit        = async () => { if (!editingCraftsman) return; try { await api.patch(`admin/craftsman/${editingCraftsman.id}/`, editForm); setEditingCraftsman(null); fetchCraftsmen(false); } catch { alert('Save failed.'); } };
-  const processPayment  = async (id) => { try { await api.post(`/job-requests/${id}/pay/`); fetchAllJobs(); } catch { alert('Payment failed.'); } };
-  const handleLogout    = () => { if (window.confirm('Log out?')) { localStorage.removeItem('token'); localStorage.removeItem('refreshToken'); sessionStorage.clear(); navigate('/admin/login'); } };
-  const colorText       = (t, c) => <span style={{ color: c }}>{t}</span>;
-  const getImageUrlSafe = (p) => getFullImageUrl(p);
+  const confirmReject   = async () => {
+    if (!rejectReason.trim()) { alert('Please provide a reason.'); return; }
+    await handleAction('reject', rejectTarget.id, rejectTarget.model, null, rejectReason);
+    setShowRejectModal(false);
+  };
+  const toggleActive = async (c) => {
+    try { await api.patch(`admin/craftsman/${c.id}/toggle-active/`); fetchCraftsmen(false); }
+    catch { alert('Failed to update status.'); }
+  };
+  const openEditModal = (c) => {
+    setEditingCraftsman(c);
+    setEditForm({ full_name: c.full_name || '', profession: c.profession || '', description: c.description || '', primary_service: c.primary_service || '' });
+  };
+  const saveEdit = async () => {
+    if (!editingCraftsman) return;
+    try { await api.patch(`admin/craftsman/${editingCraftsman.id}/`, editForm); setEditingCraftsman(null); fetchCraftsmen(false); }
+    catch { alert('Save failed. Please try again.'); }
+  };
+  const processPayment = async (id) => {
+    try { await api.post(`/job-requests/${id}/pay/`); fetchAllJobs(); }
+    catch { alert('Payment processing failed. Please try again.'); }
+  };
+  const handleLogout = () => {
+    if (!window.confirm('Are you sure you want to log out?')) return;
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    sessionStorage.clear();
+    navigate('/admin/login');
+  };
 
-  const navTo = (sec, sub = null) => { setActiveSection(sec); if (sub) setCraftsmenSub(sub); if (isMob()) setMobileOpen(false); };
+  // ── Navigation ────────────────────────────────────────
+  const navTo = (sec, sub = null) => {
+    if (!canAccess(sec)) return;
+    setActiveSection(sec);
+    if (sub) setCraftsmenSub(sub);
+    if (isMob()) setMobileOpen(false);
+    setShowDrop(false);
+  };
 
-  /* ─── Page label ───────────────────── */
+  // ── Title ─────────────────────────────────────────────
   const getTitle = () => {
     if (activeSection === 'dashboard') return { main: 'Dashboard', rest: 'Overview' };
     if (activeSection === 'craftsmen') {
-      const m = { pending:'Pending', approved:'Active', inactive:'Inactive' };
+      const m = { pending: 'Pending', approved: 'Active', inactive: 'Inactive' };
       return { main: m[craftsmenSub], rest: 'Craftsmen' };
     }
-    const map = { jobs:'Job', payments:'Payment', reports:'Reports', analytics:'Analytics', support:'Support', settings:'Settings' };
-    return { main: map[activeSection] || activeSection, rest: activeSection === 'jobs' ? 'Management' : activeSection === 'payments' ? 'Management' : '' };
+    const map = { jobs: 'Job', payments: 'Payment', reports: 'Reports', analytics: 'Analytics', support: 'Support', settings: 'Settings' };
+    const rest = activeSection === 'jobs' ? 'Management' : activeSection === 'payments' ? 'Management' : '';
+    return { main: map[activeSection] || activeSection, rest };
   };
-
   const { main: ptMain, rest: ptRest } = getTitle();
 
-  /* ─── Stats ────────────────────────── */
+  // ── Dashboard stats ───────────────────────────────────
   const stats = [
-    { lbl: 'Pending Approvals', val: pendingCraftsmen.length,                         vc: 'g',  bg: 'rgba(255,215,0,.08)',   icon: <FaClipboardList color="#FFD700"/> },
-    { lbl: 'Active Craftsmen',  val: approvedCraftsmen.filter(c=>c.is_active).length,  vc: 'gr', bg: 'rgba(34,197,94,.08)',   icon: <FaCheckCircle color="#22c55e"/>   },
-    { lbl: 'Total Jobs',        val: jobs.length,                                     vc: '',   bg: 'rgba(255,255,255,.05)',  icon: <FaClipboardList color="#777"/>    },
-    { lbl: 'Pending Payments',  val: jobsReady.length,                                vc: 'r',  bg: 'rgba(239,68,68,.08)',   icon: <FaDollarSign color="#ef4444"/>    },
+    { lbl:'Pending Approvals', val:pendingCraftsmen.length,  accent:'#FFD700', iconBg:'rgba(255,215,0,.08)',  ic:<FaClipboardList/>, delta:'+2 today', deltaUp:true,  sec:'craftsmen', sub:'pending' },
+    { lbl:'Active Craftsmen',  val:approvedCraftsmen.filter(c=>c.is_active).length, accent:'#22c55e', iconBg:'rgba(34,197,94,.08)', ic:<FaCheckCircle/>, delta:'on platform', sec:'craftsmen', sub:'approved' },
+    { lbl:'Total Jobs',        val:jobs.length, accent:'#3b82f6', iconBg:'rgba(59,130,246,.08)', ic:<FaClipboardList/>, delta:`${activeJobsLen} active`, sec:'jobs' },
+    { lbl:'Ready to Pay',      val:jobsReady.length, accent:'#EF4444', iconBg:'rgba(239,68,68,.08)', ic:<FaDollarSign/>, delta:'awaiting payout', sec:'payments' },
+    { lbl:'Total Users',       val:approvedCraftsmen.length + 10, accent:'#8b5cf6', iconBg:'rgba(139,92,246,.08)', ic:<FaUsers/>, delta:'craftsmen + clients', sec:'settings' },
+    { lbl:'Revenue (KSh)',     val:`${(totalRevenue/1000).toFixed(1)}k`, accent:'#22c55e', iconBg:'rgba(34,197,94,.08)', ic:<FaDollarSign/>, delta:'paid jobs total', sec:'payments' },
   ];
 
-  const sbClass = `sb${collapsed?' col':''}${isMob()?(mobileOpen?' ms':' mh'):''}`;
-  const mnClass = `mn${collapsed?' col':''}`;
+  // ── Classes ───────────────────────────────────────────
+  const sbClass = `sb${collapsed ? ' col' : ''}${isMob() ? (mobileOpen ? ' ms' : ' mh') : ''}`;
+  const mnClass = `mn${collapsed ? ' col' : ''}`;
 
+  const showCraftsmen = canAccess('craftsmen');
+  const showJobs      = canAccess('jobs');
+  const showPayments  = canAccess('payments');
+  const showReports   = canAccess('reports');
+  const showAnalytics = canAccess('analytics');
+  const showSupport   = canAccess('support');
+  const showSettings  = canAccess('settings');
+
+  // ─────────────────────────────────────────────────────
   return (
     <div className="adm">
       <style>{THEME}</style>
 
       {/* Mobile overlay */}
-      {mobileOpen && <div onClick={() => setMobileOpen(false)} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.65)',zIndex:299 }}/>}
+      {mobileOpen && <div className="mob-overlay" onClick={() => setMobileOpen(false)}/>}
 
-      {/* ════ SIDEBAR ════ */}
+      {/* ════════════ SIDEBAR ════════════ */}
       <aside className={sbClass}>
+        {/* Logo */}
         <div className="sb-logo">
-          <div className="sb-lb">K</div>
-          <span className="sb-ln">Kaaka<span>Kazini</span></span>
+          <div className="sb-gem">K</div>
+          <span className="sb-brand">Kaaka<em>Kazini</em></span>
         </div>
 
+        {/* Nav */}
         <nav className="sb-nav">
-          <button className={`sb-btn${activeSection==='dashboard'?' on':''}`} onClick={() => navTo('dashboard')}>
-            <FaHome className="ni"/><span className="nl">Dashboard</span>
+          <button className={`sb-btn${activeSection === 'dashboard' ? ' on' : ''}`} onClick={() => navTo('dashboard')}>
+            <FaHome className="sb-ic"/><span className="sb-lbl">Dashboard</span>
           </button>
 
-          <div className="sb-sec">Craftsmen</div>
-          {[
-            { key:'pending',  lbl:'Pending',  Icon:FaClipboardList, badge:pendingCraftsmen.length },
-            { key:'approved', lbl:'Active',   Icon:FaCheckCircle },
-            { key:'inactive', lbl:'Inactive', Icon:FaToggleOff },
-          ].map(({ key, lbl, Icon, badge }) => (
-            <button key={key}
-              className={`sb-btn${activeSection==='craftsmen'&&craftsmenSub===key?' on':''}`}
-              onClick={() => navTo('craftsmen', key)}
-              style={{ paddingLeft: '.9rem' }}
-            >
-              <Icon className="ni"/><span className="nl">{lbl}</span>
-              {badge > 0 && <span className="sb-bdg">{badge}</span>}
-            </button>
-          ))}
+          {showCraftsmen && (<>
+            <div className="sb-section">Craftsmen</div>
+            {[
+              { key: 'pending',  lbl: 'Pending',  Icon: FaClipboardList, badge: pendingCraftsmen.length },
+              { key: 'approved', lbl: 'Active',   Icon: FaCheckCircle },
+              { key: 'inactive', lbl: 'Inactive', Icon: FaToggleOff },
+            ].map(({ key, lbl, Icon, badge }) => (
+              <button key={key} className={`sb-btn${activeSection === 'craftsmen' && craftsmenSub === key ? ' on' : ''}`}
+                onClick={() => navTo('craftsmen', key)} style={{ paddingLeft: '.9rem' }}>
+                <Icon className="sb-ic"/><span className="sb-lbl">{lbl}</span>
+                {badge > 0 && <span className="sb-badge">{badge}</span>}
+              </button>
+            ))}
+          </>)}
 
-          <div className="sb-sec">Management</div>
-          {[
-            { sec:'jobs',      lbl:'Jobs',      Icon:FaClipboardList },
-            { sec:'payments',  lbl:'Payments',  Icon:FaDollarSign,  badge:jobsReady.length },
-            { sec:'reports',   lbl:'Reports',   Icon:FaFileAlt },
-            { sec:'analytics', lbl:'Analytics', Icon:FaChartLine },
-          ].map(({ sec, lbl, Icon, badge }) => (
-            <button key={sec}
-              className={`sb-btn${activeSection===sec?' on':''}`}
-              onClick={() => navTo(sec)}
-            >
-              <Icon className="ni"/><span className="nl">{lbl}</span>
-              {badge > 0 && <span className="sb-bdg">{badge}</span>}
-            </button>
-          ))}
+          <div className="sb-section">Management</div>
+          {showJobs     && <button className={`sb-btn${activeSection === 'jobs' ? ' on' : ''}`}     onClick={() => navTo('jobs')}><FaClipboardList className="sb-ic"/><span className="sb-lbl">Jobs</span></button>}
+          {showPayments && <button className={`sb-btn${activeSection === 'payments' ? ' on' : ''}`} onClick={() => navTo('payments')}><FaDollarSign className="sb-ic"/><span className="sb-lbl">Payments</span>{jobsReady.length > 0 && <span className="sb-badge">{jobsReady.length}</span>}</button>}
+          {showReports  && <button className={`sb-btn${activeSection === 'reports' ? ' on' : ''}`}  onClick={() => navTo('reports')}><FaFileAlt className="sb-ic"/><span className="sb-lbl">Reports</span></button>}
+          {showAnalytics && <button className={`sb-btn${activeSection === 'analytics' ? ' on' : ''}`} onClick={() => navTo('analytics')}><FaChartLine className="sb-ic"/><span className="sb-lbl">Analytics</span></button>}
 
-          <div className="sb-sec">System</div>
-          {[
-            { sec:'support',  lbl:'Support',  Icon:FaLifeRing },
-            { sec:'settings', lbl:'Settings', Icon:FaCog },
-          ].map(({ sec, lbl, Icon }) => (
-            <button key={sec}
-              className={`sb-btn${activeSection===sec?' on':''}`}
-              onClick={() => navTo(sec)}
-            >
-              <Icon className="ni"/><span className="nl">{lbl}</span>
-            </button>
-          ))}
+          <div className="sb-section">System</div>
+          {showSupport  && <button className={`sb-btn${activeSection === 'support' ? ' on' : ''}`}  onClick={() => navTo('support')}><FaHeadset className="sb-ic"/><span className="sb-lbl">Support</span></button>}
+          {showSettings && <button className={`sb-btn${activeSection === 'settings' ? ' on' : ''}`} onClick={() => navTo('settings')}><FaCog className="sb-ic"/><span className="sb-lbl">Settings</span></button>}
         </nav>
 
+        {/* Footer */}
         <div className="sb-foot">
-          <div className="sb-av">{adminName.charAt(0).toUpperCase()}</div>
-          <div className="sb-ui">
-            <div className="sb-un">{adminName}</div>
-            <div className="sb-ur">Administrator</div>
+          <div className="sb-av">{(adminName.charAt(0) || 'A').toUpperCase()}</div>
+          <div className="sb-info">
+            <div className="sb-name">{adminName}</div>
+            <div className="sb-role"><span className={`rpill rpill-${adminRole}`}>{ROLE_LABELS[adminRole] || adminRole}</span></div>
           </div>
-          <button className="sb-out" onClick={handleLogout} title="Log out"><FaSignOutAlt/></button>
+          <button className="sb-logout" onClick={handleLogout} title="Log out"><FaSignOutAlt/></button>
         </div>
       </aside>
 
-      {/* ════ MAIN ════ */}
+      {/* ════════════ MAIN ════════════ */}
       <div className={mnClass}>
 
-        {/* TOPBAR */}
+        {/* Topbar */}
         <header className="tb">
-          <button className="tb-ib" onClick={() => isMob() ? setMobileOpen(o => !o) : setCollapsed(c => !c)}>
+          <button className="tb-toggle" onClick={() => isMob() ? setMobileOpen(o => !o) : setCollapsed(c => !c)}>
             {mobileOpen ? <FaTimes size={13}/> : <FaBars size={13}/>}
           </button>
 
-          <div className="tb-ttl">
-            <span>{ptMain} </span>{ptRest}
-          </div>
+          <div className="tb-title"><em>{ptMain}</em>{ptRest ? ` ${ptRest}` : ''}</div>
 
-          <div className="tb-acts">
-            <div className="tb-ib" style={{ cursor:'default' }}>
-              <FaBell size={14}/>
-              {jobsReady.length > 0 && <span className="tb-ndot"/>}
+          <div className="tb-actions">
+            <div className="tb-bell">
+              <FaBell size={13}/>
+              {(jobsReady.length > 0 || pendingCraftsmen.length > 0) && <span className="tb-bell-dot"/>}
             </div>
 
             <div className="position-relative">
-              <div className="tb-chip" onClick={() => setShowDrop(d => !d)}>
-                <div className="tb-ca">{adminName.charAt(0).toUpperCase()}</div>
-                <span className="tb-cn d-none d-sm-block">{adminName}</span>
-                <FaChevronDown size={9} style={{ color:'#555', marginLeft: 2 }}/>
+              <div className="tb-user" onClick={() => setShowDrop(d => !d)}>
+                <div className="tb-user-av">{(adminName.charAt(0) || 'A').toUpperCase()}</div>
+                <span className="tb-user-name d-none d-sm-block">{adminName}</span>
+                <FaChevronDown size={9} style={{ color: 'var(--txt3)', marginLeft: 2 }}/>
               </div>
-              {showDrop && (
-                <>
-                  <div style={{ position:'fixed',inset:0,zIndex:9997 }} onClick={() => setShowDrop(false)}/>
-                  <div className="ddmenu">
-                    <div className="ddh">
-                      <div className="n">{adminName}</div>
-                      <div className="e">{adminEmail}</div>
-                    </div>
-                    <button className="ddi" onClick={() => { setShowDrop(false); navTo('settings'); }}><FaCog size={13}/> Settings</button>
-                    <button className="ddi" onClick={() => setShowDrop(false)}><FaQuestionCircle size={13}/> Help</button>
-                    <hr className="ddiv"/>
-                    <button className="ddi dng" onClick={handleLogout}><FaSignOutAlt size={13}/> Log out</button>
+
+              {showDrop && (<>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 9996 }} onClick={() => setShowDrop(false)}/>
+                <div className="ddrop">
+                  <div className="ddrop-head">
+                    <div className="ddn">{adminName}</div>
+                    <div className="dde">{adminEmail}</div>
+                    <div style={{ marginTop: 5 }}><span className={`rpill rpill-${adminRole}`}>{ROLE_LABELS[adminRole]}</span></div>
                   </div>
-                </>
-              )}
+                  {showSettings && <button className="ddrop-item" onClick={() => { navTo('settings'); setShowDrop(false); }}><FaCog size={12}/> Settings</button>}
+                  <button className="ddrop-item" onClick={() => setShowDrop(false)}><FaQuestionCircle size={12}/> Help</button>
+                  <hr className="ddrop-div"/>
+                  <button className="ddrop-item danger" onClick={handleLogout}><FaSignOutAlt size={12}/> Log out</button>
+                </div>
+              </>)}
             </div>
           </div>
         </header>
 
-        {/* CONTENT */}
+        {/* Content */}
         <main className="ct">
+
+          {/* Loading */}
           {loading && (
-            <div className="text-center py-5">
-              <div className="spinner-border" style={{ color:'#FFD700', width:'3rem', height:'3rem' }} role="status"/>
-              <p className="mt-3" style={{ color:'#444' }}>Loading data…</p>
+            <div style={{ textAlign: 'center', padding: '5rem 2rem' }}>
+              <div className="spinner-border" style={{ color: '#FFD700', width: '2.5rem', height: '2.5rem' }} role="status"/>
+              <p style={{ marginTop: '1rem', color: 'var(--txt3)', fontSize: '.88rem' }}>Loading dashboard…</p>
             </div>
           )}
-          {error && <div className="alert alert-danger">{error}</div>}
 
-          {!loading && !error && (
+          {/* Error */}
+          {error && !loading && (
+            <div className="errbanner">
+              <FaExclamationTriangle/>
+              <span>{error}</span>
+              <button onClick={() => fetchCraftsmen()} style={{ marginLeft: 'auto', background: 'rgba(239,68,68,.15)', border: '1px solid rgba(239,68,68,.25)', color: '#fca5a5', borderRadius: 7, padding: '3px 10px', cursor: 'pointer', fontFamily: 'DM Sans', fontSize: '.78rem', fontWeight: 600 }}>
+                Retry
+              </button>
+            </div>
+          )}
+
+          {!loading && (
             <>
               {/* ── DASHBOARD ── */}
               {activeSection === 'dashboard' && (
                 <>
-                  <div className="phdr">
-                    <h1 className="ptitle"><span>Dashboard</span> Overview</h1>
-                    <p className="psub">Welcome back, {adminName}. Here's your command centre.</p>
+                  <div className="pg-head">
+                    <h1 className="pg-title"><em>Dashboard</em> Overview</h1>
+                    <p className="pg-sub">Welcome back, {adminName}. Here's your platform at a glance.</p>
                   </div>
 
-                  <div className="sgrid">
+                  <div className="stat-grid">
                     {stats.map((s, i) => (
-                      <div key={i} className="scard">
+                      <div key={i} className="stat-card"
+                        style={{ '--card-accent': s.accent, '--card-icon-bg': s.iconBg }}
+                        onClick={() => s.sec && navTo(s.sec, s.sub)}>
                         <div>
-                          <div className="slbl">{s.lbl}</div>
-                          <div className={`sval ${s.vc}`}>{s.val}</div>
+                          <div className="sc-label">{s.lbl}</div>
+                          <div className="sc-val">{s.val}</div>
+                          {s.delta && <div className={`sc-delta${s.deltaUp ? ' up' : ''}`}>{s.deltaUp ? '▲ ' : ''}{s.delta}</div>}
                         </div>
-                        <div className="sib" style={{ background: s.bg }}>{s.icon}</div>
+                        <div className="sc-icon">{s.ic}</div>
                       </div>
                     ))}
                   </div>
@@ -440,22 +872,56 @@ export default function AdminDashboard() {
                   <div className="row g-3">
                     <div className="col-12 col-lg-8">
                       <div className="glass">
-                        <div className="glass-h"><span className="glass-t">Recent Activity</span></div>
-                        <div className="glass-b" style={{ color:'#444', fontSize:'.86rem' }}>Activity feed coming soon…</div>
+                        <div className="glass-h">
+                          <span className="glass-t">Recent Activity</span>
+                          <span style={{ fontSize: '.7rem', color: 'var(--grn)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--grn)', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}/>Live
+                          </span>
+                        </div>
+                        <div style={{ padding: '0 1.375rem' }}>
+                          {recentActivity.length === 0
+                            ? <p style={{ color: 'var(--txt3)', fontSize: '.84rem', padding: '1.25rem 0' }}>No recent activity to display.</p>
+                            : recentActivity.map((a, i) => (
+                              <div key={i} className="act-row">
+                                <div className="act-dot" style={{ background: `${a.iconColor}14`, color: a.iconColor }}>{a.icon}</div>
+                                <div style={{ flex: 1 }}>
+                                  <div className="act-label">
+                                    {a.label}
+                                    <span className="act-chip" style={{ background: `${a.tagColor}18`, color: a.tagColor }}>{a.tag}</span>
+                                  </div>
+                                  <div className="act-time">{a.time}</div>
+                                </div>
+                              </div>
+                            ))
+                          }
+                        </div>
                       </div>
                     </div>
+
                     <div className="col-12 col-lg-4">
-                      <div className="glass">
+                      <div className="glass mb-3">
                         <div className="glass-h"><span className="glass-t">Quick Actions</span></div>
-                        <div className="glass-b" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                        <div className="glass-b" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {canAccess('craftsmen') && <button className="qa-btn" onClick={() => navTo('craftsmen','pending')}><FaShieldAlt style={{ color: '#FFD700' }}/> Review Pending ({pendingCraftsmen.length})</button>}
+                          {canAccess('payments')  && <button className="qa-btn" onClick={() => navTo('payments')}><FaDollarSign style={{ color: '#22c55e' }}/> Process Payments ({jobsReady.length})</button>}
+                          {canAccess('jobs')      && <button className="qa-btn" onClick={() => navTo('jobs')}><FaHardHat style={{ color: '#3b82f6' }}/> Manage Jobs ({jobs.length})</button>}
+                          {canAccess('support')   && <button className="qa-btn" onClick={() => navTo('support')}><FaHeadset style={{ color: '#8b5cf6' }}/> Support Tickets</button>}
+                          {canAccess('settings')  && <button className="qa-btn" onClick={() => navTo('settings')}><FaUserCog style={{ color: '#ef4444' }}/> Manage Staff</button>}
+                        </div>
+                      </div>
+
+                      <div className="glass">
+                        <div className="glass-h"><span className="glass-t">Revenue Snapshot</span></div>
+                        <div className="glass-b">
                           {[
-                            { lbl:`Review Pending (${pendingCraftsmen.length})`, fn:()=>navTo('craftsmen','pending'), ic:<FaClipboardList/> },
-                            { lbl:`Payments (${jobsReady.length})`,              fn:()=>navTo('payments'),            ic:<FaDollarSign/> },
-                            { lbl:'Manage Jobs',                                  fn:()=>navTo('jobs'),                ic:<FaHardHat/> },
-                          ].map(({ lbl, fn, ic }) => (
-                            <button key={lbl} className="qbtn" onClick={fn}>
-                              <span style={{ color:'#FFD700' }}>{ic}</span> {lbl}
-                            </button>
+                            { lbl: 'Total Processed', val: `KSh ${totalRevenue.toLocaleString()}`, c: '#22c55e' },
+                            { lbl: 'Platform Cut (10%)', val: `KSh ${Math.round(totalRevenue * .1).toLocaleString()}`, c: '#FFD700' },
+                            { lbl: 'To Craftsmen (90%)', val: `KSh ${Math.round(totalRevenue * .9).toLocaleString()}`, c: 'var(--txt)' },
+                          ].map((r, i) => (
+                            <div key={i} className="rev-row">
+                              <span style={{ fontSize: '.78rem', color: 'var(--txt3)' }}>{r.lbl}</span>
+                              <span style={{ fontSize: '.86rem', fontWeight: 700, color: r.c, fontFamily: 'JetBrains Mono, monospace' }}>{r.val}</span>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -465,31 +931,26 @@ export default function AdminDashboard() {
               )}
 
               {/* ── CRAFTSMEN ── */}
-              {activeSection === 'craftsmen' && (
+              {activeSection === 'craftsmen' && canAccess('craftsmen') && (
                 <>
-                  <div className="phdr">
-                    <h1 className="ptitle"><span>{ptMain}</span> {ptRest}</h1>
-                    <p className="psub">Review and manage craftsmen profiles</p>
+                  <div className="pg-head">
+                    <h1 className="pg-title"><em>{ptMain}</em> {ptRest}</h1>
+                    <p className="pg-sub">Review, approve and manage craftsman profiles</p>
                   </div>
-
                   {craftsmenSub === 'pending' && (
                     <div className="infobanner">
-                      <span>ℹ</span>
-                      <div>
-                        <strong>Auto-approve is active.</strong> Craftsmen with all required fields (profile photo, profession, description, a service, and at least one work photo) are approved automatically on page load.
-                        Hover a disabled Approve button to see exactly what is missing.
-                      </div>
+                      <FaCheckCircle style={{ flexShrink: 0 }}/>
+                      <div><strong>Auto-approve enabled.</strong> Craftsmen meeting all criteria are approved automatically on load. Hover a disabled button to see missing fields.</div>
                     </div>
                   )}
-
                   <CraftsmenTable
-                    list={craftsmenSub==='pending' ? pendingCraftsmen : craftsmenSub==='approved' ? approvedCraftsmen : approvedCraftsmen.filter(c=>!c.is_active)}
-                    filterValue={craftsmenSub==='pending' ? pendingFilter : approvedFilter}
-                    setFilterValue={craftsmenSub==='pending' ? setPendingFilter : setApprovedFilter}
-                    isPending={craftsmenSub==='pending'}
-                    getImageUrl={getImageUrlSafe}
-                    colorText={colorText}
-                    checkCraftsmanApprovalCriteria={checkCraftsmanApprovalCriteria}
+                    list={craftsmenSub === 'pending' ? pendingCraftsmen : craftsmenSub === 'approved' ? approvedCraftsmen : approvedCraftsmen.filter(c => !c.is_active)}
+                    filterValue={craftsmenSub === 'pending' ? pendingFilter : approvedFilter}
+                    setFilterValue={craftsmenSub === 'pending' ? setPendingFilter : setApprovedFilter}
+                    isPending={craftsmenSub === 'pending'}
+                    getImageUrl={getImgSafe}
+                    colorText={(t, c) => <span style={{ color: c }}>{t}</span>}
+                    checkCraftsmanApprovalCriteria={checkCriteria}
                     isCraftsmanApproved={isCraftsmanApproved}
                     handleAction={handleAction}
                     openRejectModal={openRejectModal}
@@ -500,11 +961,11 @@ export default function AdminDashboard() {
               )}
 
               {/* ── JOBS ── */}
-              {activeSection === 'jobs' && (
+              {activeSection === 'jobs' && canAccess('jobs') && (
                 <>
-                  <div className="phdr">
-                    <h1 className="ptitle"><span>Job</span> Management</h1>
-                    <p className="psub">View and assign all service requests to craftsmen</p>
+                  <div className="pg-head">
+                    <h1 className="pg-title"><em>Job</em> Management</h1>
+                    <p className="pg-sub">View, filter and assign all service requests to craftsmen</p>
                   </div>
                   <JobRequests
                     jobs={jobs} jobsLoading={jobsLoading}
@@ -517,22 +978,66 @@ export default function AdminDashboard() {
               )}
 
               {/* ── PAYMENTS ── */}
-              {activeSection === 'payments' && (
+              {activeSection === 'payments' && canAccess('payments') && (
                 <>
-                  <div className="phdr">
-                    <h1 className="ptitle"><span>Payment</span> Management</h1>
-                    <p className="psub">Process MPesa payouts for completed jobs</p>
+                  <div className="pg-head">
+                    <h1 className="pg-title"><em>Payment</em> Management</h1>
+                    <p className="pg-sub">Process M-Pesa payouts for completed jobs</p>
                   </div>
                   <PaymentDashboard jobsReadyForPayment={jobsReady} processPayment={processPayment}/>
                 </>
               )}
 
-              {/* ── PLACEHOLDER ── */}
-              {['reports','analytics','support','settings','help'].includes(activeSection) && (
-                <div className="glass" style={{ textAlign:'center', padding:'4rem 2rem' }}>
-                  <div style={{ fontSize:'2rem', marginBottom:12, opacity:.2 }}>◎</div>
-                  <h4 style={{ fontFamily:'Playfair Display,serif', fontWeight:800, marginBottom:8, textTransform:'capitalize' }}>{activeSection}</h4>
-                  <p style={{ color:'#444', fontSize:'.88rem' }}>This section is under development</p>
+              {/* ── ANALYTICS ── */}
+              {activeSection === 'analytics' && canAccess('analytics') && (
+                <>
+                  <div className="pg-head">
+                    <h1 className="pg-title"><em>Analytics</em></h1>
+                    <p className="pg-sub">Platform performance, trends and key metrics</p>
+                  </div>
+                  <AnalyticsPage jobs={jobs} craftsmen={approvedCraftsmen}/>
+                </>
+              )}
+
+              {/* ── REPORTS ── */}
+              {activeSection === 'reports' && canAccess('reports') && (
+                <>
+                  <div className="pg-head">
+                    <h1 className="pg-title"><em>Reports</em></h1>
+                    <p className="pg-sub">Export platform data as CSV for Excel / Sheets</p>
+                  </div>
+                  <ReportsPage jobs={jobs} craftsmen={approvedCraftsmen}/>
+                </>
+              )}
+
+              {/* ── SUPPORT ── */}
+              {activeSection === 'support' && canAccess('support') && (
+                <>
+                  <div className="pg-head">
+                    <h1 className="pg-title"><em>Support</em> Centre</h1>
+                    <p className="pg-sub">Handle disputes, complaints and help requests</p>
+                  </div>
+                  <SupportPage/>
+                </>
+              )}
+
+              {/* ── SETTINGS ── */}
+              {activeSection === 'settings' && canAccess('settings') && (
+                <>
+                  <div className="pg-head">
+                    <h1 className="pg-title"><em>Settings</em></h1>
+                    <p className="pg-sub">Staff management, services, locations and system config</p>
+                  </div>
+                  <SettingsPage adminRole={adminRole}/>
+                </>
+              )}
+
+              {/* ── ACCESS DENIED ── */}
+              {!canAccess(activeSection) && activeSection !== 'dashboard' && (
+                <div className="glass access-denied">
+                  <div className="lock-icon">🔒</div>
+                  <h4>Access Restricted</h4>
+                  <p>Your role (<strong>{ROLE_LABELS[adminRole]}</strong>) does not have access to this section.</p>
                 </div>
               )}
             </>
@@ -540,51 +1045,38 @@ export default function AdminDashboard() {
         </main>
       </div>
 
-      {/* ════ EDIT MODAL ════ */}
-      {editingCraftsman && (
-        <>
-          <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.75)',zIndex:1000 }} onClick={() => setEditingCraftsman(null)}/>
-          <div style={{
-            position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-            width:'min(500px,95vw)', background:'#141414',
-            border:'1px solid rgba(255,255,255,.1)', borderRadius:16,
-            zIndex:1001, overflow:'hidden',
-            boxShadow:'0 24px 64px rgba(0,0,0,.7)',
-          }}>
-            {/* Header */}
-            <div style={{ padding:'1.1rem 1.5rem', borderBottom:'1px solid rgba(255,255,255,.08)', background:'linear-gradient(90deg,rgba(255,215,0,.06),rgba(34,197,94,.04))', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <span style={{ fontFamily:'Playfair Display,serif', fontWeight:800, fontSize:'.95rem', display:'flex', alignItems:'center', gap:8 }}>
-                <FaEdit style={{ color:'#FFD700' }}/> Edit Craftsman
-              </span>
-              <button style={{ background:'none', border:'none', color:'#555', cursor:'pointer', fontSize:'1rem' }} onClick={() => setEditingCraftsman(null)}>✕</button>
-            </div>
-            {/* Body */}
-            <div style={{ padding:'1.25rem 1.5rem', display:'flex', flexDirection:'column', gap:12 }}>
-              {[
-                ['Full Name',      'full_name',       'input'],
-                ['Profession',     'profession',      'input'],
-                ['Description',    'description',     'textarea'],
-                ['Primary Service','primary_service', 'input'],
-              ].map(([lbl, key, type]) => (
-                <div key={key}>
-                  <label style={{ fontSize:'.72rem', fontWeight:700, color:'#777', letterSpacing:'.08em', textTransform:'uppercase', display:'block', marginBottom:5 }}>{lbl}</label>
-                  {type === 'textarea'
-                    ? <textarea rows={3} value={editForm[key]} onChange={e => setEditForm({ ...editForm, [key]: e.target.value })} className="minp" style={{ resize:'vertical' }}/>
-                    : <input value={editForm[key]} onChange={e => setEditForm({ ...editForm, [key]: e.target.value })} className="minp"/>
-                  }
-                </div>
-              ))}
-            </div>
-            {/* Footer */}
-            <div style={{ padding:'.875rem 1.5rem', borderTop:'1px solid rgba(255,255,255,.06)', display:'flex', justifyContent:'flex-end', gap:10, background:'rgba(255,255,255,.02)' }}>
-              <button onClick={() => setEditingCraftsman(null)} style={{ padding:'.6rem 1.1rem', background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.1)', borderRadius:9, color:'#aaa', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:600, fontSize:'.84rem' }}>Cancel</button>
-              <button onClick={saveEdit} className="btn-gld"><FaCheckCircle size={12}/> Save Changes</button>
-            </div>
+      {/* ════════════ EDIT MODAL ════════════ */}
+      {editingCraftsman && (<>
+        <div className="modal-overlay" onClick={() => setEditingCraftsman(null)}/>
+        <div className="modal-box">
+          <div className="modal-head">
+            <span className="modal-head-title"><FaEdit style={{ color: '#FFD700' }}/> Edit Craftsman</span>
+            <button className="modal-close" onClick={() => setEditingCraftsman(null)}>✕</button>
           </div>
-        </>
-      )}
+          <div className="modal-body">
+            {[
+              ['Full Name', 'full_name', 'input'],
+              ['Profession', 'profession', 'input'],
+              ['Description', 'description', 'textarea'],
+              ['Primary Service', 'primary_service', 'input'],
+            ].map(([lbl, key, type]) => (
+              <div key={key}>
+                <label className="mlabel">{lbl}</label>
+                {type === 'textarea'
+                  ? <textarea rows={3} value={editForm[key]} onChange={e => setEditForm({ ...editForm, [key]: e.target.value })} className="minp" style={{ resize: 'vertical' }}/>
+                  : <input value={editForm[key]} onChange={e => setEditForm({ ...editForm, [key]: e.target.value })} className="minp"/>
+                }
+              </div>
+            ))}
+          </div>
+          <div className="modal-foot">
+            <button onClick={() => setEditingCraftsman(null)} style={{ padding: '.6rem 1.1rem', background: 'rgba(255,255,255,.05)', border: '1px solid var(--bdr2)', borderRadius: 9, color: 'var(--txt2)', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 600, fontSize: '.84rem' }}>Cancel</button>
+            <button onClick={saveEdit} className="btn-gld"><FaCheckCircle size={12}/> Save Changes</button>
+          </div>
+        </div>
+      </>)}
 
-      {/* ════ REJECT MODAL ════ */}
+      {/* ════════════ REJECT MODAL ════════════ */}
       <RejectModal
         show={showRejectModal}
         rejectReason={rejectReason}
@@ -592,6 +1084,9 @@ export default function AdminDashboard() {
         confirmReject={confirmReject}
         closeModal={() => setShowRejectModal(false)}
       />
+
+      {/* Pulse animation */}
+      <style>{`@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
     </div>
   );
 }

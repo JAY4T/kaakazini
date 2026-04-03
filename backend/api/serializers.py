@@ -264,3 +264,75 @@ class CraftsmanMemberSerializer(serializers.ModelSerializer):
         model  = CraftsmanMember
         fields = ['id', 'full_name', 'email', 'phone', 'role', 'status', 'joined_at']
         read_only_fields = ['id', 'status', 'joined_at']
+
+
+
+
+# ADD these to your existing serializers.py
+
+from .models import (
+    Craftsman, BookingRequest, AvailabilityNotificationRequest,
+    # ... your existing imports
+)
+from django.utils import timezone
+
+
+class CraftsmanAvailabilitySerializer(serializers.ModelSerializer):
+    active_jobs_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = Craftsman
+        fields = [
+            'id', 'full_name', 'profession', 'primary_service',
+            'availability_status', 'last_seen', 'active_jobs_count',
+        ]
+
+    def get_active_jobs_count(self, obj):
+        from .models import JobRequest
+        return obj.jobs.filter(
+            status__in=[
+                JobRequest.STATUS_ACCEPTED,
+                JobRequest.STATUS_IN_PROGRESS,
+            ]
+        ).count()
+
+
+class BookingRequestSerializer(serializers.ModelSerializer):
+    client_name    = serializers.CharField(source='client.full_name',    read_only=True)
+    craftsman_name = serializers.CharField(source='craftsman.full_name', read_only=True)
+
+    class Meta:
+        model  = BookingRequest
+        fields = [
+            'id', 'client', 'client_name',
+            'craftsman', 'craftsman_name',
+            'requested_at', 'message', 'service',
+            'status', 'created_at', 'responded_at',
+        ]
+        read_only_fields = ['client', 'status', 'responded_at', 'created_at']
+
+    def validate_craftsman(self, craftsman):
+        if craftsman.availability_status == 'busy':
+            raise serializers.ValidationError(
+                "This craftsman is currently on a job. "
+                "Use 'Notify Me' to be alerted when they're free."
+            )
+        return craftsman
+
+    def validate_requested_at(self, value):
+        if value < timezone.now():
+            raise serializers.ValidationError("Requested time cannot be in the past.")
+        return value
+
+
+class NotifyMeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = AvailabilityNotificationRequest
+        fields = ['craftsman']
+
+    def validate_craftsman(self, craftsman):
+        if craftsman.availability_status == 'online':
+            raise serializers.ValidationError(
+                "This craftsman is already available — you can book them directly!"
+            )
+        return craftsman

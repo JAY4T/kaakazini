@@ -963,3 +963,153 @@ def _notify_member_approved(member):
         logger.info(f"[Brevo] Approval email sent to {member.email} (member #{member.id})")
     except Exception as exc:
         logger.error(f"[Brevo] Failed to send approval email to {member.email}: {exc}")
+
+
+
+
+
+
+# ADD these imports at the top of your existing views.py
+from rest_framework import filters
+from django.shortcuts import get_object_or_404
+from .models import BookingRequest, AvailabilityNotificationRequest
+from .serializers import (
+    CraftsmanAvailabilitySerializer,
+    BookingRequestSerializer,
+    NotifyMeSerializer,
+)
+
+
+# ── Availability ──────────────────────────────────────────────────────────────
+
+class CraftsmanAvailabilityListView(generics.ListAPIView):
+    serializer_class   = CraftsmanAvailabilitySerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends    = [filters.SearchFilter]
+    search_fields      = ['full_name', 'primary_service', 'location']
+
+    def get_queryset(self):
+        qs      = Craftsman.objects.filter(is_approved=True, is_active=True)
+        avail   = self.request.query_params.get('status')
+        service = self.request.query_params.get('service')
+        if avail:   qs = qs.filter(availability_status=avail)
+        if service: qs = qs.filter(primary_service=service)
+        return qs.order_by('-last_seen')
+
+
+class CraftsmanAvailabilityDetailView(generics.RetrieveAPIView):
+    serializer_class   = CraftsmanAvailabilitySerializer
+    permission_classes = [IsAuthenticated]
+    queryset           = Craftsman.objects.filter(is_approved=True, is_active=True)
+
+
+# ── Booking Requests ──────────────────────────────────────────────────────────
+
+class BookingRequestCreateView(generics.CreateAPIView):
+    serializer_class   = BookingRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(client=self.request.user)
+
+
+class BookingRequestListView(generics.ListAPIView):
+    serializer_class   = BookingRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'craftsman'):
+            return BookingRequest.objects.filter(
+                craftsman=user.craftsman
+            ).select_related('client', 'craftsman')
+        return BookingRequest.objects.filter(
+            client=user
+        ).select_related('client', 'craftsman')
+
+
+class BookingRequestRespondView(generics.UpdateAPIView):
+    serializer_class   = BookingRequestSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names  = ['patch']
+
+    def get_queryset(self):
+        if not hasattr(self.request.user, 'craftsman'):
+            return BookingRequest.objects.none()
+        return BookingRequest.objects.filter(
+            craftsman=self.request.user.craftsman,
+            status='pending'
+        )
+
+    def patch(self, request, *args, **kwargs):
+        booking    = self.get_object()
+        new_status = request.data.get('status')
+        if new_status not in ('accepted', 'declined'):
+            return Response(
+                {'error': 'status must be "accepted" or "declined".'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        booking.status       = new_status
+        booking.responded_at = timezone.now()
+        booking.save(update_fields=['status', 'responded_at'])
+        return Response(BookingRequestSerializer(booking).data)
+
+
+class BookingRequestCancelView(generics.UpdateAPIView):
+    serializer_class   = BookingRequestSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names  = ['patch']
+
+    def get_queryset(self):
+        return BookingRequest.objects.filter(
+            client=self.request.user,
+            status='pending'
+        )
+
+    def patch(self, request, *args, **kwargs):
+        booking              = self.get_object()
+        booking.status       = 'cancelled'
+        booking.responded_at = timezone.now()
+        booking.save(update_fields=['status', 'responded_at'])
+        return Response({'message': 'Booking cancelled successfully.'})
+
+
+# ── Notify Me ─────────────────────────────────────────────────────────────────
+
+class NotifyMeView(generics.CreateAPIView):
+    serializer_class   = NotifyMeSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        obj, created = AvailabilityNotificationRequest.objects.get_or_create(
+            client=request.user,
+            craftsman=serializer.validated_data['craftsman'],
+            defaults={'notified': False}
+        )
+        if not created and obj.notified:
+            obj.notified    = False
+            obj.notified_at = None
+            obj.save(update_fields=['notified', 'notified_at'])
+
+        return Response(
+            {'message': "You'll be notified when this craftsman is free."},
+            status=status.HTTP_201_CREATED
+        )
+
+
+class NotifyMeDeleteView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return get_object_or_404(
+            AvailabilityNotificationRequest,
+            client=self.request.user,
+            craftsman_id=self.kwargs['craftsman_pk']
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        self.get_object().delete()
+        return Response({'message': 'Notification subscription removed.'})

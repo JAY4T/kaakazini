@@ -102,19 +102,16 @@ function DashboardPage() {
   const [activeTab, setActiveTab] = useState("Dashboard");
 
   const accountType = profileData.account_type || craftsman.account_type || "Individual";
-
-  // ── active_role comes from /me/ (user table), not /craftsman/ ───────────
-  const activeRole = craftsman.active_role || "craftsman";
+  const activeRole  = craftsman.active_role || "craftsman";
 
   const professionOptions = ["Electrician","Plumber","Carpenter","Welder","Painter","Mechanic","WoodMaker","Mason","Tiler","Roofer","AC Technician","Landscaper"];
   const skillOptions      = ["Wiring","Pipe Fitting","Roofing","Furniture Making","Auto Repair","Welding","Tiling","Plastering","Painting"];
   const serviceOptions    = ["Plumbing","Electrical","Carpentry","Painting","Roofing","Welding","Tiling","Interior Design","Landscaping","Masonry","AC Repair","Woodwork","Auto Repair","Tarmacking","Fencing","Borehole Drilling"];
 
-  // ── On mount: load craftsman profile + jobs + user role ─────────────────
   useEffect(() => {
     fetchCraftsmanData();
     fetchAssignedJobs();
-    fetchUserRole();       // ← fetch active_role from /me/
+    fetchUserRole();
   }, []);
 
   const handleTabChange = (tab) => {
@@ -122,25 +119,17 @@ function DashboardPage() {
     setSidebarOpen(false);
   };
 
-  // ── Fetches active_role from the user/accounts table via /me/ ───────────
   const fetchUserRole = async () => {
     try {
       const { data } = await api.get("/me/");
-      // Merge active_role into craftsman state
       setCraftsman(prev => ({ ...prev, active_role: data.active_role || "craftsman" }));
-    } catch (err) {
-      // Silently fail — default is "craftsman" already
-    }
+    } catch {}
   };
 
-  // ── Fetches craftsman profile data ───────────────────────────────────────
   const fetchCraftsmanData = async () => {
     try {
       const { data } = await api.get("/craftsman/");
-      setCraftsman(prev => ({
-        ...prev,          // preserve active_role if already set by fetchUserRole
-        ...data,          // spread craftsman data on top
-      }));
+      setCraftsman(prev => ({ ...prev, ...data }));
       setProfileData({
         description:      data.description      || "",
         profession:       data.profession        || "",
@@ -161,7 +150,7 @@ function DashboardPage() {
           preview: getFullImageUrl(img.image_url), isExisting: true,
         })));
       }
-    } catch (err) {
+    } catch {
       addToast("Failed to load your profile. Please refresh.", "error", "Load Error");
     } finally {
       setLoading(false);
@@ -172,35 +161,31 @@ function DashboardPage() {
     try {
       const { data } = await api.get("/job-requests/");
       setJobs(data || []);
-    } catch (err) {}
+    } catch {}
   };
 
-  // ── Switch between craftsman ↔ client mode ───────────────────────────────
+  // ── FIX: use window.location.href so AuthContext re-reads localStorage ──
   const handleSwitchRole = async () => {
     if (switchingRole) return;
-
     const newRole = activeRole === "craftsman" ? "client" : "craftsman";
     setSwitchingRole(true);
-
     try {
       await api.post("/switch-role/", { role: newRole });
 
-      // Update active_role in local state immediately
+      // Persist new role in localStorage so ProtectedRoute sees it on redirect
+      const stored = JSON.parse(localStorage.getItem("user") || "{}");
+      stored.role  = newRole;
+      localStorage.setItem("user", JSON.stringify(stored));
+
       setCraftsman(prev => ({ ...prev, active_role: newRole }));
+      addToast(`Switched to ${newRole} mode!`, "success", "Role Switched 🔄", 2000);
 
-      addToast(
-        `Switched to ${newRole} mode!`,
-        "success",
-        "Role Switched 🔄",
-        3000,
-      );
-
-      // Redirect after short delay so user sees the toast
       setTimeout(() => {
+        // Hard redirect forces full auth-context reload — navigate() won't work here
         if (newRole === "client") {
-          navigate("/hire");
+          window.location.href = "/hire";
         } else {
-          navigate("/craftsman-dashboard");
+          window.location.href = "/craftsman-dashboard";
         }
       }, 1000);
 
@@ -232,10 +217,7 @@ function DashboardPage() {
     setSaving(true);
     try {
       const { data } = await api.patch("/craftsman/", formData);
-      setCraftsman(prev => ({
-        ...prev,   // preserve active_role
-        ...data,   // update craftsman fields
-      }));
+      setCraftsman(prev => ({ ...prev, ...data }));
       setProfileImage(data.profile_url         ? getFullImageUrl(data.profile_url)         : null);
       setProofDocument(data.proof_document_url  ? getFullImageUrl(data.proof_document_url)  : null);
       if (Array.isArray(data.gallery_images)) {
@@ -351,7 +333,6 @@ function DashboardPage() {
 
       <ToastContainer toasts={toasts} removeToast={removeToast}/>
 
-      {/* Mobile top bar */}
       <div className="mobile-topbar">
         <span className="mobile-topbar-title">Kaakazini</span>
         <button className="hamburger-btn" onClick={() => setSidebarOpen(v => !v)}>
