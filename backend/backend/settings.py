@@ -231,11 +231,13 @@ USE_I18N           = True
 USE_TZ             = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
 # ============================
 # APP SETTINGS
 # ============================
-FRONTEND_URL        = config('FRONTEND_URL', default='http://localhost:3000')
-BACKEND_URL         = config('BACKEND_URL',  default='http://127.0.0.1:8000')
+FRONTEND_URL        = config('FRONTEND_URL')
+BACKEND_URL         = config('BACKEND_URL')
+ADMIN_DASHBOARD_URL = config('ADMIN_DASHBOARD_URL')
 BREVO_API_KEY       = config('BREVO_API_KEY',       default='')
 GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')
 
